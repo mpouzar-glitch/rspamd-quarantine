@@ -105,27 +105,27 @@ Complete MariaDB/MySQL schema with:
 
 ### Quarantine View
 Compact table with inline statistics, filters, and quick actions.
-![Quarantine view screenshot (anonymized)](docs/screenshots/quarantine.svg)
+![Quarantine view screenshot (anonymized)](docs/quarantene.png)
 
 ### Statistics Dashboard
 2×2 grid with action/state distribution charts and time-based trends.
-![Statistics dashboard screenshot (anonymized)](docs/screenshots/statistics.svg)
+![Statistics dashboard screenshot (anonymized)](docs/stats.jpg)
 
 ### Audit Log
 Complete user action history with filtering and pagination.
-![Audit log screenshot (anonymized)](docs/screenshots/audit-log.svg)
+![Audit log screenshot (anonymized)](docs/audit_log.jpg)
 
 ### Bulk Operations
 Bulk operations view with inline actions and filters.
-![Bulk operations screenshot (anonymized)](docs/screenshots/bulk-operations.svg)
+![Bulk operations screenshot (anonymized)](docs/bulk_operation.png)
 
 ### Message Trace
 Trace view for sender/recipient activity and scoring.
-![Message trace screenshot (anonymized)](docs/screenshots/message-trace.svg)
+![Message trace screenshot (anonymized)](docs/trace_messages.png)
 
 ### User Management
 User and role management overview.
-![User management screenshot (anonymized)](docs/screenshots/users.svg)
+![User management screenshot (anonymized)](docs/users.jpg)
 
 ---
 
