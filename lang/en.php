@@ -56,10 +56,14 @@ return [
 
     // Login
     'login_title' => 'Login',
+    'login_subtitle' => 'Sign in to access the system',
     'login_username' => 'Username',
     'login_password' => 'Password',
     'login_button' => 'Sign In',
     'login_failed' => 'Invalid credentials',
+    'login_missing_credentials' => 'Please enter your username and password.',
+    'login_timeout' => 'Your session has expired. Please sign in again.',
+    'login_error' => 'Login error. Please try again later.',
     'login_required' => 'Login required',
     'logout_success' => 'You have been successfully logged out',
 

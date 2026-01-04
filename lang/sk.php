@@ -56,10 +56,14 @@ return [
 
     // Login
     'login_title' => 'Prihlásenie',
+    'login_subtitle' => 'Prihláste sa pre prístup do systému',
     'login_username' => 'Používateľské meno',
     'login_password' => 'Heslo',
     'login_button' => 'Prihlásiť sa',
     'login_failed' => 'Neplatné prihlasovacie údaje',
+    'login_missing_credentials' => 'Vyplňte používateľské meno a heslo.',
+    'login_timeout' => 'Vaša relácia vypršala. Prihláste sa prosím znova.',
+    'login_error' => 'Chyba pri prihlasovaní. Skúste to prosím neskôr.',
     'login_required' => 'Vyžaduje sa prihlásenie',
     'logout_success' => 'Boli ste úspešne odhlásení',
 

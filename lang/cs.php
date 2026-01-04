@@ -56,10 +56,14 @@ return [
 
     // Login
     'login_title' => 'Přihlášení',
+    'login_subtitle' => 'Přihlaste se pro přístup do systému',
     'login_username' => 'Uživatelské jméno',
     'login_password' => 'Heslo',
     'login_button' => 'Přihlásit se',
     'login_failed' => 'Neplatné přihlašovací údaje',
+    'login_missing_credentials' => 'Vyplňte uživatelské jméno a heslo.',
+    'login_timeout' => 'Vaše relace vypršela. Přihlaste se prosím znovu.',
+    'login_error' => 'Chyba při přihlášení. Zkuste to prosím později.',
     'login_required' => 'Vyžaduje se přihlášení',
     'logout_success' => 'Byli jste úspěšně odhlášeni',
 

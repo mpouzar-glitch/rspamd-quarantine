@@ -8,15 +8,15 @@
     <div class="footer-content">
         <div class="footer-left">
             <span class="version-info">
-                Rspamd Quarantine v<?php echo defined('QUARANTINE_VERSION') ? QUARANTINE_VERSION : '2.1.1'; ?> 
-                &bull; <?php echo date('Y'); ?> 
+                <?php echo htmlspecialchars(__('app_title')); ?> v<?php echo defined('QUARANTINE_VERSION') ? QUARANTINE_VERSION : '2.1.1'; ?>
+                &bull; <?php echo date('Y'); ?>
             </span>
         </div>
         <div class="footer-right">
             <div class="footer-links">
                 <?php if (isset($_SESSION['userrole']) && $_SESSION['userrole'] === 'admin'): ?>
-                    <a href="stats.php" class="footer-link"><i class="fas fa-chart-bar"></i> Statistiky</a>
-                    <a href="trace.php" class="footer-link"><i class="fas fa-search"></i> Trace</a>
+                    <a href="stats.php" class="footer-link"><i class="fas fa-chart-bar"></i> <?php echo htmlspecialchars(__('nav_statistics')); ?></a>
+                    <a href="trace.php" class="footer-link"><i class="fas fa-search"></i> <?php echo htmlspecialchars(__('nav_trace')); ?></a>
                 <?php endif; ?>
             </div>
             <div class="system-info">
@@ -27,7 +27,7 @@
 </footer>
 
 <style>
-/* Full Width Footer - BEZ MEZER */
+/* Full width footer without side gaps */
 .app-footer {
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     color: #ecf0f1;
@@ -47,9 +47,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1400px;         /* stejná jako .container */
+    max-width: 1400px;         /* matches .container */
     margin: 0 auto;
-    padding: 0 20px;           /* jen boční padding jako container */
+    padding: 0 20px;           /* side padding matches .container */
     width: 100%;
 }
 
