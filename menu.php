@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
-// menu.php - Společné menu pro všechny stránky
+require_once __DIR__ . '/lang_helper.php';
+// menu.php - Shared navigation for all pages
 if (!isset($_SESSION['authenticated'])) {
     header('Location: login.php');
     exit;
@@ -9,8 +10,16 @@ if (!isset($_SESSION['authenticated'])) {
 $user_role = $_SESSION['user_role'] ?? 'viewer';
 $username = $_SESSION['username'] ?? 'Unknown';
 $current_page = basename($_SERVER['PHP_SELF']);
+$page_title = $page_title ?? ($pageTitle ?? __('app_title'));
 
-// Zjistit počet zpráv v karanténě pro badge
+$role_labels = [
+    'admin' => __('role_admin'),
+    'domain_admin' => __('role_domain_admin'),
+    'viewer' => __('role_viewer'),
+];
+$user_role_label = $role_labels[$user_role] ?? $user_role;
+
+// Get number of quarantined messages for the badge
 try {
     $db = Database::getInstance()->getConnection();
     $params = [];
@@ -24,11 +33,11 @@ try {
 }
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?? 'Rspamd Quarantine' ?></title>
+    <title><?= htmlspecialchars($page_title) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
@@ -319,17 +328,17 @@ try {
     <div class="nav-container">
         <div class="nav-brand">
             <i class="fas fa-shield-alt"></i>
-            <span>Rspamd Quarantine</span>
+            <span><?php echo htmlspecialchars(__('app_title')); ?></span>
         </div>
 
-        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <button class="menu-toggle" id="menuToggle" aria-label="<?php echo htmlspecialchars(__('menu_toggle')); ?>">
             <i class="fas fa-bars"></i>
         </button>
 
         <div class="nav-menu" id="navMenu">
             <a href="index.php" class="nav-item <?= $current_page === 'index.php' ? 'active' : '' ?>">
                 <i class="fas fa-inbox"></i>
-                <span>Karanténa</span>
+                <span><?php echo htmlspecialchars(__('nav_quarantine')); ?></span>
                 <?php if ($quarantine_count > 0): ?>
                     <span class="badge-count"><?= $quarantine_count ?></span>
                 <?php endif; ?>
@@ -338,45 +347,45 @@ try {
             <?php if (checkPermission('domain_admin')): ?>
                 <a href="bulk_operations.php" class="nav-item <?= $current_page === 'bulk_operations.php' ? 'active' : '' ?>">
                     <i class="fas fa-tasks"></i>
-                    <span>Hromadné operace</span>
+                    <span><?php echo htmlspecialchars(__('nav_bulk_operations')); ?></span>
                 </a>
             <?php endif; ?>
 
             <?php if (checkPermission('domain_admin')): ?>            
                 <a href="trace.php" class="nav-item <?= $current_page === 'trace.php' ? 'active' : '' ?>">
                     <i class="fas fa-search"></i>
-                    <span>Message Trace</span>
+                    <span><?php echo htmlspecialchars(__('nav_trace')); ?></span>
                 </a>
             <?php endif; ?>
 
             <?php if (checkPermission('admin')): ?>
                 <a href="audit.php" class="nav-item <?= $current_page === 'audit.php' ? 'active' : '' ?>">
                     <i class="fas fa-clipboard-list"></i>
-                    <span>Audit Log</span>
+                    <span><?php echo htmlspecialchars(__('nav_audit')); ?></span>
                 </a>
             <?php endif; ?>
 
             <a href="stats.php" class="nav-item <?= $current_page === 'stats.php' ? 'active' : '' ?>">
                 <i class="fas fa-chart-bar"></i>
-                <span>Statistiky</span>
+                <span><?php echo htmlspecialchars(__('nav_statistics')); ?></span>
             </a>
 
             <?php if (checkPermission('admin')): ?>
                 <a href="users.php" class="nav-item <?= $current_page === 'users.php' ? 'active' : '' ?>">
                     <i class="fas fa-users-cog"></i>
-                    <span>Uživatelé</span>
+                    <span><?php echo htmlspecialchars(__('nav_users')); ?></span>
                 </a>
             <?php endif; ?>
 
             <a href="logout.php" class="nav-item">
                 <i class="fas fa-sign-out-alt"></i>
-                <span>Odhlásit</span>
+                <span><?php echo htmlspecialchars(__('nav_logout')); ?></span>
             </a>
 
             <div class="nav-user">
                 <div class="user-info">
                     <div class="user-name"><?= htmlspecialchars($username) ?></div>
-                    <div class="user-role"><?= htmlspecialchars($user_role) ?></div>
+                    <div class="user-role"><?= htmlspecialchars($user_role_label) ?></div>
                 </div>
             </div>
         </div>
@@ -386,7 +395,7 @@ try {
 <?php if ($user_role === 'domain_admin' && !empty($_SESSION['allowed_domains'])): ?>
     <div class="domain-filter-info">
         <i class="fas fa-filter"></i> 
-        <strong>Filtrováno pro domény:</strong> 
+        <strong><?php echo htmlspecialchars(__('domain_filter_info')); ?></strong>
         <?= htmlspecialchars(implode(', ', $_SESSION['allowed_domains'])) ?>
     </div>
 <?php endif; ?>

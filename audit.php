@@ -1,13 +1,14 @@
 <?php
 /**
  * Audit Log - Rspamd Quarantine
- * Zobrazení audit logu akcí uživatelů
+ * Displays audit log entries for user actions
  */
 
 session_start();
 require_once 'config.php';
 require_once 'functions.php';
 require_once 'filter_helper.php';
+require_once 'lang_helper.php';
 
 // Authentication check
 if (!isAuthenticated()) {
@@ -19,9 +20,9 @@ $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 
-// Pouze admin a domainadmin mohou vidět audit log
+// Only admins can access the audit log
 if (!checkPermission('admin')) {
-    $_SESSION['error_msg'] = 'Nemáte oprávnění k přístupu k audit logu.';
+    $_SESSION['error_msg'] = __('audit_access_denied');
     header('Location: index.php');
     exit;
 }
@@ -43,7 +44,7 @@ $offset = ($page - 1) * ITEMS_PER_PAGE;
 $params = [];
 $where = ['1=1'];
 
-// Admin vidí vše
+// Limit to current user for admin scope (legacy behavior)
 if ($userRole === 'admin') {
     $where[] = 'username = ?';
     $params[] = $user;
@@ -112,15 +113,15 @@ $statsStmt = $db->prepare($statsSql);
 $statsStmt->execute($params);
 $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 
-$pageTitle = 'Audit Log - Rspamd Quarantine';
+$page_title = __('audit_page_title', ['app' => __('app_title')]);
 include 'menu.php';
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
@@ -130,30 +131,30 @@ include 'menu.php';
 
 <div class="container">
 
-    <!-- NADPIS SE STATISTIKAMI -->
+    <!-- HEADER WITH STATISTICS -->
     <div class="header-with-stats">
         <div class="header-title">
-            <h1><i class="fas fa-clipboard-list"></i> Audit Log</h1>
+            <h1><i class="fas fa-clipboard-list"></i> <?php echo htmlspecialchars(__('audit_title')); ?></h1>
         </div>
         <div class="stats-inline">
             <div class="stat-inline-item total">
-                <span class="stat-inline-label">Celkem</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('audit_total')); ?></span>
                 <span class="stat-inline-value"><?php echo number_format($stats['total']); ?></span>
             </div>
             <div class="stat-inline-item" style="border-left-color: #17a2b8;">
-                <span class="stat-inline-label">Uvolněno</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('audit_releases')); ?></span>
                 <span class="stat-inline-value"><?php echo number_format($stats['releases']); ?></span>
             </div>
             <div class="stat-inline-item" style="border-left-color: #e74c3c;">
-                <span class="stat-inline-label">Naučeno</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('audit_learns')); ?></span>
                 <span class="stat-inline-value"><?php echo number_format($stats['learns']); ?></span>
             </div>
             <div class="stat-inline-item" style="border-left-color: #6c757d;">
-                <span class="stat-inline-label">Smazáno</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('audit_deletes')); ?></span>
                 <span class="stat-inline-value"><?php echo number_format($stats['deletes']); ?></span>
             </div>
             <div class="stat-inline-item" style="border-left-color: #9b59b6;">
-                <span class="stat-inline-label">Uživatelé</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('audit_users')); ?></span>
                 <span class="stat-inline-value"><?php echo number_format($stats['unique_users']); ?></span>
             </div>
         </div>
@@ -161,30 +162,37 @@ include 'menu.php';
 
     <?php displayAlerts(); ?>
 
-    <!-- FILTRY -->
+    <!-- FILTERS -->
     <?php echo renderAuditFilters($filters); ?>
 
     <?php if (empty($records)): ?>
         <div class="no-results">
             <i class="fas fa-clipboard-list"></i>
-            <h3>Žádné záznamy nenalezeny</h3>
-            <p>Zkuste upravit kritéria vyhledávání.</p>
+            <h3><?php echo htmlspecialchars(__('audit_no_records_title')); ?></h3>
+            <p><?php echo htmlspecialchars(__('audit_no_records_desc')); ?></p>
         </div>
     <?php else: ?>
 
         <div class="results-info">
-            Zobrazeno <strong><?php echo count($records); ?></strong> z <strong><?php echo number_format($totalItems); ?></strong> záznamů
-            | Stránka <?php echo $page; ?> z <?php echo $totalPages; ?>
+            <?php echo __(
+                'audit_results_info',
+                [
+                    'shown' => count($records),
+                    'total' => number_format($totalItems),
+                    'page' => $page,
+                    'pages' => $totalPages,
+                ]
+            ); ?>
         </div>
 
         <table class="messages-table audit-table">
             <thead>
                 <tr>
-                    <th style="width: 140px;">Čas</th>
-                    <th style="width: 120px;">Uživatel</th>
-                    <th style="width: 150px;">Akce</th>
-                    <th>Detail</th>
-                    <th style="width: 130px;">IP Adresa</th>
+                    <th style="width: 140px;"><?php echo htmlspecialchars(__('time')); ?></th>
+                    <th style="width: 120px;"><?php echo htmlspecialchars(__('user')); ?></th>
+                    <th style="width: 150px;"><?php echo htmlspecialchars(__('action')); ?></th>
+                    <th><?php echo htmlspecialchars(__('details')); ?></th>
+                    <th style="width: 130px;"><?php echo htmlspecialchars(__('ip_address')); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -240,7 +248,7 @@ include 'menu.php';
             <div class="pagination">
                 <?php if ($page > 1): ?>
                     <a href="?page=<?php echo ($page - 1); ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                        <i class="fas fa-chevron-left"></i> Předchozí
+                        <i class="fas fa-chevron-left"></i> <?php echo htmlspecialchars(__('pagination_previous')); ?>
                     </a>
                 <?php endif; ?>
 
@@ -258,7 +266,7 @@ include 'menu.php';
 
                 <?php if ($page < $totalPages): ?>
                     <a href="?page=<?php echo ($page + 1); ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                        Další <i class="fas fa-chevron-right"></i>
+                        <?php echo htmlspecialchars(__('pagination_next')); ?> <i class="fas fa-chevron-right"></i>
                     </a>
                 <?php endif; ?>
             </div>
