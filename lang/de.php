@@ -56,10 +56,14 @@ return [
 
     // Login
     'login_title' => 'Anmeldung',
+    'login_subtitle' => 'Melden Sie sich an, um auf das System zuzugreifen',
     'login_username' => 'Benutzername',
     'login_password' => 'Passwort',
     'login_button' => 'Anmelden',
     'login_failed' => 'Ungültige Anmeldedaten',
+    'login_missing_credentials' => 'Bitte Benutzername und Passwort eingeben.',
+    'login_timeout' => 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+    'login_error' => 'Anmeldefehler. Bitte versuchen Sie es später erneut.',
     'login_required' => 'Anmeldung erforderlich',
     'logout_success' => 'Sie wurden erfolgreich abgemeldet',
 

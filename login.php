@@ -2,10 +2,11 @@
 /**
  * Rspamd Quarantine - Login Page
  * Version: 2.0.3
- * OPRAVENO: Načítání user_domains jako array
+ * Fixed: Load user_domains as an array
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lang_helper.php';
 
 $error_message = '';
 $success_message = '';
@@ -25,12 +26,12 @@ if (isset($_GET['logout'])) {
     session_unset();
     session_destroy();
     session_start();
-    $success_message = 'Byli jste úspěšně odhlášeni.';
+    $success_message = __('logout_success');
 }
 
 // Handle session timeout
 if (isset($_GET['timeout'])) {
-    $error_message = 'Vaše relace vypršela. Přihlaste se prosím znovu.';
+    $error_message = __('login_timeout');
 }
 
 // Redirect if already authenticated
@@ -44,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
     // Validate input
     if (empty($_POST['username']) || empty($_POST['password'])) {
-        $error_message = 'Vyplňte uživatelské jméno a heslo.';
+        $error_message = __('login_missing_credentials');
     } else {
         $username = trim($_POST['username']);
         $password = $_POST['password'];
@@ -80,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     ");
                     $stmt->execute([$user['id']]);
 
-                    // OPRAVENO: Načíst jako array a trimovat každou doménu
+                    // Fixed: Load as array and trim each domain
                     $domains = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     $_SESSION['user_domains'] = array_map('trim', $domains);
 
@@ -110,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
             } else {
                 // Failed login
-                $error_message = 'Nesprávné přihlašovací údaje.';
+                $error_message = __('login_failed');
 
                 // Log failed login attempt
                 logAudit(
@@ -125,17 +126,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
         } catch (Exception $e) {
             error_log('Login error: ' . $e->getMessage());
-            $error_message = 'Chyba při přihlášení. Zkuste to prosím později.';
+            $error_message = __('login_error');
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Přihlášení - <?php echo APP_NAME; ?></title>
+    <title><?php echo htmlspecialchars(__('login_title')); ?> - <?php echo htmlspecialchars(__('app_title')); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -263,8 +264,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <div class="login-container">
         <div class="login-header">
             <i class="fas fa-shield-alt"></i>
-            <h1><?php echo APP_NAME; ?></h1>
-            <p>Přihlaste se pro přístup do systému</p>
+            <h1><?php echo htmlspecialchars(__('app_title')); ?></h1>
+            <p><?php echo htmlspecialchars(__('login_subtitle')); ?></p>
         </div>
 
         <?php if ($error_message): ?>
@@ -284,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         <form method="POST" action="login.php">
             <div class="form-group">
                 <label for="username">
-                    <i class="fas fa-user"></i> Uživatelské jméno
+                    <i class="fas fa-user"></i> <?php echo htmlspecialchars(__('login_username')); ?>
                 </label>
                 <input 
                     type="text" 
@@ -298,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
             <div class="form-group">
                 <label for="password">
-                    <i class="fas fa-lock"></i> Heslo
+                    <i class="fas fa-lock"></i> <?php echo htmlspecialchars(__('login_password')); ?>
                 </label>
                 <input 
                     type="password" 
@@ -310,12 +311,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             </div>
 
             <button type="submit" name="login" class="btn-login">
-                <i class="fas fa-sign-in-alt"></i> Přihlásit se
+                <i class="fas fa-sign-in-alt"></i> <?php echo htmlspecialchars(__('login_button')); ?>
             </button>
         </form>
 
         <div class="login-footer">
-            <?php echo APP_NAME; ?> v<?php echo APP_VERSION; ?>
+            <?php echo htmlspecialchars(__('app_title')); ?> v<?php echo htmlspecialchars(APP_VERSION); ?>
         </div>
     </div>
 </body>
