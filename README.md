@@ -245,7 +245,39 @@ server {
 }
 ```
 
-### 5. Create Admin User
+### 5. Configure Rspamd
+
+Add a metadata exporter rule that posts Rspamd results to the quarantine UI. Create or edit `/etc/rspamd/local.d/metadata_exporter.conf`:
+
+```conf
+# /etc/rspamd/local.d/metadata_exporter.conf
+rules {
+    HTTP_QUARANTINE {
+        backend = "http";
+        url = "http://127.0.0.1/rspamd-quarantine/receiver.php";
+        selector = "is_spam";
+        formatter = "default";
+        meta_headers = true;
+        timeout = 10s;
+    }
+
+    HTTP_TRACE_ALL {
+        backend = "http";
+        url = "http://127.0.0.1/rspamd-quarantine/trace_receiver.php";
+        selector = "default";
+        formatter = "json";
+        timeout = 5s;
+    }
+}
+```
+
+Reload Rspamd after the change:
+
+```bash
+systemctl reload rspamd
+```
+
+### 6. Create Admin User
 
 Generate a password hash:
 
@@ -269,7 +301,7 @@ INSERT INTO user_domains (user_id, domain)
 VALUES (1, 'example.com'), (1, 'example.org');
 ```
 
-### 6. File Permissions
+### 7. File Permissions
 
 ```bash
 chown -R www-data:www-data /var/www/rspamd-quarantine-webui
