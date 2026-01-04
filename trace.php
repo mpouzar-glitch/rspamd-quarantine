@@ -6,6 +6,7 @@
 
 require_once 'config.php';
 require_once 'filter_helper.php';
+require_once 'lang_helper.php';
 
 // Check authentication
 if (!isAuthenticated()) {
@@ -42,16 +43,16 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get statistics
 $stats = getTraceStats($db, $filters);
 
-$pageTitle = 'Message Trace - Rspamd Quarantine';
+$page_title = __('trace_page_title', ['app' => __('app_title')]);
 include 'menu.php';
 ?>
 
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/style.css">
@@ -59,10 +60,10 @@ include 'menu.php';
 </head>
 <body>
     <div class="container">
-        <!-- NADPIS SE STATISTIKAMI -->
+        <!-- HEADER WITH STATISTICS -->
         <div class="header-with-stats">
             <div class="header-title">
-            <h1><i class="fas fa-route"></i> Message Trace</h1>
+            <h1><i class="fas fa-route"></i> <?php echo htmlspecialchars(__('trace_title')); ?></h1>
         </div>
             <div>
                 <?php
@@ -81,7 +82,7 @@ include 'menu.php';
 
         <?php displayAlerts(); ?>
 
-        <!-- FILTRY -->
+        <!-- FILTERS -->
         <?php
         echo renderSearchFilters(getQuarantineFilters([
             'columns' => null,
@@ -104,10 +105,15 @@ include 'menu.php';
         <div class="results-info">
             <div class="results-text">
                 <i class="fas fa-info-circle"></i>
-                Zobrazeno <strong><?php echo number_format(count($messages)); ?></strong> 
-                z <strong><?php echo number_format($totalItems); ?></strong> zpráv
+                <?php echo __(
+                    'trace_results_info',
+                    [
+                        'shown' => number_format(count($messages)),
+                        'total' => number_format($totalItems),
+                    ]
+                ); ?>
                 <?php if (!empty(array_filter($filters))): ?>
-                    (filtrováno)
+                    (<?php echo htmlspecialchars(__('trace_filtered')); ?>)
                 <?php endif; ?>
             </div>
         </div>
@@ -116,21 +122,21 @@ include 'menu.php';
         <?php if (empty($messages)): ?>
             <div class="empty-state">
                 <i class="fas fa-inbox"></i>
-                <h3>Žádné zprávy</h3>
-                <p>Zkuste upravit filtry nebo změnit časové období</p>
+                <h3><?php echo htmlspecialchars(__('trace_no_messages_title')); ?></h3>
+                <p><?php echo htmlspecialchars(__('trace_no_messages_desc')); ?></p>
             </div>
         <?php else: ?>
             <div class="table-container">
                 <table class="messages-table">
                     <thead>
                         <tr>
-                            <th class="col-timestamp">Čas</th>
-                            <th class="col-email">Odesílatel</th>
-                            <th class="col-email">Příjemce</th>
-                            <th class="col-subject">Předmět</th>
-                            <th class="col-action">Akce</th>
-                            <th class="col-score">Skóre</th>
-                            <th class="col-ip">IP adresa</th>
+                            <th class="col-timestamp"><?php echo htmlspecialchars(__('time')); ?></th>
+                            <th class="col-email"><?php echo htmlspecialchars(__('msg_sender')); ?></th>
+                            <th class="col-email"><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
+                            <th class="col-subject"><?php echo htmlspecialchars(__('msg_subject')); ?></th>
+                            <th class="col-action"><?php echo htmlspecialchars(__('action')); ?></th>
+                            <th class="col-score"><?php echo htmlspecialchars(__('msg_score')); ?></th>
+                            <th class="col-ip"><?php echo htmlspecialchars(__('ip_address')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,7 +145,7 @@ include 'menu.php';
                             $msgId = $msg['id'];
                             $sender = decodeMimeHeader($msg['sender']);
                             $recipients = decodeMimeHeader($msg['recipients']);
-                            $subject = decodeMimeHeader($msg['subject']) ?: '(bez předmětu)';
+                            $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
                             $action = $msg['action'] ?? 'unknown';
@@ -219,7 +225,7 @@ include 'menu.php';
                                     <i class="fas fa-paper-plane"></i> 
                                     <a href="?sender=<?php echo urlencode($sender); ?>" 
                                        class="email-link" 
-                                       title="Filtrovat podle odesílatele: <?php echo htmlspecialchars($sender); ?>">
+                                       title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
                                 </td>
@@ -227,7 +233,7 @@ include 'menu.php';
                                     <i class="fas fa-inbox"></i> 
                                     <a href="?recipient=<?php echo urlencode($recipients); ?>" 
                                        class="email-link" 
-                                       title="Filtrovat podle příjemce: <?php echo htmlspecialchars($recipients); ?>">
+                                       title="<?php echo htmlspecialchars(__('filter_by_recipient', ['recipient' => $recipients])); ?>">
                                         <?php echo htmlspecialchars(truncateText($recipients, 40)); ?>
                                     </a>
                                 </td>
@@ -248,7 +254,7 @@ include 'menu.php';
                                         <?php if (!empty($parsed_symbols)): ?>
                                             <div class="symbols-popup">
                                                 <div class="symbols-popup-header">
-                                                    <i class="fas fa-list-ul"></i> Rspamd Symboly (<?php echo count($parsed_symbols); ?>)
+                                                    <i class="fas fa-list-ul"></i> <?php echo htmlspecialchars(__('symbols_header', ['count' => count($parsed_symbols)])); ?>
                                                 </div>
                                                 <div class="symbols-grid">
                                                     <?php foreach ($parsed_symbols as $sym): 
@@ -273,7 +279,7 @@ include 'menu.php';
                                 <td class="ip-field">
                                     <a href="?ip=<?php echo urlencode($ipAddress); ?>" 
                                        class="ip-link" 
-                                       title="Filtrovat podle IP: <?php echo htmlspecialchars($ipAddress); ?>">
+                                       title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
                                         <?php echo htmlspecialchars($ipAddress); ?>
                                     </a>
                                 </td>
@@ -296,11 +302,11 @@ include 'menu.php';
 
                     <?php if ($page > 1): ?>
                         <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => 1])); ?>" 
-                           class="page-btn" title="První stránka">
+                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_first_page')); ?>">
                             <i class="fas fa-angle-double-left"></i>
                         </a>
                         <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $page - 1])); ?>" 
-                           class="page-btn" title="Předchozí">
+                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_previous')); ?>">
                             <i class="fas fa-angle-left"></i>
                         </a>
                     <?php endif; ?>
@@ -314,11 +320,11 @@ include 'menu.php';
 
                     <?php if ($page < $totalPages): ?>
                         <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $page + 1])); ?>" 
-                           class="page-btn" title="Další">
+                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_next')); ?>">
                             <i class="fas fa-angle-right"></i>
                         </a>
                         <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $totalPages])); ?>" 
-                           class="page-btn" title="Poslední stránka">
+                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_last_page')); ?>">
                             <i class="fas fa-angle-double-right"></i>
                         </a>
                     <?php endif; ?>

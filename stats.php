@@ -1,12 +1,13 @@
 <?php
-// stats.php - Statistiky a grafy pro Rspamd Quarantine
-// Zobrazuje detailní statistiky s grafy a tabulkami
-// Podporuje multidomain filtraci pro domain_admin uživatele
+// stats.php - Statistics and charts for Rspamd Quarantine
+// Shows detailed statistics with charts and tables
+// Supports multi-domain filtering for domain_admin users
 
 session_start();
 require_once 'config.php';
 require_once 'functions.php';
 require_once 'filter_helper.php';
+require_once 'lang_helper.php';
 
 // Check authentication
 if (!isAuthenticated()) {
@@ -36,9 +37,9 @@ $stateDist = getStateDistribution($db, $dateFrom, $dateTo, $domainFilter, $param
 $dailyTrace = getDailyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $weeklyTrace = getWeeklyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 
-$pageTitle = 'Statistiky - Rspamd Quarantine';
+$page_title = __('stats_page_title', ['app' => __('app_title')]);
 
-// Funkce pro zkrácení textu s tooltipem
+// Helper to truncate text with tooltip
 function truncateWithTooltip($text, $maxLength = 40) {
     $text = htmlspecialchars($text);
     if (mb_strlen($text) > $maxLength) {
@@ -51,11 +52,11 @@ function truncateWithTooltip($text, $maxLength = 40) {
 include 'menu.php';
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <title><?php echo htmlspecialchars($page_title); ?></title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -67,13 +68,13 @@ include 'menu.php';
 <div class="stats-container">
     <div class="header-with-stats">
         <div class="header-title">
-            <h1><i class="fas fa-chart-bar"></i> Statistiky a grafy</h1>
+            <h1><i class="fas fa-chart-bar"></i> <?php echo htmlspecialchars(__('stats_title')); ?></h1>
         </div>
         <div class="stats-inline">
             <div class="stat-inline-item total">
                 <i class="fas fa-inbox"></i>
                 <div>
-                    <span class="stat-inline-label">Karanténa</span>
+                    <span class="stat-inline-label"><?php echo htmlspecialchars(__('stats_quarantine_label')); ?></span>
                     <span class="stat-inline-value"><?php echo number_format($volumeStats['quarantine']['total_messages'] ?? 0); ?></span>
                 </div>
             </div>
@@ -81,7 +82,7 @@ include 'menu.php';
             <div class="stat-inline-item" style="border-left-color: #3498db;">
                 <i class="fas fa-database"></i>
                 <div>
-                    <span class="stat-inline-label">Objem dat</span>
+                    <span class="stat-inline-label"><?php echo htmlspecialchars(__('stats_data_volume_label')); ?></span>
                     <span class="stat-inline-value"><?php echo formatMessageSize($volumeStats['quarantine']['total_bytes'] ?? 0); ?></span>
                 </div>
             </div>
@@ -89,7 +90,7 @@ include 'menu.php';
             <div class="stat-inline-item" style="border-left-color: #2ecc71;">
                 <i class="fas fa-route"></i>
                 <div>
-                    <span class="stat-inline-label">Trace celkem</span>
+                    <span class="stat-inline-label"><?php echo htmlspecialchars(__('stats_trace_total_label')); ?></span>
                     <span class="stat-inline-value"><?php echo number_format($volumeStats['trace']['total_messages'] ?? 0); ?></span>
                 </div>
             </div>
@@ -97,7 +98,7 @@ include 'menu.php';
             <div class="stat-inline-item score">
                 <i class="fas fa-chart-line"></i>
                 <div>
-                    <span class="stat-inline-label">Ø Skóre</span>
+                    <span class="stat-inline-label"><?php echo htmlspecialchars(__('stats_avg_score_label')); ?></span>
                     <span class="stat-inline-value"><?php echo number_format($volumeStats['quarantine']['avg_score'] ?? 0, 2); ?></span>
                 </div>
             </div>
@@ -105,26 +106,37 @@ include 'menu.php';
     </div>    
  
     <div style="margin-bottom: 20px; color: #7f8c8d; font-size: 14px;">
-        <i class="far fa-calendar-alt"></i> Období: <?php echo date('d.m.Y', strtotime($dateFrom)); ?> - <?php echo date('d.m.Y', strtotime($dateTo)); ?>
+        <i class="far fa-calendar-alt"></i> <?php echo __(
+            'stats_period',
+            [
+                'from' => date('d.m.Y', strtotime($dateFrom)),
+                'to' => date('d.m.Y', strtotime($dateTo)),
+            ]
+        ); ?>
         <?php if ($userRole !== 'admin'): ?>
-        &nbsp;&nbsp;<i class="fas fa-filter"></i> Filtrováno pro domény: <?php echo htmlspecialchars(implode(', ', $_SESSION['user_domains'] ?? [])); ?>
+        &nbsp;&nbsp;<i class="fas fa-filter"></i> <?php echo __(
+            'stats_filtered_domains',
+            [
+                'domains' => htmlspecialchars(implode(', ', $_SESSION['user_domains'] ?? [])),
+            ]
+        ); ?>
         <?php endif; ?>
     </div>
 
     <!-- Time Selector -->
     <div class="time-selector">
-        <label><i class="fas fa-calendar-alt"></i> Časové období:</label>
-        <a href="?days=7" class="<?php echo $days == 7 ? 'active' : ''; ?>">7 dní</a>
-        <a href="?days=14" class="<?php echo $days == 14 ? 'active' : ''; ?>">14 dní</a>
-        <a href="?days=30" class="<?php echo $days == 30 ? 'active' : ''; ?>">30 dní</a>
-        <a href="?days=60" class="<?php echo $days == 60 ? 'active' : ''; ?>">60 dní</a>
-        <a href="?days=90" class="<?php echo $days == 90 ? 'active' : ''; ?>">90 dní</a>
+        <label><i class="fas fa-calendar-alt"></i> <?php echo htmlspecialchars(__('stats_time_range_label')); ?></label>
+        <a href="?days=7" class="<?php echo $days == 7 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 7])); ?></a>
+        <a href="?days=14" class="<?php echo $days == 14 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 14])); ?></a>
+        <a href="?days=30" class="<?php echo $days == 30 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 30])); ?></a>
+        <a href="?days=60" class="<?php echo $days == 60 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 60])); ?></a>
+        <a href="?days=90" class="<?php echo $days == 90 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 90])); ?></a>
     </div>
 
     <div class="charts-grid">
     <!-- Action Distribution Chart -->
     <div class="chart-container">
-        <h2><i class="fas fa-pie-chart"></i> Rozložení podle akcí (Message Trace)</h2>
+        <h2><i class="fas fa-pie-chart"></i> <?php echo htmlspecialchars(__('stats_action_distribution')); ?></h2>
         <div class="chart-wrapper">
             <canvas id="actionChart"></canvas>
         </div>
@@ -132,7 +144,7 @@ include 'menu.php';
 
     <!-- State Distribution Chart -->
     <div class="chart-container">
-        <h2><i class="fas fa-chart-pie"></i> Rozložení podle stavu (Karanténa)</h2>
+        <h2><i class="fas fa-chart-pie"></i> <?php echo htmlspecialchars(__('stats_state_distribution')); ?></h2>
         <div class="chart-wrapper">
             <canvas id="stateChart"></canvas>
         </div>
@@ -140,7 +152,7 @@ include 'menu.php';
 
     <!-- Daily Trace Chart -->
     <div class="chart-container">
-        <h2><i class="fas fa-chart-area"></i> Denní graf zpráv (Message Trace)</h2>
+        <h2><i class="fas fa-chart-area"></i> <?php echo htmlspecialchars(__('stats_daily_trace')); ?></h2>
         <div class="chart-wrapper chart-wrapper-large">
             <canvas id="dailyChart"></canvas>
         </div>
@@ -148,7 +160,7 @@ include 'menu.php';
 
     <!-- Weekly Trace Chart -->
     <div class="chart-container">
-        <h2><i class="fas fa-chart-bar"></i> Týdenní graf zpráv (Message Trace)</h2>
+        <h2><i class="fas fa-chart-bar"></i> <?php echo htmlspecialchars(__('stats_weekly_trace')); ?></h2>
         <div class="chart-wrapper chart-wrapper-large">
             <canvas id="weeklyChart"></canvas>
         </div>
@@ -159,15 +171,15 @@ include 'menu.php';
     <div class="tables-grid">
     <!-- Top Recipients Table -->
     <div class="table-container">
-        <h2><i class="fas fa-users"></i> Top příjemci</h2>
+        <h2><i class="fas fa-users"></i> <?php echo htmlspecialchars(__('stats_top_recipients')); ?></h2>
         <table class="messages-table">
             <thead>
                 <tr>
                     <th style="width: 40px;">#</th>
-                    <th style="width: 300px;">Příjemce</th>
-                    <th style="width: 100px;">Počet</th>
-                    <th style="width: 100px;">Průměrné skóre</th>
-                    <th>Max skóre</th>
+                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -199,15 +211,15 @@ include 'menu.php';
 
     <!-- Top Senders Table -->
     <div class="table-container">
-        <h2><i class="fas fa-paper-plane"></i> Top odesílatelé</h2>
+        <h2><i class="fas fa-paper-plane"></i> <?php echo htmlspecialchars(__('stats_top_senders')); ?></h2>
         <table class="messages-table">
             <thead>
                 <tr>
                     <th style="width: 40px;">#</th>
-                    <th style="width: 300px;">Odesílatel</th>
-                    <th style="width: 100px;">Počet</th>
-                    <th style="width: 100px;">Průměrné skóre</th>
-                    <th>Max skóre</th>
+                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_sender')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -240,6 +252,9 @@ include 'menu.php';
 </div>
 
 <script>
+const statsStrings = {
+    messagesLabel: <?php echo json_encode(__('stats_messages_label')); ?>
+};
 // Action Distribution Chart (Pie)
 <?php
 $actionLabels = [];
@@ -278,7 +293,7 @@ new Chart(document.getElementById('actionChart'), {
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        return context.label + ': ' + context.parsed.toLocaleString() + ' zpráv';
+                        return context.label + ': ' + context.parsed.toLocaleString() + ' ' + statsStrings.messagesLabel;
                     }
                 }
             }
@@ -318,7 +333,7 @@ new Chart(document.getElementById('stateChart'), {
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        return context.label + ': ' + context.parsed.toLocaleString() + ' zpráv';
+                        return context.label + ': ' + context.parsed.toLocaleString() + ' ' + statsStrings.messagesLabel;
                     }
                 }
             }

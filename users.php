@@ -2,14 +2,15 @@
 /**
  * Rspamd Quarantine - User Management
  * Version: 2.0.4
- * OPRAVENO: Plná grafická úprava + funkční domény
+ * Updated: Full UI refresh and working domain assignments
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lang_helper.php';
 requireAuth();
 
 if (!checkPermission('admin')) {
-    $_SESSION['error_msg'] = 'Nemáte oprávnění ke správě uživatelů';
+    $_SESSION['error_msg'] = __('users_access_denied');
     header('Location: index.php');
     exit;
 }
@@ -31,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Validate
             if (empty($username) || empty($password) || empty($email) || empty($role)) {
-                $_SESSION['error_msg'] = 'Vyplňte všechna povinná pole';
+                $_SESSION['error_msg'] = __('users_required_fields');
                 break;
             }
 
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
             $stmt->execute([$username]);
             if ($stmt->fetch()) {
-                $_SESSION['error_msg'] = 'Uživatelské jméno již existuje';
+                $_SESSION['error_msg'] = __('users_username_exists');
                 break;
             }
 
@@ -57,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$username, $password_hash, $email, $role, $active]);
                 $user_id = $db->lastInsertId();
 
-                // Insert domains for domain_admin (každá doména na vlastní řádek)
+                // Insert domains for domain_admin (one per line)
                 if ($role === 'domain_admin' && !empty($domains_text)) {
                     $domains = array_filter(array_map('trim', explode("\n", $domains_text)));
                     $stmt = $db->prepare("INSERT INTO user_domains (user_id, domain) VALUES (?, ?)");
@@ -70,11 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $db->commit();
                 logAudit($_SESSION['user_id'], $_SESSION['username'], 'user_created', 'users', $user_id, "Created user: $username");
-                $_SESSION['success_msg'] = 'Uživatel byl úspěšně přidán';
+                $_SESSION['success_msg'] = __('users_create_success');
 
             } catch (Exception $e) {
                 $db->rollBack();
-                $_SESSION['error_msg'] = 'Chyba při vytváření uživatele: ' . $e->getMessage();
+                $_SESSION['error_msg'] = __('users_create_error', ['error' => $e->getMessage()]);
             }
             break;
 
@@ -89,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Validate
             if (empty($username) || empty($email) || empty($role)) {
-                $_SESSION['error_msg'] = 'Vyplňte všechna povinná pole';
+                $_SESSION['error_msg'] = __('users_required_fields');
                 break;
             }
 
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
             $stmt->execute([$username, $user_id]);
             if ($stmt->fetch()) {
-                $_SESSION['error_msg'] = 'Uživatelské jméno již existuje';
+                $_SESSION['error_msg'] = __('users_username_exists');
                 break;
             }
 
@@ -122,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$username, $email, $role, $active, $user_id]);
                 }
 
-                // Update domains for domain_admin (každá doména na vlastní řádek)
+                // Update domains for domain_admin (one per line)
                 $stmt = $db->prepare("DELETE FROM user_domains WHERE user_id = ?");
                 $stmt->execute([$user_id]);
 
@@ -138,11 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $db->commit();
                 logAudit($_SESSION['user_id'], $_SESSION['username'], 'user_updated', 'users', $user_id, "Updated user: $username");
-                $_SESSION['success_msg'] = 'Uživatel byl úspěšně aktualizován';
+                $_SESSION['success_msg'] = __('users_update_success');
 
             } catch (Exception $e) {
                 $db->rollBack();
-                $_SESSION['error_msg'] = 'Chyba při aktualizaci uživatele: ' . $e->getMessage();
+                $_SESSION['error_msg'] = __('users_update_error', ['error' => $e->getMessage()]);
             }
             break;
 
@@ -151,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Prevent deleting yourself
             if ($user_id == $_SESSION['user_id']) {
-                $_SESSION['error_msg'] = 'Nemůžete smazat sám sebe';
+                $_SESSION['error_msg'] = __('users_delete_self_error');
                 break;
             }
 
@@ -173,11 +174,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $db->commit();
                 logAudit($_SESSION['user_id'], $_SESSION['username'], 'user_deleted', 'users', $user_id, "Deleted user: " . $user['username']);
-                $_SESSION['success_msg'] = 'Uživatel byl smazán';
+                $_SESSION['success_msg'] = __('users_delete_success');
 
             } catch (Exception $e) {
                 $db->rollBack();
-                $_SESSION['error_msg'] = 'Chyba při mazání uživatele: ' . $e->getMessage();
+                $_SESSION['error_msg'] = __('users_delete_error', ['error' => $e->getMessage()]);
             }
             break;
     }
@@ -186,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Get all users with their domains (každá doména na vlastní řádek)
+// Get all users with their domains (one per line)
 $sql = "
     SELECT 
         u.*,
@@ -204,11 +205,17 @@ $active_users = count(array_filter($users, function($u) { return $u['active']; }
 $admin_count = count(array_filter($users, function($u) { return $u['role'] === 'admin'; }));
 $domain_admin_count = count(array_filter($users, function($u) { return $u['role'] === 'domain_admin'; }));
 
-$page_title = "Správa uživatelů - Rspamd Quarantine";
+$role_labels = [
+    'admin' => __('role_admin'),
+    'domain_admin' => __('role_domain_admin'),
+    'viewer' => __('role_viewer'),
+];
+
+$page_title = __('users_page_title', ['app' => __('app_title')]);
 include 'menu.php';
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -646,23 +653,23 @@ include 'menu.php';
     <!-- HEADER WITH STATS -->
     <div class="header-with-stats">
         <div class="header-title">
-            <h1><i class="fas fa-users-cog"></i> Správa uživatelů</h1>
+            <h1><i class="fas fa-users-cog"></i> <?php echo htmlspecialchars(__('users_title')); ?></h1>
         </div>
         <div class="stats-inline">
             <div class="stat-inline-item total">
-                <span class="stat-inline-label">Celkem</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_total_label')); ?></span>
                 <span class="stat-inline-value"><?php echo $total_users; ?></span>
             </div>
             <div class="stat-inline-item active">
-                <span class="stat-inline-label">Aktivní</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_active_label')); ?></span>
                 <span class="stat-inline-value"><?php echo $active_users; ?></span>
             </div>
             <div class="stat-inline-item admin">
-                <span class="stat-inline-label">Admini</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_admin_label')); ?></span>
                 <span class="stat-inline-value"><?php echo $admin_count; ?></span>
             </div>
             <div class="stat-inline-item domain-admin">
-                <span class="stat-inline-label">Domain Admin</span>
+                <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_domain_admin_label')); ?></span>
                 <span class="stat-inline-value"><?php echo $domain_admin_count; ?></span>
             </div>
         </div>
@@ -673,7 +680,7 @@ include 'menu.php';
     <!-- ACTION BUTTONS -->
     <div class="action-buttons">
         <button class="btn-add-user" onclick="openAddModal()">
-            <i class="fas fa-user-plus"></i> Přidat uživatele
+            <i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_add')); ?>
         </button>
     </div>
 
@@ -681,21 +688,21 @@ include 'menu.php';
     <?php if (empty($users)): ?>
         <div class="no-results">
             <i class="fas fa-users"></i>
-            <h3>Žádní uživatelé</h3>
-            <p>Přidejte prvního uživatele pomocí tlačítka výše</p>
+            <h3><?php echo htmlspecialchars(__('users_no_users_title')); ?></h3>
+            <p><?php echo htmlspecialchars(__('users_no_users_desc')); ?></p>
         </div>
     <?php else: ?>
         <table class="users-table">
             <thead>
                 <tr>
                     <th style="width: 60px;">ID</th>
-                    <th>Uživatelské jméno</th>
-                    <th>E-mail</th>
-                    <th style="width: 130px;">Role</th>
-                    <th style="width: 200px;">Domény</th>
-                    <th style="width: 100px;">Stav</th>
-                    <th style="width: 130px;">Vytvořeno</th>
-                    <th style="width: 100px;">Akce</th>
+                    <th><?php echo htmlspecialchars(__('users_username')); ?></th>
+                    <th><?php echo htmlspecialchars(__('users_email')); ?></th>
+                    <th style="width: 130px;"><?php echo htmlspecialchars(__('users_role')); ?></th>
+                    <th style="width: 200px;"><?php echo htmlspecialchars(__('users_domains')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('status')); ?></th>
+                    <th style="width: 130px;"><?php echo htmlspecialchars(__('users_created')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -705,20 +712,20 @@ include 'menu.php';
                         <td>
                             <strong><?php echo htmlspecialchars($user['username']); ?></strong>
                             <?php if ($user['id'] == $_SESSION['user_id']): ?>
-                                <span style="color: #3498db; font-size: 10px;"> (YOU)</span>
+                                <span style="color: #3498db; font-size: 10px;"> (<?php echo htmlspecialchars(__('users_label_you')); ?>)</span>
                             <?php endif; ?>
                         </td>
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
                         <td>
                             <?php
                             $roleClass = 'role-viewer';
-                            $roleName = 'Viewer';
+                            $roleName = $role_labels['viewer'];
                             if ($user['role'] === 'admin') {
                                 $roleClass = 'role-admin';
-                                $roleName = 'Admin';
+                                $roleName = $role_labels['admin'];
                             } elseif ($user['role'] === 'domain_admin') {
                                 $roleClass = 'role-domain-admin';
-                                $roleName = 'Domain Admin';
+                                $roleName = $role_labels['domain_admin'];
                             }
                             ?>
                             <span class="role-badge <?php echo $roleClass; ?>"><?php echo $roleName; ?></span>
@@ -736,11 +743,11 @@ include 'menu.php';
                         <td>
                             <?php if ($user['active']): ?>
                                 <span class="status-badge status-active">
-                                    <i class="fas fa-check-circle"></i> Aktivní
+                                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars(__('users_active')); ?>
                                 </span>
                             <?php else: ?>
                                 <span class="status-badge status-inactive">
-                                    <i class="fas fa-times-circle"></i> Neaktivní
+                                    <i class="fas fa-times-circle"></i> <?php echo htmlspecialchars(__('users_inactive')); ?>
                                 </span>
                             <?php endif; ?>
                         </td>
@@ -748,11 +755,11 @@ include 'menu.php';
                             <?php echo date('d.m.Y H:i', strtotime($user['created_at'])); ?>
                         </td>
                         <td>
-                            <button class="action-btn btn-edit" onclick='openEditModal(<?php echo json_encode($user); ?>)' title="Upravit">
+                            <button class="action-btn btn-edit" onclick='openEditModal(<?php echo json_encode($user); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                <button class="action-btn btn-delete" onclick="confirmDelete(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username'], ENT_QUOTES); ?>')" title="Smazat">
+                                <button class="action-btn btn-delete" onclick="confirmDelete(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username'], ENT_QUOTES); ?>')" title="<?php echo htmlspecialchars(__('delete')); ?>">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             <?php endif; ?>
@@ -768,45 +775,45 @@ include 'menu.php';
 <div id="addModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2><i class="fas fa-user-plus"></i> Přidat nového uživatele</h2>
+            <h2><i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_add_title')); ?></h2>
             <span class="close" onclick="closeAddModal()">&times;</span>
         </div>
         <form method="POST" action="">
             <input type="hidden" name="action" value="add">
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Uživatelské jméno *</label>
+                    <label><?php echo htmlspecialchars(__('users_username')); ?> *</label>
                     <input type="text" name="username" required>
                 </div>
                 <div class="form-group">
-                    <label>E-mail *</label>
+                    <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
                     <input type="email" name="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Heslo *</label>
+                    <label><?php echo htmlspecialchars(__('users_password')); ?> *</label>
                     <input type="password" name="password" required>
                 </div>
                 <div class="form-group">
-                    <label>Role *</label>
+                    <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
                     <select name="role" id="addRole" onchange="toggleDomains('addRole', 'addDomains')" required>
-                        <option value="viewer">Viewer</option>
-                        <option value="domain_admin">Domain Admin</option>
-                        <option value="admin">Admin</option>
+                        <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
+                        <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
+                        <option value="admin"><?php echo htmlspecialchars($role_labels['admin']); ?></option>
                     </select>
                 </div>
                 <div class="form-group" id="addDomains" style="display:none;">
-                    <label>Domény (každá na nový řádek)</label>
-                    <textarea name="domains" placeholder="example.com&#10;test.com"></textarea>
+                    <label><?php echo htmlspecialchars(__('users_domains_hint')); ?></label>
+                    <textarea name="domains" placeholder="<?php echo htmlspecialchars(__('users_domains_placeholder')); ?>"></textarea>
                 </div>
                 <div class="form-group checkbox-group">
                     <input type="checkbox" name="active" id="addActive" checked>
-                    <label for="addActive">Aktivní účet</label>
+                    <label for="addActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeAddModal()">Zrušit</button>
+                <button type="button" class="btn-cancel" onclick="closeAddModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
                 <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> Vytvořit uživatele
+                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_create')); ?>
                 </button>
             </div>
         </form>
@@ -817,7 +824,7 @@ include 'menu.php';
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2><i class="fas fa-edit"></i> Upravit uživatele</h2>
+            <h2><i class="fas fa-edit"></i> <?php echo htmlspecialchars(__('users_edit_title')); ?></h2>
             <span class="close" onclick="closeEditModal()">&times;</span>
         </div>
         <form method="POST" action="">
@@ -825,38 +832,38 @@ include 'menu.php';
             <input type="hidden" name="user_id" id="editUserId">
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Uživatelské jméno *</label>
+                    <label><?php echo htmlspecialchars(__('users_username')); ?> *</label>
                     <input type="text" name="username" id="editUsername" required>
                 </div>
                 <div class="form-group">
-                    <label>E-mail *</label>
+                    <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
                     <input type="email" name="email" id="editEmail" required>
                 </div>
                 <div class="form-group">
-                    <label>Nové heslo (ponechte prázdné pro beze změny)</label>
+                    <label><?php echo htmlspecialchars(__('users_new_password_hint')); ?></label>
                     <input type="password" name="password" id="editPassword">
                 </div>
                 <div class="form-group">
-                    <label>Role *</label>
+                    <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
                     <select name="role" id="editRole" onchange="toggleDomains('editRole', 'editDomains')" required>
-                        <option value="viewer">Viewer</option>
-                        <option value="domain_admin">Domain Admin</option>
-                        <option value="admin">Admin</option>
+                        <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
+                        <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
+                        <option value="admin"><?php echo htmlspecialchars($role_labels['admin']); ?></option>
                     </select>
                 </div>
                 <div class="form-group" id="editDomains" style="display:none;">
-                    <label>Domény (každá na nový řádek)</label>
+                    <label><?php echo htmlspecialchars(__('users_domains_hint')); ?></label>
                     <textarea name="domains" id="editDomainsText"></textarea>
                 </div>
                 <div class="form-group checkbox-group">
                     <input type="checkbox" name="active" id="editActive">
-                    <label for="editActive">Aktivní účet</label>
+                    <label for="editActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeEditModal()">Zrušit</button>
+                <button type="button" class="btn-cancel" onclick="closeEditModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
                 <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> Uložit změny
+                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_save_changes')); ?>
                 </button>
             </div>
         </form>
@@ -870,6 +877,10 @@ include 'menu.php';
 </form>
 
 <script>
+const usersStrings = {
+    deleteConfirm: <?php echo json_encode(__('users_delete_confirm')); ?>
+};
+
 function openAddModal() {
     document.getElementById('addModal').style.display = 'block';
 }
@@ -906,7 +917,7 @@ function toggleDomains(roleId, domainsId) {
 }
 
 function confirmDelete(userId, username) {
-    if (confirm('Opravdu chcete smazat uživatele "' + username + '"?')) {
+    if (confirm(usersStrings.deleteConfirm.replace('{username}', username))) {
         document.getElementById('deleteUserId').value = userId;
         document.getElementById('deleteForm').submit();
     }

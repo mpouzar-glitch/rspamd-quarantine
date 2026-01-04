@@ -7,6 +7,7 @@
 session_start();
 require_once 'config.php';
 require_once 'filter_helper.php';
+require_once 'lang_helper.php';
 
 // Authentication check
 if (!isAuthenticated()) {
@@ -17,7 +18,7 @@ if (!isAuthenticated()) {
 // Permission check
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 if (!checkPermission('domain_admin')) {
-    die('Nemáte oprávnění pro hromadné operace.');
+    die(__('bulk_permission_denied'));
 }
 
 $db = Database::getInstance()->getConnection();
@@ -60,16 +61,16 @@ unset($msg); // Break reference
 // Get statistics
 $stats = getExtendedQuarantineStats($db, $filters);
 
-$pageTitle = 'Hromadné operace - Rspamd Quarantine';
+$page_title = __('bulk_page_title', ['app' => __('app_title')]);
 include 'menu.php';
 ?>
 
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
@@ -77,10 +78,10 @@ include 'menu.php';
 </head>
 <body>
     <div class="container">
-        <!-- NADPIS SE STATISTIKAMI -->
+        <!-- HEADER WITH STATISTICS -->
         <div class="header-with-stats">
             <div class="header-title">
-                <h1><i class="fas fa-tasks"></i> Hromadné operace</h1>
+                <h1><i class="fas fa-tasks"></i> <?php echo htmlspecialchars(__('bulk_title')); ?></h1>
             </div>
             <div>
                 <?php
@@ -99,7 +100,7 @@ include 'menu.php';
 
         <?php displayAlerts(); ?>
 
-        <!-- FILTRY -->
+        <!-- FILTERS -->
         <?php
         echo renderSearchFilters(getQuarantineFilters([
             'columns' => null,
@@ -121,24 +122,24 @@ include 'menu.php';
         <!-- Action Legend -->
         <div class="action-legend">
             <div class="legend-item">
-                <strong>Akce:</strong>
+                <strong><?php echo htmlspecialchars(__('bulk_action_legend')); ?></strong>
             </div>
             <div class="legend-item">
-                <span class="action-spam">⬤ S</span> = Naučit SPAM
+                <span class="action-spam">⬤ S</span> = <?php echo htmlspecialchars(__('bulk_action_spam')); ?>
             </div>
             <div class="legend-item">
-                <span class="action-ham">⬤ H</span> = Naučit HAM
+                <span class="action-ham">⬤ H</span> = <?php echo htmlspecialchars(__('bulk_action_ham')); ?>
             </div>
             <div class="legend-item">
-                <span class="action-forget">⬤ F</span> = Zapomenout
+                <span class="action-forget">⬤ F</span> = <?php echo htmlspecialchars(__('bulk_action_forget')); ?>
             </div>
             <div class="legend-item">
-                <span class="action-release">☑ R</span> = Uvolnit do schránky
+                <span class="action-release">☑ R</span> = <?php echo htmlspecialchars(__('bulk_action_release')); ?>
             </div>
             <div class="legend-item" style="margin-left: auto;">
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
                     <input type="checkbox" id="htmlPreviewToggle" onchange="toggleHtmlPreview(this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
-                    <span><i class="fas fa-code"></i> <strong>HTML náhled</strong></span>
+                    <span><i class="fas fa-code"></i> <strong><?php echo htmlspecialchars(__('preview_html_toggle')); ?></strong></span>
                 </label>
             </div>
         </div>
@@ -146,31 +147,38 @@ include 'menu.php';
         <!-- Bulk Operations Info -->
         <div class="bulk-actions-info">
             <i class="fas fa-info-circle"></i>
-            <strong>Instrukce:</strong> Pro každou zprávu vyberte jednu akci (S/H/F) a případně zaškrtněte R pro uvolnění. Poté klikněte na tlačítko "Provést operace".
+            <strong><?php echo htmlspecialchars(__('bulk_instructions_label')); ?></strong> <?php echo htmlspecialchars(__('bulk_instructions_text')); ?>
         </div>
 
         <?php if (empty($messages)): ?>
             <div class="no-results">
                 <i class="fas fa-inbox"></i>
-                <h3>Žádné zprávy v karanténě</h3>
-                <p>Upravte filtry nebo počkejte na nové zprávy</p>
+                <h3><?php echo htmlspecialchars(__('bulk_no_messages_title')); ?></h3>
+                <p><?php echo htmlspecialchars(__('bulk_no_messages_desc')); ?></p>
             </div>
         <?php else: ?>
             <form method="POST" action="process_bulk.php" id="bulkForm">
                 <div class="results-info">
-                    Zobrazeno <strong><?php echo count($messages); ?></strong> z <strong><?php echo number_format($totalItems); ?></strong> zpráv
-                    | Stránka <?php echo $page; ?> z <?php echo $totalPages; ?>
+                    <?php echo __(
+                        'bulk_results_info',
+                        [
+                            'shown' => count($messages),
+                            'total' => number_format($totalItems),
+                            'page' => $page,
+                            'pages' => $totalPages,
+                        ]
+                    ); ?>
                 </div>
 
                 <table class="messages-table">
                     <thead>
                         <tr>
-                            <th style="width: 110px;">Čas</th>
-                            <th>Odesílatel</th>
-                            <th>Příjemce</th>
-                            <th>Předmět</th>
-                            <th style="width: 60px;">Skóre</th>
-                            <th style="width: 180px;">Akce</th>
+                            <th style="width: 110px;"><?php echo htmlspecialchars(__('time')); ?></th>
+                            <th><?php echo htmlspecialchars(__('msg_sender')); ?></th>
+                            <th><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
+                            <th><?php echo htmlspecialchars(__('msg_subject')); ?></th>
+                            <th style="width: 60px;"><?php echo htmlspecialchars(__('msg_score')); ?></th>
+                            <th style="width: 180px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -179,7 +187,7 @@ include 'menu.php';
                             $msgId = $msg['id'];
                             $sender = decodeMimeHeader($msg['sender']);
                             $recipients = decodeMimeHeader($msg['recipients']);
-                            $subject = decodeMimeHeader($msg['subject']) ?: '(bez předmětu)';
+                            $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
 
 
@@ -256,7 +264,7 @@ include 'menu.php';
                                     <i class="fas fa-paper-plane"></i> 
                                     <a href="?sender=<?php echo urlencode($sender); ?>" 
                                        class="email-link" 
-                                       title="Filtrovat podle odesílatele: <?php echo htmlspecialchars($sender); ?>">
+                                       title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
                                 </td>
@@ -264,7 +272,7 @@ include 'menu.php';
                                     <i class="fas fa-inbox"></i> 
                                     <a href="?recipient=<?php echo urlencode($recipients); ?>" 
                                        class="email-link" 
-                                       title="Filtrovat podle příjemce: <?php echo htmlspecialchars($recipients); ?>">
+                                       title="<?php echo htmlspecialchars(__('filter_by_recipient', ['recipient' => $recipients])); ?>">
                                         <?php echo htmlspecialchars(truncateText($recipients, 40)); ?>
                                     </a>
                                 </td>
@@ -278,7 +286,7 @@ include 'menu.php';
                                         <?php if (!empty($parsedSymbols)): ?>
                                         <div class="symbols-popup">
                                             <div class="symbols-popup-header">
-                                                <i class="fas fa-list-ul"></i> Rspamd Symboly (<?php echo count($parsedSymbols); ?>)
+                                                <i class="fas fa-list-ul"></i> <?php echo htmlspecialchars(__('symbols_header', ['count' => count($parsedSymbols)])); ?>
                                             </div>
                                             <div class="symbols-grid">
                                                 <?php foreach ($parsedSymbols as $sym): 
@@ -301,19 +309,19 @@ include 'menu.php';
                                 </td>
                                 <td class="text-center">
                                     <div class="action-controls">
-                                        <label class="action-label action-spam" title="Naučit SPAM">
+                                        <label class="action-label action-spam" title="<?php echo htmlspecialchars(__('bulk_action_spam')); ?>">
                                             <input type="radio" name="<?php echo $radioName; ?>" value="spam" class="action-radio" onchange="updateRowState('<?php echo $msgId; ?>')" <?php echo $isAutoLearnSpam ? 'checked' : ''; ?>>
-                                            <span>S</span><?php if ($isAutoLearnSpam) echo ' <i class="fas fa-robot" style="font-size:9px;" title="Auto-learn by Rspamd"></i>'; ?>
+                                            <span>S</span><?php if ($isAutoLearnSpam) echo ' <i class="fas fa-robot" style="font-size:9px;" title="' . htmlspecialchars(__('bulk_auto_learned')) . '"></i>'; ?>
                                         </label>
-                                        <label class="action-label action-ham" title="Naučit HAM">
+                                        <label class="action-label action-ham" title="<?php echo htmlspecialchars(__('bulk_action_ham')); ?>">
                                             <input type="radio" name="<?php echo $radioName; ?>" value="ham" class="action-radio" onchange="updateRowState('<?php echo $msgId; ?>')">
                                             <span>H</span>
                                         </label>
-                                        <label class="action-label action-forget" title="Zapomenout">
+                                        <label class="action-label action-forget" title="<?php echo htmlspecialchars(__('bulk_action_forget')); ?>">
                                             <input type="radio" name="<?php echo $radioName; ?>" value="forget" class="action-radio" onchange="updateRowState('<?php echo $msgId; ?>')">
                                             <span>F</span>
                                         </label>
-                                        <label class="action-label action-release" title="Uvolnit">
+                                        <label class="action-label action-release" title="<?php echo htmlspecialchars(__('bulk_action_release_short')); ?>">
                                             <input type="checkbox" name="release_<?php echo $msgId; ?>" value="1" class="action-checkbox" onchange="updateRowState('<?php echo $msgId; ?>')">
                                             <span>R</span>
                                         </label>
@@ -327,11 +335,11 @@ include 'menu.php';
                 <!-- Bulk Submit Button -->
                 <div class="bulk-submit-container">
                     <button type="submit" class="bulk-submit-btn" id="bulkSubmitBtn" disabled>
-                        <i class="fas fa-play-circle"></i> Provést operace
+                        <i class="fas fa-play-circle"></i> <?php echo htmlspecialchars(__('bulk_submit')); ?>
                         <span class="selected-count" id="selectedCount">0</span>
                     </button>
                     <div style="margin-top: 10px; color: #6c757d; font-size: 13px;">
-                        <i class="fas fa-info-circle"></i> Vyberte akce před odesláním
+                        <i class="fas fa-info-circle"></i> <?php echo htmlspecialchars(__('bulk_submit_hint')); ?>
                     </div>
                 </div>
 
@@ -340,7 +348,7 @@ include 'menu.php';
                     <div class="pagination">
                         <?php if ($page > 1): ?>
                             <a href="?page=<?php echo $page - 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                                <i class="fas fa-chevron-left"></i> Předchozí
+                                <i class="fas fa-chevron-left"></i> <?php echo htmlspecialchars(__('pagination_previous')); ?>
                             </a>
                         <?php endif; ?>
 
@@ -358,7 +366,7 @@ include 'menu.php';
 
                         <?php if ($page < $totalPages): ?>
                             <a href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                                Další <i class="fas fa-chevron-right"></i>
+                                <?php echo htmlspecialchars(__('pagination_next')); ?> <i class="fas fa-chevron-right"></i>
                             </a>
                         <?php endif; ?>
                     </div>
@@ -368,6 +376,23 @@ include 'menu.php';
     </div>
 
     <script>
+    const bulkStrings = {
+        selectActionAlert: <?php echo json_encode(__('bulk_select_action_alert')); ?>,
+        confirmOperations: <?php echo json_encode(__('bulk_confirm_operations')); ?>,
+        previewLoading: <?php echo json_encode(__('preview_loading')); ?>,
+        previewErrorLabel: <?php echo json_encode(__('error')); ?>,
+        previewParseError: <?php echo json_encode(__('preview_parse_error')); ?>,
+        previewLoadFailed: <?php echo json_encode(__('preview_load_failed')); ?>,
+        previewNetworkError: <?php echo json_encode(__('preview_network_error')); ?>,
+        previewTitle: <?php echo json_encode(__('preview_message_title')); ?>,
+        previewSender: <?php echo json_encode(__('msg_sender')); ?>,
+        previewSubject: <?php echo json_encode(__('msg_subject')); ?>,
+        previewTime: <?php echo json_encode(__('time')); ?>,
+        previewScore: <?php echo json_encode(__('msg_score')); ?>,
+        previewModeHtml: <?php echo json_encode(__('preview_mode_html')); ?>,
+        previewModeText: <?php echo json_encode(__('preview_mode_text')); ?>
+    };
+
     // Update row visual state and count selected actions
     function updateRowState(msgId) {
         const row = document.getElementById('row_' + msgId);
@@ -435,7 +460,7 @@ include 'menu.php';
 
         if (allRadios.length === 0 && allCheckboxes.length === 0) {
             e.preventDefault();
-            alert('Vyberte alespoň jednu akci pro zpracování.');
+            alert(bulkStrings.selectActionAlert);
             return false;
         }
 
@@ -453,7 +478,7 @@ include 'menu.php';
         const count = processedMessages.size;
 
         // Confirmation
-        if (!confirm('Opravdu chcete provést operace na ' + count + ' zprávách?')) {
+        if (!confirm(bulkStrings.confirmOperations.replace('{count}', count))) {
             e.preventDefault();
             return false;
         }
@@ -474,7 +499,7 @@ include 'menu.php';
     <!-- Preview Tooltip -->
     <div id="previewTooltip" class="preview-tooltip">
         <div class="preview-loading">
-            <i class="fas fa-spinner fa-spin"></i> Načítám náhled...
+            <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
         </div>
     </div>
 
@@ -568,7 +593,7 @@ include 'menu.php';
             activeRequest.abort();
         }
 
-        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> Načítám náhled...</div>';
+        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> ' + bulkStrings.previewLoading + '</div>';
         tooltip.classList.add('active');
         positionTooltip(x, y);
 
@@ -583,19 +608,19 @@ include 'menu.php';
                     if (data.success) {
                         renderPreview(data);
                     } else {
-                        tooltip.innerHTML = '<div class="preview-error">Chyba: ' + escapeHtml(data.error) + '</div>';
+                        tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewErrorLabel + ': ' + escapeHtml(data.error) + '</div>';
                     }
                 } catch (e) {
-                    tooltip.innerHTML = '<div class="preview-error">Chyba při zpracování odpovědi</div>';
+                    tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewParseError + '</div>';
                 }
             } else {
-                tooltip.innerHTML = '<div class="preview-error">Nepodařilo se načíst náhled</div>';
+                tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewLoadFailed + '</div>';
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            tooltip.innerHTML = '<div class="preview-error">Chyba síťového připojení</div>';
+            tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewNetworkError + '</div>';
             activeRequest = null;
         };
 
@@ -609,20 +634,20 @@ include 'menu.php';
         let formatIndicator = '';
         if (data.is_html) {
             formatIndicator = `<span style="font-size: 10px; color: #007bff; margin-left: 5px;">
-                <i class="fas fa-code"></i> HTML režim
+                <i class="fas fa-code"></i> ${bulkStrings.previewModeHtml}
             </span>`;
         } else if (data.has_html) {
             formatIndicator = `<span style="font-size: 10px; color: #6c757d; margin-left: 5px;">
-                <i class="fas fa-align-left"></i> Text režim
+                <i class="fas fa-align-left"></i> ${bulkStrings.previewModeText}
             </span>`;
         }
 
         tooltip.innerHTML = `
             <div class="preview-header">
-                <h4><i class="fas fa-envelope"></i> Náhled zprávy ${formatIndicator}</h4>
-                <div class="preview-meta"><strong>Od:</strong> ${escapeHtml(data.sender)}</div>
-                <div class="preview-meta"><strong>Předmět:</strong> ${escapeHtml(data.subject)}</div>
-                <div class="preview-meta"><strong>Čas:</strong> ${escapeHtml(data.timestamp)} | <strong>Skóre:</strong> ${data.score}</div>
+                <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
+                <div class="preview-meta"><strong>${bulkStrings.previewSender}:</strong> ${escapeHtml(data.sender)}</div>
+                <div class="preview-meta"><strong>${bulkStrings.previewSubject}:</strong> ${escapeHtml(data.subject)}</div>
+                <div class="preview-meta"><strong>${bulkStrings.previewTime}:</strong> ${escapeHtml(data.timestamp)} | <strong>${bulkStrings.previewScore}:</strong> ${data.score}</div>
             </div>
             <div class="${contentClass}">${data.is_html ? data.preview : escapeHtml(data.preview)}</div>
         `;
