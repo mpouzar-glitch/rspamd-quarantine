@@ -6,6 +6,7 @@
 
 session_start(); 
 require_once 'config.php';
+require_once 'lang_helper.php';
 require_once 'filter_helper.php';
 
 // Authentication check
@@ -55,16 +56,16 @@ unset($msg); // Break reference
 // Get statistics
 $stats = getExtendedQuarantineStats($db, $filters);
 
-$pageTitle = 'Karanténa - Rspamd Quarantine';
+$page_title = __('quarantine_title');
 include 'menu.php';
 ?>
 
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
@@ -72,10 +73,10 @@ include 'menu.php';
 </head>
 <body>
     <div class="container">
-        <!-- NADPIS SE STATISTIKAMI -->
+        <!-- Header with statistics -->
         <div class="header-with-stats">
             <div class="header-title">
-                <h1><i class="fas fa-inbox"></i> Karanténa zpráv</h1>
+                <h1><i class="fas fa-inbox"></i> <?php echo htmlspecialchars(__('quarantine_messages')); ?></h1>
             </div>
             <div>
                 <?php
@@ -94,7 +95,7 @@ include 'menu.php';
 
         <?php displayAlerts(); ?>
 
-        <!-- FILTRY -->
+        <!-- Filters -->
         <?php
         echo renderSearchFilters(getQuarantineFilters([
             'columns' => null,
@@ -116,30 +117,37 @@ include 'menu.php';
         <?php if (empty($messages)): ?>
             <div class="no-results">
                 <i class="fas fa-inbox"></i>
-                <h3>Žádné zprávy nenalezeny</h3>
-                <p>Zkuste upravit kritéria vyhledávání.</p>
+                <h3><?php echo htmlspecialchars(__('quarantine_no_messages')); ?></h3>
+                <p><?php echo htmlspecialchars(__('quarantine_no_messages_desc')); ?></p>
             </div>
         <?php else: ?>
             <div class="results-info" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    Zobrazeno <strong><?php echo count($messages); ?></strong> z <strong><?php echo number_format($totalItems); ?></strong> zpráv
-                    | Stránka <?php echo $page; ?> z <?php echo $totalPages; ?>
+                    <?php echo __(
+                        'quarantine_results_info',
+                        [
+                            'shown' => count($messages),
+                            'total' => number_format($totalItems),
+                            'page' => $page,
+                            'pages' => $totalPages,
+                        ]
+                    ); ?>
                 </div>
                 <label class="preview-toggle">
                     <input type="checkbox" id="htmlPreviewToggle" onchange="toggleHtmlPreview(this.checked)" style="width: 14px; height: 14px; cursor: pointer;">
-                    <i class="fas fa-code"></i> <strong>HTML náhled</strong>
+                    <i class="fas fa-code"></i> <strong><?php echo htmlspecialchars(__('preview_html_toggle')); ?></strong>
                 </label>
             </div>
 
             <table class="messages-table">
                 <thead>
                     <tr>
-                        <th style="width: 110px;">Čas</th>
-                        <th>Odesílatel</th>
-                        <th>Příjemce</th>
-                        <th>Předmět</th>
-                        <th style="width: 60px;">Skóre</th>
-                        <th style="width: 150px;">Operace</th>
+                        <th style="width: 110px;"><?php echo htmlspecialchars(__('time')); ?></th>
+                        <th><?php echo htmlspecialchars(__('msg_sender')); ?></th>
+                        <th><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
+                        <th><?php echo htmlspecialchars(__('subject')); ?></th>
+                        <th style="width: 60px;"><?php echo htmlspecialchars(__('msg_score')); ?></th>
+                        <th style="width: 150px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,7 +156,7 @@ include 'menu.php';
                         $msgId = $msg['id'];
                         $sender = decodeMimeHeader($msg['sender']);
                         $recipients = decodeMimeHeader($msg['recipients']);
-                        $subject = decodeMimeHeader($msg['subject']) ?: '(bez předmětu)';
+                        $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                         $score = round($msg['score'], 2);
 
                         // Parse symbols from JSON
@@ -168,7 +176,7 @@ include 'menu.php';
                                     }
                                 }
 
-                                // Sort by score descending
+                        // Sort by score descending
                                 usort($parsedSymbols, function($a, $b) {
                                     return $b['score'] <=> $a['score'];
                                 });
@@ -217,7 +225,7 @@ include 'menu.php';
                                 <i class="fas fa-paper-plane"></i> 
                                 <a href="?sender=<?php echo urlencode($sender); ?>" 
                                    class="email-link" 
-                                   title="Filtrovat podle odesílatele: <?php echo htmlspecialchars($sender); ?>">
+                                   title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                     <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                 </a>
                             </td>
@@ -225,7 +233,7 @@ include 'menu.php';
                                 <i class="fas fa-inbox"></i> 
                                 <a href="?recipient=<?php echo urlencode($recipients); ?>" 
                                    class="email-link" 
-                                   title="Filtrovat podle příjemce: <?php echo htmlspecialchars($recipients); ?>">
+                                   title="<?php echo htmlspecialchars(__('filter_by_recipient', ['recipient' => $recipients])); ?>">
                                     <?php echo htmlspecialchars(truncateText($recipients, 40)); ?>
                                 </a>
                             </td>
@@ -239,7 +247,7 @@ include 'menu.php';
                                     <?php if (!empty($parsedSymbols)): ?>
                                     <div class="symbols-popup">
                                         <div class="symbols-popup-header">
-                                            <i class="fas fa-list-ul"></i> Rspamd Symboly (<?php echo count($parsedSymbols); ?>)
+                                            <i class="fas fa-list-ul"></i> <?php echo htmlspecialchars(__('msg_symbols')); ?> (<?php echo count($parsedSymbols); ?>)
                                         </div>
                                         <div class="symbols-grid">
                                             <?php foreach ($parsedSymbols as $sym): 
@@ -262,14 +270,14 @@ include 'menu.php';
                             </td>
                             <td class="text-center">
                                 <div class="action-controls">
-                                    <a href="view.php?id=<?php echo $msgId; ?>" class="action-btn view-btn" title="Zobrazit detail">
+                                    <a href="view.php?id=<?php echo $msgId; ?>" class="action-btn view-btn" title="<?php echo htmlspecialchars(__('msg_view_details')); ?>">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <form method="POST" action="operations.php" style="display: inline;">
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="learn_spam">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn learn-spam-btn" title="Naučit jako SPAM">
+                                        <button type="submit" class="action-btn learn-spam-btn" title="<?php echo htmlspecialchars(__('msg_learn_spam')); ?>">
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
@@ -277,7 +285,7 @@ include 'menu.php';
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="learn_ham">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn learn-ham-btn" title="Naučit jako HAM">
+                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -285,15 +293,15 @@ include 'menu.php';
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="release">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn release-btn" title="Uvolnit zprávu">
+                                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
                                             <i class="fas fa-paper-plane"></i>
                                         </button>
                                     </form>
-                                    <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('Opravdu smazat zprávu?');">
+                                    <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="delete">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn delete-btn" title="Smazat zprávu">
+                                        <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
@@ -309,7 +317,7 @@ include 'menu.php';
                 <div class="pagination">
                     <?php if ($page > 1): ?>
                         <a href="?page=<?php echo $page - 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                            <i class="fas fa-chevron-left"></i> Předchozí
+                            <i class="fas fa-chevron-left"></i> <?php echo htmlspecialchars(__('pagination_previous')); ?>
                         </a>
                     <?php endif; ?>
 
@@ -327,7 +335,7 @@ include 'menu.php';
 
                     <?php if ($page < $totalPages): ?>
                         <a href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => ''])); ?>" class="page-link">
-                            Další <i class="fas fa-chevron-right"></i>
+                            <?php echo htmlspecialchars(__('pagination_next')); ?> <i class="fas fa-chevron-right"></i>
                         </a>
                     <?php endif; ?>
                 </div>
@@ -338,7 +346,7 @@ include 'menu.php';
     <!-- Preview Tooltip -->
     <div id="previewTooltip" class="preview-tooltip">
         <div class="preview-loading">
-            <i class="fas fa-spinner fa-spin"></i> Načítám náhled...
+            <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
         </div>
     </div>
 
@@ -417,7 +425,7 @@ include 'menu.php';
             activeRequest.abort();
         }
 
-        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> Načítám náhled...</div>';
+        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?></div>';
         tooltip.classList.add('active');
         positionTooltip(x, y);
 
@@ -432,19 +440,19 @@ include 'menu.php';
                     if (data.success) {
                         renderPreview(data);
                     } else {
-                        tooltip.innerHTML = '<div class="preview-error">Chyba: ' + escapeHtml(data.error) + '</div>';
+                        tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_error')); ?>: ' + escapeHtml(data.error) + '</div>';
                     }
                 } catch (e) {
-                    tooltip.innerHTML = '<div class="preview-error">Chyba při zpracování odpovědi</div>';
+                    tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_parse_error')); ?></div>';
                 }
             } else {
-                tooltip.innerHTML = '<div class="preview-error">Nepodařilo se načíst náhled</div>';
+                tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_load_failed')); ?></div>';
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            tooltip.innerHTML = '<div class="preview-error">Chyba síťového připojení</div>';
+            tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_network_error')); ?></div>';
             activeRequest = null;
         };
 
@@ -458,20 +466,20 @@ include 'menu.php';
         let formatIndicator = '';
         if (data.is_html) {
             formatIndicator = `<span style="font-size: 10px; color: #007bff; margin-left: 5px;">
-                <i class="fas fa-code"></i> HTML režim
+                <i class="fas fa-code"></i> <?php echo htmlspecialchars(__('preview_mode_html')); ?>
             </span>`;
         } else if (data.has_html) {
             formatIndicator = `<span style="font-size: 10px; color: #6c757d; margin-left: 5px;">
-                <i class="fas fa-align-left"></i> Text režim
+                <i class="fas fa-align-left"></i> <?php echo htmlspecialchars(__('preview_mode_text')); ?>
             </span>`;
         }
 
         tooltip.innerHTML = `
             <div class="preview-header">
-                <h4><i class="fas fa-envelope"></i> Náhled zprávy ${formatIndicator}</h4>
-                <div class="preview-meta"><strong>Od:</strong> ${escapeHtml(data.sender)}</div>
-                <div class="preview-meta"><strong>Předmět:</strong> ${escapeHtml(data.subject)}</div>
-                <div class="preview-meta"><strong>Čas:</strong> ${escapeHtml(data.timestamp)} | <strong>Skóre:</strong> ${data.score}</div>
+                <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('from')); ?>:</strong> ${escapeHtml(data.sender)}</div>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('subject')); ?>:</strong> ${escapeHtml(data.subject)}</div>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong><?php echo htmlspecialchars(__('msg_score')); ?>:</strong> ${data.score}</div>
             </div>
             <div class="${contentClass}">${data.is_html ? data.preview : escapeHtml(data.preview)}</div>
         `;

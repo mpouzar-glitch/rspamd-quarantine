@@ -3,6 +3,7 @@
  * Filter Helper Functions
  * Provides reusable filter functionality with session persistence
  */
+require_once __DIR__ . '/lang_helper.php';
 
 /**
  * Initialize filter session if not exists
@@ -60,7 +61,7 @@ function getFiltersFromRequest(string $sessionKey = 'search_filters'): array {
         'score_min',
         'score_max',
         'statefilter',
-        'date',  // ZMĚNĚNO: místo date_from a date_to
+        'date',  // Updated: using single date filter instead of date_from/date_to.
         'sender',
         'recipient',
         'ip',
@@ -107,9 +108,9 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['search'] = [
             'key' => 'search',
             'type' => 'text',
-            'label' => 'Hledat',
+            'label' => __('search'),
             'icon' => 'fas fa-search',
-            'placeholder' => 'Email, Předmět, IP...',
+            'placeholder' => __('filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -119,16 +120,16 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['action'] = [
             'key' => 'action',
             'type' => 'select',
-            'label' => 'Akce',
+            'label' => __('filter_action'),
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
             'options' => [
-                '' => 'Všechny akce',
-                'reject' => 'Reject',
-                'no action' => 'No Action',
-                'add header' => 'Add Header',
-                'rewrite subject' => 'Rewrite Subject',
+                '' => __('filter_all_actions'),
+                'reject' => __('action_reject'),
+                'no action' => __('action_no_action'),
+                'add header' => __('action_add_header'),
+                'rewrite subject' => __('action_rewrite_subject'),
             ],
         ];
     }
@@ -137,10 +138,10 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['score_min'] = [
             'key' => 'score_min',
             'type' => 'number',
-            'label' => 'Min skóre',
+            'label' => __('filter_min_score'),
             'icon' => 'fas fa-chart-line',
             'step' => '0.1',
-            'placeholder' => 'např. 6.0',
+            'placeholder' => __('filter_score_min_placeholder'),
             'value' => getFilterValue('score_min', $sessionKey),
             'class' => 'filter-group score-min',
         ];
@@ -150,10 +151,10 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['score_max'] = [
             'key' => 'score_max',
             'type' => 'number',
-            'label' => 'Max skóre',
+            'label' => __('filter_max_score'),
             'icon' => 'fas fa-chart-line',
             'step' => '0.1',
-            'placeholder' => 'např. 15.0',
+            'placeholder' => __('filter_score_max_placeholder'),
             'value' => getFilterValue('score_max', $sessionKey),
             'class' => 'filter-group score-max',
         ];
@@ -163,16 +164,16 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['statefilter'] = [
             'key' => 'statefilter',
             'type' => 'select',
-            'label' => 'Stav zprávy',
+            'label' => __('msg_status'),
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('statefilter', $sessionKey),
             'class' => 'filter-group',
             'options' => [
-                '' => 'Vše',
-                '0' => '⏸ Karanténa',
-                '1' => '👍 Naučeno HAM',
-                '2' => '👎 Naučeno SPAM',
-                '3' => '✓ Uvolněno',
+                '' => __('state_all'),
+                '0' => __('state_quarantined'),
+                '1' => __('state_learned_ham'),
+                '2' => __('state_learned_spam'),
+                '3' => __('state_released'),
             ],
         ];
     }
@@ -181,7 +182,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['date'] = [
             'key' => 'date',
             'type' => 'date',
-            'label' => 'Datum',
+            'label' => __('date'),
             'icon' => 'fas fa-calendar',
             'value' => getFilterValue('date', $sessionKey),
             'class' => 'filter-group date-filter',
@@ -192,9 +193,9 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['sender'] = [
             'key' => 'sender',
             'type' => 'text',
-            'label' => 'Odesílatel',
+            'label' => __('msg_sender'),
             'icon' => 'fas fa-paper-plane',
-            'placeholder' => 'např. spam@example.com',
+            'placeholder' => __('filter_sender_placeholder'),
             'value' => getFilterValue('sender', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -204,9 +205,9 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['recipient'] = [
             'key' => 'recipient',
             'type' => 'text',
-            'label' => 'Příjemce',
+            'label' => __('msg_recipient'),
             'icon' => 'fas fa-inbox',
-            'placeholder' => 'např. user@domain.com',
+            'placeholder' => __('filter_recipient_placeholder'),
             'value' => getFilterValue('recipient', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -216,9 +217,9 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['ip'] = [
             'key' => 'ip',
             'type' => 'text',
-            'label' => 'IP adresa',
+            'label' => __('filter_ip'),
             'icon' => 'fas fa-network-wired',
-            'placeholder' => 'např. 192.168.1.1',
+            'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -228,9 +229,9 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         $filters['auth_user'] = [
             'key' => 'auth_user',
             'type' => 'text',
-            'label' => 'Auth. uživatel',
+            'label' => __('filter_auth_user'),
             'icon' => 'fas fa-user',
-            'placeholder' => 'např. user@domain',
+            'placeholder' => __('filter_auth_user_placeholder'),
             'value' => getFilterValue('auth_user', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -432,7 +433,7 @@ function renderSearchFilters(array $filters_def): string {
 
                         <button type="button" class="filter-clear-btn" 
                                 onclick="clearFilterField('<?php echo htmlspecialchars($filter['key']); ?>')"
-                                title="Vymazat">
+                                title="<?php echo htmlspecialchars(__('filter_clear')); ?>">
                             ×
                         </button>
                     </div>
@@ -440,7 +441,7 @@ function renderSearchFilters(array $filters_def): string {
             <?php endforeach; ?>
 
             <button type="submit" class="compact-filter-submit">
-                <i class="fas fa-search"></i> Hledat
+                <i class="fas fa-search"></i> <?php echo htmlspecialchars(__('search')); ?>
             </button>
         </div>
     </form>
