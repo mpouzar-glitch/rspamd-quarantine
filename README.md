@@ -67,6 +67,10 @@ Three access levels:
 
 Domain filters are automatically applied in all SQL queries (quarantine, trace, stats, audit).
 
+### Language Auto‑Detection
+- UI language is selected automatically based on the browser locale
+- Supported languages: **cs**, **sk**, **en**, **de**
+
 ### Database Schema
 Complete MariaDB/MySQL schema with:
 - **Core tables**: `quarantine_messages`, `message_trace`
