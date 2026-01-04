@@ -281,7 +281,23 @@ Reload Rspamd after the change:
 systemctl reload rspamd
 ```
 
-### 6. Create Admin User
+### 6. Nastavení Postfix milteru
+
+Přidejte následující nastavení do `/etc/postfix/main.cf`:
+
+```conf
+smtpd_milters = inet:127.0.0.1:11332
+milter_default_action = accept
+milter_protocol = 6
+non_smtpd_milters =
+milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
+
+# Bypass pro localhost (DISABLE milters)
+smtpd_milter_maps = cidr:/etc/postfix/smtpd_milter_maps
+milter_default_action = accept
+```
+
+### 7. Create Admin User
 
 Generate a password hash:
 
@@ -305,7 +321,7 @@ INSERT INTO user_domains (user_id, domain)
 VALUES (1, 'example.com'), (1, 'example.org');
 ```
 
-### 7. File Permissions
+### 8. File Permissions
 
 ```bash
 chown -R www-data:www-data /var/www/rspamd-quarantine-webui
