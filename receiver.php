@@ -121,6 +121,22 @@ $raw_input = file_get_contents('php://input');
 
 $payload = json_decode($raw_input, true);
 $is_json_payload = json_last_error() === JSON_ERROR_NONE && is_array($payload);
+
+if (!$is_json_payload) {
+    $headers_pos = strpos($raw_input, 'Headers:');
+    if ($headers_pos !== false) {
+        $json_start = $headers_pos + strlen('Headers:');
+        $json_end = strpos($raw_input, "\n", $json_start);
+        if ($json_end === false) {
+            $json_end = strlen($raw_input);
+        }
+        $json_candidate = trim(substr($raw_input, $json_start, $json_end - $json_start));
+        if ($json_candidate !== '') {
+            $payload = json_decode($json_candidate, true);
+            $is_json_payload = json_last_error() === JSON_ERROR_NONE && is_array($payload);
+        }
+    }
+}
 $payload_meta = [];
 if ($is_json_payload && isset($payload['meta']) && is_array($payload['meta'])) {
     $payload_meta = $payload['meta'];
@@ -131,6 +147,12 @@ if ($is_json_payload) {
     $message_content = getPayloadValue($payload, $payload_meta, ['message', 'mime', 'raw_message', 'raw']);
     if (is_array($message_content) && isset($message_content['content'])) {
         $message_content = $message_content['content'];
+    }
+    if (is_string($message_content) && $message_content !== '') {
+        $decoded_message = base64_decode($message_content, true);
+        if ($decoded_message !== false && base64_encode($decoded_message) === $message_content) {
+            $message_content = $decoded_message;
+        }
     }
     if (!is_string($message_content) || $message_content === '') {
         $message_content = $raw_input;
