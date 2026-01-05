@@ -1623,4 +1623,118 @@ function getWeeklyTrace($db, $dateFrom, $dateTo, $domainFilter, $params) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// ============================================
+// Rspamd map management helpers
+// ============================================
+
+if (!function_exists('getRspamdApiServers')) {
+    function getRspamdApiServers() {
+        if (defined('RSPAMD_API_SERVERS') && is_array(RSPAMD_API_SERVERS) && !empty(RSPAMD_API_SERVERS)) {
+            return RSPAMD_API_SERVERS;
+        }
+
+        if (defined('RSPAMD_API_URL') && !empty(RSPAMD_API_URL)) {
+            return [RSPAMD_API_URL];
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('getRspamdMapName')) {
+    function getRspamdMapName($listType, $entryType) {
+        $defaultMaps = [
+            'whitelist' => [
+                'ip' => 'whitelist_ip',
+                'email' => 'whitelist_email',
+            ],
+            'blacklist' => [
+                'ip' => 'blacklist_ip',
+                'email' => 'blacklist_email',
+            ],
+        ];
+
+        if (defined('RSPAMD_MAPS') && is_array(RSPAMD_MAPS)) {
+            if (isset(RSPAMD_MAPS[$listType][$entryType])) {
+                return RSPAMD_MAPS[$listType][$entryType];
+            }
+        }
+
+        return $defaultMaps[$listType][$entryType] ?? null;
+    }
+}
+
+if (!function_exists('buildRspamdMapContent')) {
+    function buildRspamdMapContent(array $entries) {
+        $lines = [];
+        foreach ($entries as $entry) {
+            $value = str_replace(["\r", "\n"], '', $entry['entry_value']);
+            $score = is_numeric($entry['score']) ? $entry['score'] : 0;
+            $lines[] = trim($value . ' ' . $score);
+        }
+
+        return implode("\n", $lines) . "\n";
+    }
+}
+
+if (!function_exists('uploadRspamdMap')) {
+    function uploadRspamdMap($mapName, $content) {
+        $servers = getRspamdApiServers();
+        if (empty($servers)) {
+            return [
+                'success' => false,
+                'error' => 'Rspamd API není nakonfigurováno',
+                'results' => [],
+            ];
+        }
+
+        $results = [];
+        $success = true;
+
+        foreach ($servers as $server) {
+            $url = rtrim($server, '/') . '/maps';
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, [
+                'map' => $mapName,
+                'data' => $content,
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+            $headers = [];
+            if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
+                $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
+            }
+
+            if (!empty($headers)) {
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            }
+
+            $response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_error = curl_error($ch);
+            curl_close($ch);
+
+            $serverResult = [
+                'server' => $server,
+                'http_code' => $http_code,
+                'response' => $response,
+                'error' => $curl_error ?: null,
+            ];
+
+            if ($http_code < 200 || $http_code >= 300 || $curl_error) {
+                $success = false;
+            }
+
+            $results[] = $serverResult;
+        }
+
+        return [
+            'success' => $success,
+            'results' => $results,
+        ];
+    }
+}
+
 ?>

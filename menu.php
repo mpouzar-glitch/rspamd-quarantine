@@ -371,6 +371,13 @@ try {
             </a>
 
             <?php if (checkPermission('admin')): ?>
+                <a href="maps.php" class="nav-item <?= $current_page === 'maps.php' ? 'active' : '' ?>">
+                    <i class="fas fa-list-check"></i>
+                    <span><?php echo htmlspecialchars(__('nav_maps')); ?></span>
+                </a>
+            <?php endif; ?>
+
+            <?php if (checkPermission('admin')): ?>
                 <a href="users.php" class="nav-item <?= $current_page === 'users.php' ? 'active' : '' ?>">
                     <i class="fas fa-users-cog"></i>
                     <span><?php echo htmlspecialchars(__('nav_users')); ?></span>

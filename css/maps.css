@@ -1,0 +1,52 @@
+.maps-grid {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.maps-panel {
+    flex: 1 1 0;
+    background: #fff;
+    border-radius: 6px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.maps-panel-header {
+    margin-bottom: 15px;
+}
+
+.maps-panel-header h2 {
+    margin-bottom: 6px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.maps-panel-header p {
+    margin: 0;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.maps-form {
+    margin-bottom: 15px;
+}
+
+.maps-table {
+    width: 100%;
+}
+
+.maps-table .no-results {
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+@media (max-width: 1200px) {
+    .maps-grid {
+        flex-direction: column;
+    }
+}
