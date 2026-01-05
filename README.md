@@ -131,6 +131,9 @@ Trace view for sender/recipient activity and scoring.
 User and role management overview.
 ![User management screenshot (anonymized)](docs/users.jpg)
 
+### Whhitelist / Blacklist
+![RSPAMD whitelist/blacklist)](docs/whitelist_blacklist.jpg)
+
 ---
 
 ## Requirements
