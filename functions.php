@@ -571,13 +571,15 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
 
     // Sender filter
     if (!empty($filters['sender'])) {
-        $where[] = "sender LIKE ?";
+        $where[] = "(sender LIKE ? OR headers_from LIKE ?)";
+        $params[] = '%' . $filters['sender'] . '%';
         $params[] = '%' . $filters['sender'] . '%';
     }
 
     // Recipient filter
     if (!empty($filters['recipient'])) {
-        $where[] = "recipients LIKE ?";
+        $where[] = "(recipients LIKE ? OR headers_to LIKE ?)";
+        $params[] = '%' . $filters['recipient'] . '%';
         $params[] = '%' . $filters['recipient'] . '%';
     }
 

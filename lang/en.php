@@ -35,6 +35,7 @@ return [
     'details' => 'Details',
     'user' => 'User',
     'ip_address' => 'IP address',
+    'hostname' => 'Hostname',
     'error' => 'Error',
     'success' => 'Success',
     'warning' => 'Warning',

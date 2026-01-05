@@ -35,6 +35,7 @@ return [
     'details' => 'Detaily',
     'user' => 'Uživatel',
     'ip_address' => 'IP adresa',
+    'hostname' => 'Hostname',
     'error' => 'Chyba',
     'success' => 'Úspěch',
     'warning' => 'Varování',
