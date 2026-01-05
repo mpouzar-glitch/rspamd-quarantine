@@ -1,13 +1,9 @@
 <?php
 /*
+ * Rspamd Quarantine - Helper Functions
  * Version: 2.0.0
  * Author: Martin Pouzar
  * License: GNU General Public License v3.0
- */
-/**
- * Rspamd Quarantine - Helper Functions
- * Version: 2.0.2
- * Updated: 2026-01-01
  * 
  * Authentication, authorization, audit logging, and utility functions
  */
@@ -1850,99 +1846,155 @@ if (!function_exists('uploadRspamdMap')) {
         $success = true;
 
         foreach ($servers as $server) {
-            $headers = [];
-            if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
-                $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
+            $password = defined('RSPAMD_API_PASSWORD') ? RSPAMD_API_PASSWORD : '';
+
+            // KROK 1: Získej seznam map
+            $mapsUrl = rtrim($server, '/') . '/maps';
+            $ch = curl_init($mapsUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Password: ' . $password]);
+
+            $mapsResponse = curl_exec($ch);
+            $mapsHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($mapsHttpCode !== 200) {
+                $results[] = [
+                    'server' => $server,
+                    'error' => 'Nelze načíst seznam map (HTTP ' . $mapsHttpCode . ')',
+                    'success' => false,
+                ];
+                $success = false;
+                continue;
             }
 
-            $url = rtrim($server, '/') . '/maps';
-            $mapExists = null;
-            $mapCheckError = null;
-
-            $checkHandle = curl_init($url);
-            curl_setopt($checkHandle, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($checkHandle, CURLOPT_TIMEOUT, 10);
-            if (!empty($headers)) {
-                curl_setopt($checkHandle, CURLOPT_HTTPHEADER, $headers);
-            }
-
-            $mapsResponse = curl_exec($checkHandle);
-            $mapsHttpCode = curl_getinfo($checkHandle, CURLINFO_HTTP_CODE);
-            $mapsCurlError = curl_error($checkHandle);
-            curl_close($checkHandle);
-
-            if ($mapsCurlError || $mapsHttpCode < 200 || $mapsHttpCode >= 300) {
-                $mapCheckError = $mapsCurlError ?: 'HTTP ' . ($mapsHttpCode ?: 'n/a');
-            } else {
                 $maps = json_decode($mapsResponse, true);
                 if (!is_array($maps)) {
-                    $mapCheckError = 'Neplatná odpověď API pro seznam map';
-                } else {
-                    foreach ($maps as $map) {
-                        if (is_array($map)) {
-                            $candidates = [
-                                $map['id'] ?? null,
-                                $map['name'] ?? null,
-                                $map['map'] ?? null,
-                                $map['uri'] ?? null,
+                $results[] = [
+                    'server' => $server,
+                    'error' => 'Neplatná odpověď API pro seznam map',
+                    'success' => false,
                             ];
-                            foreach ($candidates as $candidate) {
-                                if (!$candidate) {
+                $success = false;
                                     continue;
                                 }
 
-                                if ($candidate === $mapName || strpos($candidate, $mapName) !== false) {
-                                    $mapExists = true;
-                                    break 2;
+            // KROK 2: Najdi ID mapy
+            $mapId = null;
+            $mapUri = null;
+            $mapEditable = false;
+
+            foreach ($maps as $map) {
+                if (!is_array($map)) {
+                    continue;
                                 }
+
+                $uri = $map['uri'] ?? '';
+
+                // Hledej přesnou shodu s .map souborem
+                if (strpos($uri, $mapName . '.map') !== false) {
+                    $isEditable = ($map['editable'] ?? false) === true;
+
+                    // Preferuj editovatelné mapy ve /var/lib/rspamd/
+                    if ($isEditable && strpos($uri, '/var/lib/rspamd/') !== false) {
+                        $mapId = $map['map'];
+                        $mapUri = $uri;
+                        $mapEditable = true;
+                        break;  // Perfektní match, ukonči
+                    } elseif ($isEditable && $mapId === null) {
+                        $mapId = $map['map'];
+                        $mapUri = $uri;
+                        $mapEditable = true;
+                        // Pokračuj hledat /var/lib/rspamd/ verzi
                             }
-                        } elseif (is_string($map)) {
-                            if ($map === $mapName || strpos($map, $mapName) !== false) {
-                                $mapExists = true;
-                                break;
                             }
                         }
-                    }
 
-                    if ($mapExists !== true) {
-                        $mapExists = false;
+            if ($mapId === null) {
+                $results[] = [
+                    'server' => $server,
+                    'error' => "Mapa '{$mapName}.map' nebyla nalezena.",
+                    'hint' => "Zkontroluj: 1) Existuje /var/lib/rspamd/{$mapName}.map? 2) Je v /etc/rspamd/local.d/multimap.conf? 3) Byl Rspamd restartován?",
+                    'success' => false,
+                    'available_maps' => array_values(array_filter(
+                        array_map(function($m) {
+                            $uri = $m['uri'] ?? '';
+                            // Ukaž jen custom mapy (ne vestavěné)
+                            if (strpos($uri, '/var/lib/rspamd/') !== false || 
+                                (strpos($uri, '.map') !== false && 
+                                 strpos($uri, 'whitelist') === false && 
+                                 strpos($uri, 'blacklist') === false)) {
+                                return basename($uri);
                     }
+                            return null;
+                        }, $maps)
+                    )),
+                ];
+                $success = false;
+                continue;
                 }
+
+            if (!$mapEditable) {
+                $results[] = [
+                    'server' => $server,
+                    'error' => "Mapa '{$mapName}' (ID: $mapId) není editovatelná",
+                    'hint' => "Mapa musí být v /var/lib/rspamd/, ne v /etc/rspamd/",
+                    'map_uri' => $mapUri,
+                    'success' => false,
+                ];
+                $success = false;
+                continue;
             }
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, [
-                'map' => $mapName,
-                'data' => $content,
-            ]);
+            $content = trim($content);
+            if (empty($content)) {
+                // Rspamd nemá rád úplně prázdné soubory u některých typů map
+                // Lepší je tam nechat aspoň komentář
+                $content = "# Empty map\n";
+            } else {
+                // Zajisti, že končí novým řádkem
+                $content .= "\n";
+            }
+
+            // KROK 3: Ulož data
+            $saveUrl = rtrim($server, '/') . '/savemap';
+            $ch = curl_init($saveUrl);
+            
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $content);             
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-            if (!empty($headers)) {
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Map-Id: " . (string)$mapId, // ID z předchozího kroku
+                "Map: " . (string)$mapId, // ID z předchozího kroku
+                'Password: ' . $password,
+                'Content-Type: text/plain', // Rspamd přijímá raw text
+                "Content-Length: " . strlen($content) 
+            ]);
 
             $response = curl_exec($ch);
-            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curl_error = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
-            $serverResult = [
+            $serverSuccess = ($httpCode >= 200 && $httpCode < 300 && !$curlError);
+
+            $results[] = [
                 'server' => $server,
-                'http_code' => $http_code,
+                'map_id' => $mapId,
+                'map_uri' => $mapUri,
+                'map_name' => $mapName,
+                'http_code' => $httpCode,
                 'response' => $response,
-                'error' => $curl_error ?: null,
-                'map_exists' => $mapExists,
-                'map_created' => $mapExists === false && !$curl_error && $http_code >= 200 && $http_code < 300,
-                'map_check_error' => $mapCheckError,
+                'error' => $curlError ?: null,
+                'success' => $serverSuccess,
+                'data_size' => strlen($content),
             ];
 
-            if ($http_code < 200 || $http_code >= 300 || $curl_error || $mapCheckError) {
+            if (!$serverSuccess) {
                 $success = false;
             }
-
-            $results[] = $serverResult;
         }
 
         return [
