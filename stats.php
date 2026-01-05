@@ -41,6 +41,7 @@ $actionDist = getActionDistribution($db, $dateFrom, $dateTo, $domainFilter, $par
 $stateDist = getStateDistribution($db, $dateFrom, $dateTo, $domainFilter, $params);
 $dailyTrace = getDailyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $weeklyTrace = getWeeklyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
+$topSymbols = getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
 
 $page_title = __('stats_page_title', ['app' => __('app_title')]);
 
@@ -244,6 +245,46 @@ include 'menu.php';
                     <td>
                         <?php 
                         $score = $sender['max_score'] ?? 0;
+                        $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
+                        ?>
+                        <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top Symbols Table -->
+    <div class="table-container">
+        <h2><i class="fas fa-flag"></i> <?php echo htmlspecialchars(__('stats_top_symbols')); ?></h2>
+        <table class="messages-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_symbols')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($topSymbols as $i => $symbol): ?>
+                <?php if ($i > 40) break; ?>
+                <tr>
+                    <td><?php echo $i + 1; ?></td>
+                    <td><strong><?php echo truncateWithTooltip($symbol['symbol'], 40); ?></strong></td>
+                    <td><?php echo number_format($symbol['count']); ?></td>
+                    <td>
+                        <?php
+                        $score = $symbol['avg_score'] ?? 0;
+                        $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
+                        ?>
+                        <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
+                    </td>
+                    <td>
+                        <?php
+                        $score = $symbol['max_score'] ?? 0;
                         $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
                         ?>
                         <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
