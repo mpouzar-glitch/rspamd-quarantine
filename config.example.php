@@ -55,7 +55,7 @@ define('AUTOLEARN_ENABLED', true);
 // Score threshold for auto-learning as SPAM
 // Messages in quarantine (state=0) with score >= this value will be
 // automatically selected for SPAM learning
-define('AUTOLEARN_SCORE', 15.0);
+define('AUTOLEARN_SCORE', 20.0);
 
 // ============================================
 // Database Configuration
