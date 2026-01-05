@@ -140,6 +140,9 @@ return [
     'maps_config_missing' => 'Chybí konfigurace mapy.',
     'maps_upload_failed' => 'Nahrání mapy selhalo na: {servers}.',
     'maps_upload_failed_generic' => 'Nahrání mapy selhalo.',
+    'maps_add_whitelist_sender' => 'Přidat odesílatele do whitelistu',
+    'maps_add_blacklist_sender' => 'Přidat odesílatele do blacklistu',
+    'maps_permission_denied' => 'Nemáte oprávnění spravovat mapy.',
 
     // Message details
     'msg_sender' => 'Odesílatel',

@@ -140,6 +140,9 @@ return [
     'maps_config_missing' => 'Map configuration missing.',
     'maps_upload_failed' => 'Map upload failed on: {servers}.',
     'maps_upload_failed_generic' => 'Map upload failed.',
+    'maps_add_whitelist_sender' => 'Add sender to whitelist',
+    'maps_add_blacklist_sender' => 'Add sender to blacklist',
+    'maps_permission_denied' => 'You do not have permission to manage maps.',
 
     // Message details
     'msg_sender' => 'Sender',

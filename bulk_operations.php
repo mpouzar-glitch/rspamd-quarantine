@@ -23,6 +23,8 @@ if (!checkPermission('domain_admin')) {
 
 $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
+$returnUrl = $_SERVER['REQUEST_URI'] ?? 'bulk_operations.php';
+$canManageMaps = checkPermission('domain_admin');
 
 // Get filters from request
 $filters = getFiltersFromRequest();
@@ -186,6 +188,7 @@ include 'menu.php';
                             <?php
                             $msgId = $msg['id'];
                             $sender = decodeMimeHeader($msg['sender']);
+                            $senderEmail = extractEmailAddress($sender);
                             $recipients = decodeMimeHeader($msg['recipients']);
                             $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
@@ -266,6 +269,26 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
+                                    <?php if ($canManageMaps && $senderEmail): ?>
+                                        <span class="sender-actions">
+                                            <form method="POST" action="map_quick_add.php" class="sender-action-form">
+                                                <input type="hidden" name="list_type" value="whitelist">
+                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                <button type="submit" class="sender-action-btn whitelist-btn" title="<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>">
+                                                    <i class="fas fa-shield-alt"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="map_quick_add.php" class="sender-action-form">
+                                                <input type="hidden" name="list_type" value="blacklist">
+                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                <button type="submit" class="sender-action-btn blacklist-btn" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </form>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="email-field">
                                     <i class="fas fa-inbox"></i> 

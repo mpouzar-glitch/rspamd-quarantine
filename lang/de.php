@@ -140,6 +140,9 @@ return [
     'maps_config_missing' => 'Map-Konfiguration fehlt.',
     'maps_upload_failed' => 'Map-Upload fehlgeschlagen auf: {servers}.',
     'maps_upload_failed_generic' => 'Map-Upload fehlgeschlagen.',
+    'maps_add_whitelist_sender' => 'Absender zur Whitelist hinzufügen',
+    'maps_add_blacklist_sender' => 'Absender zur Blacklist hinzufügen',
+    'maps_permission_denied' => 'Sie haben keine Berechtigung, Maps zu verwalten.',
 
     // Message details
     'msg_sender' => 'Absender',

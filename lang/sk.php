@@ -140,6 +140,9 @@ return [
     'maps_config_missing' => 'Chýba konfigurácia mapy.',
     'maps_upload_failed' => 'Nahratie mapy zlyhalo na: {servers}.',
     'maps_upload_failed_generic' => 'Nahratie mapy zlyhalo.',
+    'maps_add_whitelist_sender' => 'Pridať odosielateľa do whitelistu',
+    'maps_add_blacklist_sender' => 'Pridať odosielateľa do blacklistu',
+    'maps_permission_denied' => 'Nemáte oprávnenie spravovať mapy.',
 
     // Message details
     'msg_sender' => 'Odosielateľ',
