@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 /**
  * Bulk Operations - Mass operations on quarantined messages
  * Updated: Radio buttons, compact table, auto-learn, state colors

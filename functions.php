@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 /**
  * Rspamd Quarantine - Helper Functions
  * Version: 2.0.2
@@ -559,7 +564,9 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
     // Search filter
     if (!empty($filters['search'])) {
         $search = '%' . $filters['search'] . '%';
-        $where[] = "(sender LIKE ? OR recipients LIKE ? OR subject LIKE ? OR message_id LIKE ?)";
+        $where[] = "(sender LIKE ? OR headers_from LIKE ? OR recipients LIKE ? OR headers_to LIKE ? OR subject LIKE ? OR message_id LIKE ?)";
+        $params[] = $search;
+        $params[] = $search;
         $params[] = $search;
         $params[] = $search;
         $params[] = $search;

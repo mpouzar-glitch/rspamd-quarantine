@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 /**
  * Rspamd Quarantine Receiver
  * Version: 2.0.4
@@ -139,11 +144,19 @@ if ($headers_end !== false) {
     preg_match('/^To:(.*)$/mi', $headers_text, $to_match);
     preg_match('/^Subject:(.*)$/mi', $headers_text, $subject_match);
     preg_match('/^Date:(.*)$/mi', $headers_text, $date_match);
+    preg_match('/^Received:(.*)$/mi', $headers_text, $received_match);
 
     $headers['from'] = isset($from_match[1]) ? trim($from_match[1]) : null;
     $headers['to'] = isset($to_match[1]) ? trim($to_match[1]) : null;
     $headers['subject'] = isset($subject_match[1]) ? trim($subject_match[1]) : null;
     $headers['date'] = isset($date_match[1]) ? trim($date_match[1]) : null;
+    $headers['hostname'] = null;
+
+    if (isset($received_match[1])) {
+        if (preg_match('/\\bfrom\\s+([^\\s\\(\\);]+)/i', $received_match[1], $hostname_match)) {
+            $headers['hostname'] = trim($hostname_match[1]);
+        }
+    }
 }
 
 try {
@@ -153,12 +166,12 @@ try {
         INSERT INTO quarantine_messages (
             message_id, queue_id, sender, recipients, subject,
             ip_address, authenticated_user, action, score, symbols,
-            headers_from, headers_to, headers_date,
+            headers_from, headers_to, headers_date, hostname,
             message_content, metadata
         ) VALUES (
             :message_id, :queue_id, :sender, :recipients, :subject,
             :ip, :user, :action, :score, :symbols,
-            :headers_from, :headers_to, :headers_date,
+            :headers_from, :headers_to, :headers_date, :hostname,
             :message_content, :metadata
         )
     ");
@@ -177,6 +190,7 @@ try {
         ':headers_from' => $headers['from'],
         ':headers_to' => $headers['to'],
         ':headers_date' => $headers['date'],
+        ':hostname' => $headers['hostname'],
         ':message_content' => $message_content,
         ':metadata' => json_encode(array_merge($metadata, $headers))
     ]);

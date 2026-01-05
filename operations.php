@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 // operations.php - Zpracování operací s karanténními zprávami
 // Upraveno pro podporu volání z process_bulk.php bez redirectu
 
