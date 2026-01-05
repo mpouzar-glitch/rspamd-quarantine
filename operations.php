@@ -135,10 +135,38 @@ if (empty($message_ids)) {
 
 // Check domain access for all messages
 $placeholders = implode(',', array_fill(0, count($message_ids), '?'));
-$check_sql = "SELECT id, sender, recipients, message_content FROM quarantine_messages WHERE id IN ($placeholders)";
+$check_sql = "SELECT id, sender, recipients, subject, message_content FROM quarantine_messages WHERE id IN ($placeholders)";
 $check_stmt = $db->prepare($check_sql);
 $check_stmt->execute($message_ids);
 $messages = $check_stmt->fetchAll();
+
+$message_lookup = [];
+foreach ($messages as $msg) {
+    $message_lookup[$msg['id']] = $msg;
+}
+
+$buildAuditDetails = function (string $base, ?array $msg): string {
+    if (!$msg) {
+        return $base;
+    }
+
+    $subject = decodeMimeHeader($msg['subject'] ?? '');
+    $from = $msg['sender'] ?? '';
+    $details = [];
+
+    if ($from !== '') {
+        $details[] = "from: $from";
+    }
+    if ($subject !== '') {
+        $details[] = "subject: $subject";
+    }
+
+    if (empty($details)) {
+        return $base;
+    }
+
+    return $base . ' (' . implode(', ', $details) . ')';
+};
 
 if ($_SESSION['user_role'] !== 'admin') {
     foreach ($messages as $msg) {
@@ -189,7 +217,9 @@ try {
                 try {
                     $stmt->execute([$id]);
                     $success_count++;
-                    logAudit($user_id, $user, 'bulk_delete', 'quarantine', $id, "Bulk deleted message ID $id");
+                    $msg = $message_lookup[$id] ?? null;
+                    $details = $buildAuditDetails("Bulk deleted message ID $id", $msg);
+                    logAudit($user_id, $user, 'bulk_delete', 'quarantine', $id, $details);
                 } catch (Exception $e) {
                     $error_count++;
                     error_log("Bulk delete error for ID $id: " . $e->getMessage());
@@ -214,7 +244,8 @@ try {
                         $log_stmt->execute([$msg['id'], $user]);
                         $update_stmt->execute([$user, $msg['id']]);
                         $success_count++;
-                        logAudit($user_id, $user, 'bulk_learn_ham', 'quarantine', $msg['id'], "Bulk learned as HAM ID " . $msg['id']);
+                        $details = $buildAuditDetails("Bulk learned as HAM ID " . $msg['id'], $msg);
+                        logAudit($user_id, $user, 'bulk_learn_ham', 'quarantine', $msg['id'], $details);
                     } else {
                         $error_count++;
                         error_log("Learn HAM error for ID {$msg['id']}: " . ($result['error'] ?? 'Unknown'));
@@ -243,7 +274,8 @@ try {
                         $log_stmt->execute([$msg['id'], $user]);
                         $update_stmt->execute([$user, $msg['id']]);
                         $success_count++;
-                        logAudit($user_id, $user, 'bulk_learn_spam', 'quarantine', $msg['id'], "Bulk learned as SPAM ID " . $msg['id']);
+                        $details = $buildAuditDetails("Bulk learned as SPAM ID " . $msg['id'], $msg);
+                        logAudit($user_id, $user, 'bulk_learn_spam', 'quarantine', $msg['id'], $details);
                     } else {
                         $error_count++;
                         error_log("Learn SPAM error for ID {$msg['id']}: " . ($result['error'] ?? 'Unknown'));
