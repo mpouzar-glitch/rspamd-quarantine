@@ -27,10 +27,18 @@ $returnUrl = $_SERVER['REQUEST_URI'] ?? 'index.php';
 $canManageMaps = checkPermission('domain_admin');
 
 // Get filters from request
+$pageSessionKey = 'index_page';
+if (isset($_GET['reset_filters']) && $_GET['reset_filters'] == '1') {
+    unset($_SESSION[$pageSessionKey]);
+}
 $filters = getFiltersFromRequest();
 
 // Pagination
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$page = $_SESSION[$pageSessionKey] ?? 1;
+if (isset($_GET['page'])) {
+    $page = max(1, (int)$_GET['page']);
+    $_SESSION[$pageSessionKey] = $page;
+}
 $offset = ($page - 1) * ITEMS_PER_PAGE;
 
 // Get total count
