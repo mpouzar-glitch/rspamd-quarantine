@@ -275,8 +275,8 @@ rules {
         backend = "http";
         url = "http://127.0.0.1/rspamd-quarantine/receiver.php";
         selector = "is_spam";
-        formatter = "default";
-        meta_headers = true;
+        formatter = "json_with_message";
+        mime_type = "application/json";
         timeout = 10s;
     }
 
