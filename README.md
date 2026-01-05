@@ -284,6 +284,77 @@ Reload Rspamd after the change:
 systemctl reload rspamd
 ```
 
+### 5a. Nastavení whitelistu/blacklistu v Rspamd
+
+Pro whitelist/blacklist adres a IP využijte modul `multimap`. Vytvořte nebo upravte `/etc/rspamd/local.d/multimap.conf`:
+
+```conf
+# /etc/rspamd/local.d/multimap.conf
+WHITELIST_EMAIL {
+    type = "from";
+    map = "/var/lib/rspamd/whitelist_email.map";
+    symbol = "WHITELIST_EMAIL";
+    description = "Whitelist email addresses";
+    score = -10.0;
+}
+
+BLACKLIST_EMAIL {
+    type = "from";
+    map = "/var/lib/rspamd/blacklist_email.map";
+    symbol = "BLACKLIST_EMAIL";
+    description = "Blacklist email addresses";
+    action = "reject";
+}
+
+WHITELIST_IP {
+    type = "ip";
+    map = "/var/lib/rspamd/whitelist_ip.map";
+    symbol = "WHITELIST_IP";
+    description = "Whitelist IP addresses";
+    score = -10.0;
+}
+
+BLACKLIST_IP {
+    type = "ip";
+    map = "/var/lib/rspamd/blacklist_ip.map";
+    symbol = "BLACKLIST_IP";
+    description = "Blacklist IP addresses";
+    action = "reject";
+}
+```
+
+Vytvořte mapovací soubory (jeden záznam na řádek):
+
+```bash
+sudo touch /var/lib/rspamd/whitelist_email.map
+sudo touch /var/lib/rspamd/blacklist_email.map
+sudo touch /var/lib/rspamd/whitelist_ip.map
+sudo touch /var/lib/rspamd/blacklist_ip.map
+```
+
+Příklad obsahu map:
+
+```
+# whitelist_email.map
+user@example.com
+another.user@example.org
+
+# blacklist_email.map
+bad.sender@example.net
+
+# whitelist_ip.map
+192.0.2.10
+
+# blacklist_ip.map
+203.0.113.25
+```
+
+Po úpravách reloadujte Rspamd:
+
+```bash
+systemctl reload rspamd
+```
+
 ### 6. Nastavení Postfix milteru
 
 Přidejte následující nastavení do `/etc/postfix/main.cf`:
