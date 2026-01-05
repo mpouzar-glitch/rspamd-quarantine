@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 /**
  * Rspamd Quarantine - Main Index
  * Updated: Compact table, state colors, preview tooltip, icon-only buttons, clickable emails

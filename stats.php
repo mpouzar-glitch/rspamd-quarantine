@@ -1,4 +1,9 @@
 <?php
+/*
+ * Version: 2.0.0
+ * Author: Martin Pouzar
+ * License: GNU General Public License v3.0
+ */
 // stats.php - Statistics and charts for Rspamd Quarantine
 // Shows detailed statistics with charts and tables
 // Supports multi-domain filtering for domain_admin users

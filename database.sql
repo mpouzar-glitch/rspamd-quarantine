@@ -1,3 +1,6 @@
+-- Version: 2.0.0
+-- Author: Martin Pouzar
+-- License: GNU General Public License v3.0
 -- phpMyAdmin SQL Dump
 -- version 5.2.2
 -- https://www.phpmyadmin.net/
@@ -104,6 +107,7 @@ CREATE TABLE `quarantine_messages` (
   `headers_from` varchar(255) DEFAULT NULL,
   `headers_to` text DEFAULT NULL,
   `headers_date` varchar(255) DEFAULT NULL,
+  `hostname` varchar(255) DEFAULT NULL,
   `message_content` longblob DEFAULT NULL,
   `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
   `state` tinyint(1) DEFAULT 0,

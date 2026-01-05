@@ -1,3 +1,8 @@
+<!--
+Version: 2.0.0
+Author: Martin Pouzar
+License: GNU General Public License v3.0
+-->
 # Rspamd Quarantine Web UI
 
 Rspamd Quarantine Web UI is a lightweight web application for browsing, managing, and auditing messages processed by an Rspamd‑based mail infrastructure. It is designed for system administrators and helpdesk staff who need fast, safe control over quarantined mail, message traces, and user actions.
