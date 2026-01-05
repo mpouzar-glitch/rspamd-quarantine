@@ -190,30 +190,29 @@ include 'menu.php';
                             $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
 
+                            // Parse symbols from JSON
+                            $symbols = $msg['symbols'] ?? '';
+                            $parsedSymbols = [];
 
-                        // Parse symbols from JSON
-                        $symbols = $msg['symbols'] ?? '';
-                        $parsedSymbols = [];
+                            if (!empty($symbols)) {
+                                $symbolsData = json_decode($symbols, true);
 
-                        if (!empty($symbols)) {
-                            $symbolsData = json_decode($symbols, true);
-
-                            if (is_array($symbolsData)) {
-                                foreach ($symbolsData as $symbol) {
-                                    if (isset($symbol['name']) && isset($symbol['score'])) {
-                                        $parsedSymbols[] = [
-                                            'name' => $symbol['name'],
-                                            'score' => floatval($symbol['score'])
-                                        ];
+                                if (is_array($symbolsData)) {
+                                    foreach ($symbolsData as $symbol) {
+                                        if (isset($symbol['name']) && isset($symbol['score'])) {
+                                            $parsedSymbols[] = [
+                                                'name' => $symbol['name'],
+                                                'score' => floatval($symbol['score'])
+                                            ];
+                                        }
                                     }
-                                }
 
-                                // Sort by score descending
-                                usort($parsedSymbols, function($a, $b) {
-                                    return $b['score'] <=> $a['score'];
-                                });
+                                    // Sort by score descending
+                                    usort($parsedSymbols, function($a, $b) {
+                                        return $b['score'] <=> $a['score'];
+                                    });
+                                }
                             }
-                        }
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
                             // Score class

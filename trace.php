@@ -176,6 +176,10 @@ include 'menu.php';
                                         }
                                     }
                                 }
+                                // Sort by score descending
+                                usort($parsed_symbols, function($a, $b) {
+                                    return $b['score'] <=> $a['score'];
+                                });
                             }
 
                             // Action class - using existing badge CSS
