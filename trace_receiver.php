@@ -112,7 +112,30 @@ try {
     $authenticated_user = $data['user'] ?? $data['authenticated_user'] ?? null;
     $action = $data['action'] ?? 'unknown';
     $score = floatval($data['score'] ?? 0);
-    $hostname = $data['hostname'] ?? '';
+    $hostname = $data['hostname']
+        ?? $data['rspamd_server']
+        ?? ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+
+    $headers_from = '';
+    if (isset($data['header_from'])) {
+        $headers_from = is_array($data['header_from']) ? implode(', ', $data['header_from']) : $data['header_from'];
+    } elseif (isset($data['headers_from'])) {
+        $headers_from = is_array($data['headers_from']) ? implode(', ', $data['headers_from']) : $data['headers_from'];
+    } elseif (!empty($sender)) {
+        $headers_from = $sender;
+    }
+
+    $headers_to = '';
+    if (isset($data['header_to'])) {
+        $headers_to = is_array($data['header_to']) ? implode(', ', $data['header_to']) : $data['header_to'];
+    } elseif (isset($data['headers_to'])) {
+        $headers_to = is_array($data['headers_to']) ? implode(', ', $data['headers_to']) : $data['headers_to'];
+    } elseif (!empty($recipients)) {
+        $headers_to = $recipients;
+    }
+
+    $size_bytes = isset($data['size']) ? (int)$data['size'] : null;
+    $metadata_json = json_encode($data, JSON_UNESCAPED_UNICODE);
     
     // Parse symbols - OPRAVA
     $symbols_str = '';
@@ -158,24 +181,29 @@ try {
     
     // OPRAVA: Explicitně definovat parametry
     $params = [
-        $message_id, 
-        $queue_id, 
-        $sender, 
+        $message_id,
+        $queue_id,
+        $sender,
         $recipients,  // Nyní je to string, ne pole
-        $subject, 
+        $subject,
         $ip_address,
-        $authenticated_user, 
-        $action, 
-        $score, 
-        $symbols_str, 
-        $hostname
+        $authenticated_user,
+        $action,
+        $score,
+        $symbols_str,
+        $size_bytes,
+        $headers_from,
+        $headers_to,
+        $hostname,
+        $metadata_json
     ];
     
     // Insert into message_trace (všechny zprávy)
     $stmt = $db->prepare("
         INSERT INTO message_trace (message_id, queue_id, sender, recipients, subject, ip_address, 
-                                  authenticated_user, action, score, symbols, hostname)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  authenticated_user, action, score, symbols, size_bytes,
+                                  headers_from, headers_to, hostname, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
     $result = $stmt->execute($params);
