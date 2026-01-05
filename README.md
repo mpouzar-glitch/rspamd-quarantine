@@ -571,7 +571,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Security
 
-If you discover a security vulnerability, please email security@example.com instead of using the issue tracker.
+If you discover a security vulnerability, please email noc@milnet.cz instead of using the issue tracker.
 
 ---
 
