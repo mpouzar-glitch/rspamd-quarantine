@@ -80,6 +80,27 @@ function ipInCIDR(string $ip, string $cidr): bool {
     return ($ip_long & $mask_long) === ($subnet_long & $mask_long);
 }
 
+/**
+ * Get the first matching value from payload/meta arrays.
+ *
+ * @param array $payload
+ * @param array $meta
+ * @param array $keys
+ * @return mixed|null
+ */
+function getPayloadValue(array $payload, array $meta, array $keys) {
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $payload)) {
+            return $payload[$key];
+        }
+        if (array_key_exists($key, $meta)) {
+            return $meta[$key];
+        }
+    }
+
+    return null;
+}
+
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -96,7 +117,25 @@ if (!isAllowedReceiverIP()) {
 }
 
 // Get the raw message content
-$message_content = file_get_contents('php://input');
+$raw_input = file_get_contents('php://input');
+
+$payload = json_decode($raw_input, true);
+$is_json_payload = json_last_error() === JSON_ERROR_NONE && is_array($payload);
+$payload_meta = [];
+if ($is_json_payload && isset($payload['meta']) && is_array($payload['meta'])) {
+    $payload_meta = $payload['meta'];
+}
+
+$message_content = $raw_input;
+if ($is_json_payload) {
+    $message_content = getPayloadValue($payload, $payload_meta, ['message', 'mime', 'raw_message', 'raw']);
+    if (is_array($message_content) && isset($message_content['content'])) {
+        $message_content = $message_content['content'];
+    }
+    if (!is_string($message_content) || $message_content === '') {
+        $message_content = $raw_input;
+    }
+}
 
 if (empty($message_content)) {
     error_log('Receiver: Empty message content received');
@@ -106,28 +145,63 @@ if (empty($message_content)) {
 }
 
 // Get metadata from headers
+$header_recipients = $_SERVER['HTTP_X_RSPAMD_RCPT'] ?? null;
 $metadata = [
-    'message_id' => $_SERVER['HTTP_X_RSPAMD_MESSAGE_ID'] ?? null,
-    'queue_id' => $_SERVER['HTTP_X_RSPAMD_QUEUE_ID'] ?? null,
-    'sender' => $_SERVER['HTTP_X_RSPAMD_FROM'] ?? null,
-    'recipients_raw' => $_SERVER['HTTP_X_RSPAMD_RCPT'] ?? null,
-    'ip' => $_SERVER['HTTP_X_RSPAMD_IP'] ?? null,
-    'user' => $_SERVER['HTTP_X_RSPAMD_USER'] ?? null,
-    'action' => $_SERVER['HTTP_X_RSPAMD_ACTION'] ?? null,
-    'score' => $_SERVER['HTTP_X_RSPAMD_SCORE'] ?? null,
-    'symbols' => $_SERVER['HTTP_X_RSPAMD_SYMBOLS'] ?? null,
+    'message_id' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['message_id', 'message-id', 'messageId'])
+        : ($_SERVER['HTTP_X_RSPAMD_MESSAGE_ID'] ?? null),
+    'queue_id' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['queue_id', 'queue-id', 'queueId'])
+        : ($_SERVER['HTTP_X_RSPAMD_QUEUE_ID'] ?? null),
+    'sender' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['from', 'sender', 'mail_from', 'mail-from'])
+        : ($_SERVER['HTTP_X_RSPAMD_FROM'] ?? null),
+    'recipients_raw' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['rcpt', 'rcpts', 'recipients', 'mail_to', 'mail-to'])
+        : $header_recipients,
+    'ip' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['ip', 'client_ip', 'client-ip'])
+        : ($_SERVER['HTTP_X_RSPAMD_IP'] ?? null),
+    'user' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['user', 'authenticated_user', 'authenticated-user'])
+        : ($_SERVER['HTTP_X_RSPAMD_USER'] ?? null),
+    'action' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['action', 'default_action', 'default-action'])
+        : ($_SERVER['HTTP_X_RSPAMD_ACTION'] ?? null),
+    'score' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['score', 'metric_score', 'metric-score'])
+        : ($_SERVER['HTTP_X_RSPAMD_SCORE'] ?? null),
+    'symbols' => $is_json_payload
+        ? getPayloadValue($payload, $payload_meta, ['symbols', 'symbol_details', 'symbol-details'])
+        : ($_SERVER['HTTP_X_RSPAMD_SYMBOLS'] ?? null),
 ];
 
 // Parse recipients - remove JSON brackets and quotes
 // Input může být: ["user@domain.com"] nebo "user@domain.com" nebo user@domain.com
 $recipients = $metadata['recipients_raw'];
 if ($recipients) {
-    // Odstraníme [ ] { } " '
-    $recipients = str_replace(['[', ']', '{', '}', '"', "'"], '', $recipients);
-    // Oddělíme čárkami pokud je více příjemců
-    $recipients = trim($recipients);
+    if (is_array($recipients)) {
+        $recipients = implode(', ', $recipients);
+    } else {
+        $recipients = trim((string)$recipients);
+        if (strpos($recipients, '[') === 0) {
+            $decoded_recipients = json_decode($recipients, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_recipients)) {
+                $recipients = implode(', ', $decoded_recipients);
+            }
+        }
+        // Odstraníme [ ] { } " '
+        $recipients = str_replace(['[', ']', '{', '}', '"', "'"], '', $recipients);
+        // Oddělíme čárkami pokud je více příjemců
+        $recipients = trim($recipients);
+    }
 } else {
     $recipients = '';
+}
+
+$symbols = $metadata['symbols'];
+if (is_array($symbols)) {
+    $metadata['symbols'] = json_encode($symbols);
 }
 
 // Parse email headers for additional metadata
