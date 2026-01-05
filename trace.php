@@ -137,6 +137,7 @@ include 'menu.php';
                             <th class="col-action"><?php echo htmlspecialchars(__('action')); ?></th>
                             <th class="col-score"><?php echo htmlspecialchars(__('msg_score')); ?></th>
                             <th class="col-ip"><?php echo htmlspecialchars(__('ip_address')); ?></th>
+                            <th class="col-hostname"><?php echo htmlspecialchars(__('hostname')); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -150,6 +151,7 @@ include 'menu.php';
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
                             $action = $msg['action'] ?? 'unknown';
                             $ipAddress = $msg['ip_address'] ?? '-';
+                            $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
 
                             // Parse symbols like in view.php
@@ -286,6 +288,9 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
                                         <?php echo htmlspecialchars($ipAddress); ?>
                                     </a>
+                                </td>
+                                <td class="hostname-field">
+                                    <?php echo htmlspecialchars($hostname); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
