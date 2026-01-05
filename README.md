@@ -14,6 +14,7 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - **Compact table view** with state‑based row coloring (quarantined, spam, ham, released)
 - **Quick actions**: release, learn as spam/ham, delete
 - **Advanced filtering**: sender, recipient, subject, score range, dates, and state
+- **Clickable sender and recipient values** for fast filtering and navigation
 - **Message preview** with HTML/text toggle in tooltip
 - **Symbol popup** showing Rspamd symbols and scores on hover
 
@@ -29,6 +30,12 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - Fields: timestamp, sender, recipients, IP address, authenticated user, action, score, symbols
 - Useful for debugging deliverability and spam classification issues
 - Same filtering capabilities as quarantine view
+- Click sender or recipient values to jump directly to filtered results
+
+### Whitelist / Blacklist
+- Maintain sender- and IP-based allow/deny lists via Rspamd `multimap` rules
+- Quick add actions let you whitelist/blacklist a sender or recipient directly from message views
+- Changes take effect after reloading Rspamd
 
 ### Statistics and Charts
 - **Volume statistics** for quarantine and trace data
@@ -131,8 +138,8 @@ Trace view for sender/recipient activity and scoring.
 User and role management overview.
 ![User management screenshot (anonymized)](docs/users.jpg)
 
-### Whhitelist / Blacklist
-![RSPAMD whitelist/blacklist)](docs/whitelist_blacklist.jpg)
+### Whitelist / Blacklist
+![RSPAMD whitelist/blacklist](docs/whitelist_blacklist.jpg)
 
 ---
 
@@ -284,9 +291,9 @@ Reload Rspamd after the change:
 systemctl reload rspamd
 ```
 
-### 5a. Nastavení whitelistu/blacklistu v Rspamd
+### 5a. Configure whitelist/blacklist in Rspamd
 
-Pro whitelist/blacklist adres a IP využijte modul `multimap`. Vytvořte nebo upravte `/etc/rspamd/local.d/multimap.conf`:
+For whitelist/blacklist of email addresses and IPs, use the `multimap` module. Create or update `/etc/rspamd/local.d/multimap.conf`:
 
 ```conf
 # /etc/rspamd/local.d/multimap.conf
@@ -323,7 +330,7 @@ BLACKLIST_IP {
 }
 ```
 
-Vytvořte mapovací soubory (jeden záznam na řádek):
+Create the map files (one entry per line):
 
 ```bash
 sudo touch /var/lib/rspamd/whitelist_email.map
@@ -332,7 +339,7 @@ sudo touch /var/lib/rspamd/whitelist_ip.map
 sudo touch /var/lib/rspamd/blacklist_ip.map
 ```
 
-Příklad obsahu map:
+Example map contents:
 
 ```
 # whitelist_email.map
@@ -349,15 +356,15 @@ bad.sender@example.net
 203.0.113.25
 ```
 
-Po úpravách reloadujte Rspamd:
+Reload Rspamd after the changes:
 
 ```bash
 systemctl reload rspamd
 ```
 
-### 6. Nastavení Postfix milteru
+### 6. Configure Postfix milter
 
-Přidejte následující nastavení do `/etc/postfix/main.cf`:
+Add the following settings to `/etc/postfix/main.cf`:
 
 ```conf
 smtpd_milters = inet:127.0.0.1:11332
@@ -366,7 +373,7 @@ milter_protocol = 6
 non_smtpd_milters =
 milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
 
-# Bypass pro localhost (DISABLE milters)
+# Bypass for localhost (DISABLE milters)
 smtpd_milter_maps = cidr:/etc/postfix/smtpd_milter_maps
 milter_default_action = accept
 ```
@@ -417,7 +424,7 @@ chmod 600 config.php
 2. Log in with admin credentials
 
 3. Use the top navigation menu:
-   - **Karanténa** – Quarantined messages browser
+   - **Quarantine** – Quarantined messages browser
    - **Message Trace** – Complete message history
    - **Statistiky** – Statistics and charts
    - **Audit Log** – User action history (admin/domainadmin only)
@@ -439,9 +446,9 @@ chmod 600 config.php
 ### Using Filters
 
 1. Enter search criteria in the filter bar
-2. Active filters are highlighted with blue border
+2. Active filters are highlighted with a blue border
 3. Use the × button to clear individual fields
-4. Click "Hledat" to apply filters
+4. Click "Search" to apply filters
 5. Click "Reset" to clear all filters
 
 ---
