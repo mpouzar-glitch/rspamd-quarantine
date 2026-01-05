@@ -186,6 +186,36 @@ function checkDomainAccess($email) {
     return false;
 }
 
+if (!function_exists('extractEmailAddress')) {
+    function extractEmailAddress($value) {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+            return $value;
+        }
+
+        if (preg_match('/<([^>]+)>/', $value, $matches)) {
+            $candidate = trim($matches[1]);
+            if (filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                return $candidate;
+            }
+        }
+
+        if (preg_match('/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/', $value, $matches)) {
+            $candidate = trim($matches[1]);
+            if (filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+}
+
 /**
  * Generate SQL WHERE clause for domain filtering
  * OPRAVENO: Správná syntaxe LIKE '%@domain' pro hledání domény v emailech

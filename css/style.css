@@ -183,6 +183,49 @@ body {
     padding: 6px 10px;
 }
 
+.sender-actions {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: 6px;
+    align-items: center;
+}
+
+.sender-action-form {
+    display: inline;
+    margin: 0;
+}
+
+.sender-action-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    color: #6c757d;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.sender-action-btn:hover {
+    transform: scale(1.15);
+}
+
+.sender-action-btn.whitelist-btn {
+    color: #28a745;
+}
+
+.sender-action-btn.whitelist-btn:hover {
+    color: #1e7e34;
+}
+
+.sender-action-btn.blacklist-btn {
+    color: #dc3545;
+}
+
+.sender-action-btn.blacklist-btn:hover {
+    color: #c82333;
+}
+
 /* ===== TABLES ===== */
 .table-container {
     background: white;
