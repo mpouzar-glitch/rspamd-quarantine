@@ -115,13 +115,6 @@ if (!defined('RSPAMD_MAPS')) {
 }
 
 // ============================================
-// Message Release Configuration
-// ============================================
-if (!defined('RELEASE_COMMAND')) {
-    define('RELEASE_COMMAND', '/usr/local/bin/rspamd_release.sh');
-}
-
-// ============================================
 // Security Settings
 // ============================================
 if (!defined('SESSION_TIMEOUT')) {
