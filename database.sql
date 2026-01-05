@@ -190,6 +190,23 @@ CREATE TABLE `user_domains` (
 -- --------------------------------------------------------
 
 --
+-- Struktura tabulky `rspamd_map_entries`
+--
+
+CREATE TABLE `rspamd_map_entries` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `list_type` enum('whitelist','blacklist') NOT NULL,
+  `entry_type` enum('ip','email') NOT NULL,
+  `entry_value` varchar(255) NOT NULL,
+  `score` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `created_by` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Zástupná struktura pro pohled `v_daily_stats`
 -- (Vlastní pohled viz níže)
 --
@@ -361,6 +378,16 @@ ALTER TABLE `user_domains`
   ADD KEY `idx_domain` (`domain`);
 
 --
+-- Indexy pro tabulku `rspamd_map_entries`
+--
+ALTER TABLE `rspamd_map_entries`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_map_entry` (`list_type`,`entry_type`,`entry_value`),
+  ADD KEY `idx_list_type` (`list_type`),
+  ADD KEY `idx_entry_type` (`entry_type`),
+  ADD KEY `idx_entry_value` (`entry_value`);
+
+--
 -- AUTO_INCREMENT pro tabulky
 --
 
@@ -405,6 +432,12 @@ ALTER TABLE `users`
 --
 ALTER TABLE `user_domains`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pro tabulku `rspamd_map_entries`
+--
+ALTER TABLE `rspamd_map_entries`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
 
