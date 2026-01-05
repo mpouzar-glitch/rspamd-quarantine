@@ -1533,6 +1533,127 @@ function getTopRecipients($db, $filters = [], $limit = 10) {
 }
 
 /**
+ * Parse symbols string into symbol/score pairs
+ */
+function parseSymbolsForStats($symbols) {
+    $parsedSymbols = [];
+
+    if (empty($symbols)) {
+        return $parsedSymbols;
+    }
+
+    if (preg_match_all('/"name":"([^"]+)".*?"score":([+-]?\d+(?:\.\d+)?)/s', $symbols, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $parsedSymbols[] = [
+                'name' => $match[1],
+                'score' => (float)$match[2]
+            ];
+        }
+        return $parsedSymbols;
+    }
+
+    $decoded = json_decode($symbols, true);
+    if (is_array($decoded)) {
+        foreach ($decoded as $key => $value) {
+            if (is_array($value)) {
+                $name = $value['name'] ?? (is_string($key) ? $key : null);
+                if ($name !== null) {
+                    $parsedSymbols[] = [
+                        'name' => $name,
+                        'score' => isset($value['score']) ? (float)$value['score'] : 0.0
+                    ];
+                }
+            } elseif (is_string($key) && is_numeric($value)) {
+                $parsedSymbols[] = [
+                    'name' => $key,
+                    'score' => (float)$value
+                ];
+            }
+        }
+        if (!empty($parsedSymbols)) {
+            return $parsedSymbols;
+        }
+    }
+
+    $symbolList = explode(',', $symbols);
+    foreach ($symbolList as $symbol) {
+        $symbol = trim($symbol);
+        if ($symbol === '') {
+            continue;
+        }
+        if (preg_match('/^([A-Z0-9_]+)\s*\(([-+]?\d+(?:\.\d+)?)\)$/i', $symbol, $match)) {
+            $parsedSymbols[] = [
+                'name' => $match[1],
+                'score' => (float)$match[2]
+            ];
+        } else {
+            $parsedSymbols[] = [
+                'name' => $symbol,
+                'score' => 0.0
+            ];
+        }
+    }
+
+    return $parsedSymbols;
+}
+
+/**
+ * Get top symbols with scores from trace
+ */
+function getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, $limit = 20) {
+    $domainFilterTrace = str_replace(['sender', 'recipients'], ['mt.sender', 'mt.recipients'], $domainFilter);
+    $sql = "SELECT symbols
+            FROM message_trace mt
+            WHERE timestamp BETWEEN ? AND ?
+            AND ($domainFilterTrace)
+            AND symbols IS NOT NULL
+            AND symbols != ''";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$dateFrom, $dateTo], $params));
+
+    $symbolStats = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $parsedSymbols = parseSymbolsForStats($row['symbols']);
+        foreach ($parsedSymbols as $symbol) {
+            $name = $symbol['name'];
+            $score = $symbol['score'];
+            if (!isset($symbolStats[$name])) {
+                $symbolStats[$name] = [
+                    'count' => 0,
+                    'total_score' => 0.0,
+                    'max_score' => $score
+                ];
+            }
+            $symbolStats[$name]['count']++;
+            $symbolStats[$name]['total_score'] += $score;
+            if ($score > $symbolStats[$name]['max_score']) {
+                $symbolStats[$name]['max_score'] = $score;
+            }
+        }
+    }
+
+    $symbols = [];
+    foreach ($symbolStats as $name => $data) {
+        $symbols[] = [
+            'symbol' => $name,
+            'count' => $data['count'],
+            'avg_score' => $data['count'] > 0 ? $data['total_score'] / $data['count'] : 0.0,
+            'max_score' => $data['max_score']
+        ];
+    }
+
+    usort($symbols, function ($a, $b) {
+        if ($b['count'] === $a['count']) {
+            return $b['avg_score'] <=> $a['avg_score'];
+        }
+        return $b['count'] <=> $a['count'];
+    });
+
+    return array_slice($symbols, 0, $limit);
+}
+
+/**
  * Get volume and count statistics
  */
 function getVolumeStats($db, $dateFrom, $dateTo, $domainFilter, $params) {
