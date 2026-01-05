@@ -1722,7 +1722,66 @@ if (!function_exists('uploadRspamdMap')) {
         $success = true;
 
         foreach ($servers as $server) {
+            $headers = [];
+            if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
+                $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
+            }
+
             $url = rtrim($server, '/') . '/maps';
+            $mapExists = null;
+            $mapCheckError = null;
+
+            $checkHandle = curl_init($url);
+            curl_setopt($checkHandle, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($checkHandle, CURLOPT_TIMEOUT, 10);
+            if (!empty($headers)) {
+                curl_setopt($checkHandle, CURLOPT_HTTPHEADER, $headers);
+            }
+
+            $mapsResponse = curl_exec($checkHandle);
+            $mapsHttpCode = curl_getinfo($checkHandle, CURLINFO_HTTP_CODE);
+            $mapsCurlError = curl_error($checkHandle);
+            curl_close($checkHandle);
+
+            if ($mapsCurlError || $mapsHttpCode < 200 || $mapsHttpCode >= 300) {
+                $mapCheckError = $mapsCurlError ?: 'HTTP ' . ($mapsHttpCode ?: 'n/a');
+            } else {
+                $maps = json_decode($mapsResponse, true);
+                if (!is_array($maps)) {
+                    $mapCheckError = 'Neplatná odpověď API pro seznam map';
+                } else {
+                    foreach ($maps as $map) {
+                        if (is_array($map)) {
+                            $candidates = [
+                                $map['id'] ?? null,
+                                $map['name'] ?? null,
+                                $map['map'] ?? null,
+                                $map['uri'] ?? null,
+                            ];
+                            foreach ($candidates as $candidate) {
+                                if (!$candidate) {
+                                    continue;
+                                }
+
+                                if ($candidate === $mapName || strpos($candidate, $mapName) !== false) {
+                                    $mapExists = true;
+                                    break 2;
+                                }
+                            }
+                        } elseif (is_string($map)) {
+                            if ($map === $mapName || strpos($map, $mapName) !== false) {
+                                $mapExists = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($mapExists !== true) {
+                        $mapExists = false;
+                    }
+                }
+            }
+
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, [
@@ -1731,11 +1790,6 @@ if (!function_exists('uploadRspamdMap')) {
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-            $headers = [];
-            if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
-                $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
-            }
 
             if (!empty($headers)) {
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -1751,9 +1805,12 @@ if (!function_exists('uploadRspamdMap')) {
                 'http_code' => $http_code,
                 'response' => $response,
                 'error' => $curl_error ?: null,
+                'map_exists' => $mapExists,
+                'map_created' => $mapExists === false && !$curl_error && $http_code >= 200 && $http_code < 300,
+                'map_check_error' => $mapCheckError,
             ];
 
-            if ($http_code < 200 || $http_code >= 300 || $curl_error) {
+            if ($http_code < 200 || $http_code >= 300 || $curl_error || $mapCheckError) {
                 $success = false;
             }
 
