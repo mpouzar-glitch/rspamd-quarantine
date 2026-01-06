@@ -14,7 +14,7 @@ require_once __DIR__ . '/lang_helper.php';
 
 requireAuth();
 
-if (!checkPermission('admin')) {
+if (!checkPermission('domain_admin')) {
     $_SESSION['error_msg'] = __('msg_access_denied');
     header('Location: index.php');
     exit;
@@ -22,6 +22,8 @@ if (!checkPermission('admin')) {
 
 $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
+$userRole = $_SESSION['user_role'] ?? 'viewer';
+$isDomainAdmin = $userRole === 'domain_admin';
 
 $allowedLists = ['whitelist', 'blacklist'];
 $allowedTypes = ['ip', 'email'];
@@ -100,6 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($isDomainAdmin && $entryType === 'email' && !checkDomainAccess($entryValue)) {
+            $_SESSION['error_msg'] = __('maps_permission_denied');
+            header('Location: maps.php');
+            exit;
+        }
+
         $score = (float)$scoreInput;
 
         $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
@@ -134,12 +142,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $entryStmt = $db->prepare("SELECT list_type, entry_type FROM rspamd_map_entries WHERE id = ?");
+        $entryStmt = $db->prepare("SELECT list_type, entry_type, created_by FROM rspamd_map_entries WHERE id = ?");
         $entryStmt->execute([$entryId]);
         $entry = $entryStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$entry) {
             $_SESSION['error_msg'] = __('maps_not_found');
+            header('Location: maps.php');
+            exit;
+        }
+
+        if ($isDomainAdmin && $entry['created_by'] !== $user) {
+            $_SESSION['error_msg'] = __('maps_permission_denied');
             header('Location: maps.php');
             exit;
         }
@@ -159,10 +173,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $db->query("SELECT id, list_type, entry_type, entry_value, score, created_by, created_at
-    FROM rspamd_map_entries
-    ORDER BY list_type ASC, entry_type ASC, entry_value ASC");
-$entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if ($isDomainAdmin) {
+    $stmt = $db->prepare("SELECT id, list_type, entry_type, entry_value, score, created_by, created_at
+        FROM rspamd_map_entries
+        WHERE created_by = ?
+        ORDER BY list_type ASC, entry_type ASC, entry_value ASC");
+    $stmt->execute([$user]);
+    $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->query("SELECT id, list_type, entry_type, entry_value, score, created_by, created_at
+        FROM rspamd_map_entries
+        ORDER BY list_type ASC, entry_type ASC, entry_value ASC");
+    $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
 $whitelistEntries = array_values(array_filter($entries, function ($entry) {
     return $entry['list_type'] === 'whitelist';
