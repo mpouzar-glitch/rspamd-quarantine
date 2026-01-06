@@ -201,62 +201,45 @@ body {
 }
 
 .sender-action-btn {
-    background: rgba(108, 117, 125, 0.12);
-    border: 1px solid transparent;
+    background: none;
+    border: none;
     padding: 0;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     color: #6c757d;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, color 0.2s;
 }
 
 .sender-action-btn:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
 }
 
+/* whitelist / blacklist základní barvy */
 .sender-action-btn.whitelist-btn {
     color: #28a745;
-    background: rgba(40, 167, 69, 0.12);
 }
 
 .sender-action-btn.whitelist-btn:hover {
     color: #1e7e34;
-    background: rgba(40, 167, 69, 0.2);
 }
 
 .sender-action-btn.blacklist-btn {
     color: #dc3545;
-    background: rgba(220, 53, 69, 0.12);
 }
 
 .sender-action-btn.blacklist-btn:hover {
     color: #c82333;
-    background: rgba(220, 53, 69, 0.2);
 }
 
-.sender-action-btn.is-listed {
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
-}
-
+/* stav listed – jen zvýraznění barvy */
 .sender-action-btn.whitelist-btn.is-listed {
-    border-color: #28a745;
-    background: rgba(40, 167, 69, 0.22);
-    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+    color: #33ff00; /* výraznější zelená */
 }
 
 .sender-action-btn.blacklist-btn.is-listed {
-    border-color: #dc3545;
-    background: rgba(220, 53, 69, 0.22);
-    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+    color: #ff1744; /* výraznější červená */
 }
-
 /* ===== TABLES ===== */
 .table-container {
     background: white;

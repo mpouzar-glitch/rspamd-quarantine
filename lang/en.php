@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 /**
  * English Language File
  */
@@ -40,7 +35,6 @@ return [
     'details' => 'Details',
     'user' => 'User',
     'ip_address' => 'IP address',
-    'hostname' => 'Hostname',
     'error' => 'Error',
     'success' => 'Success',
     'warning' => 'Warning',
@@ -54,7 +48,6 @@ return [
     'nav_audit' => 'Audit Log',
     'nav_bulk_operations' => 'Bulk Operations',
     'nav_trace' => 'Message Trace',
-    'nav_maps' => 'Whitelist/Blacklist',
     'nav_logout' => 'Logout',
     'nav_profile' => 'Profile',
     'nav_admin' => 'Administration',
@@ -116,38 +109,6 @@ return [
     'msg_delete_failed' => 'Failed to delete message',
     'msg_not_found' => 'Message not found',
     'msg_access_denied' => 'Access to this message denied',
-
-    // Maps
-    'maps_title' => 'Whitelist & Blacklist - Rspamd Quarantine',
-    'maps_heading' => 'Whitelist & Blacklist',
-    'maps_whitelist' => 'Whitelist',
-    'maps_blacklist' => 'Blacklist',
-    'maps_whitelist_desc' => 'Entries that lower the score (whitelist bonus).',
-    'maps_blacklist_desc' => 'Entries that raise the score (blacklist penalty).',
-    'maps_entry_type' => 'Type',
-    'maps_entry_value' => 'Value',
-    'maps_score' => 'Score',
-    'maps_add_entry' => 'Add entry',
-    'maps_created_by' => 'Created by',
-    'maps_created_at' => 'Created at',
-    'maps_no_entries' => 'No entries yet.',
-    'maps_type_ip' => 'IP address',
-    'maps_type_email' => 'Email address',
-    'maps_value_placeholder' => 'e.g. 192.0.2.10 or user@example.com',
-    'maps_invalid_input' => 'Invalid input.',
-    'maps_invalid_value' => 'Please enter a valid IP or email address.',
-    'maps_invalid_score' => 'Please enter a valid score.',
-    'maps_duplicate' => 'This entry already exists.',
-    'maps_added' => 'Entry has been added and uploaded.',
-    'maps_deleted' => 'Entry has been removed and uploaded.',
-    'maps_not_found' => 'Entry not found.',
-    'maps_confirm_delete' => 'Remove this entry?',
-    'maps_config_missing' => 'Map configuration missing.',
-    'maps_upload_failed' => 'Map upload failed on: {servers}.',
-    'maps_upload_failed_generic' => 'Map upload failed.',
-    'maps_add_whitelist_sender' => 'Add sender to whitelist',
-    'maps_add_blacklist_sender' => 'Add sender to blacklist',
-    'maps_permission_denied' => 'You do not have permission to manage maps.',
 
     // Message details
     'msg_sender' => 'Sender',

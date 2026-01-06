@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 /**
  * Rspamd Quarantine - Footer (Full Width)
  * Version 2.1.1

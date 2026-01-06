@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 /**
  * Slovak Language File
  */
@@ -40,7 +35,6 @@ return [
     'details' => 'Detaily',
     'user' => 'Používateľ',
     'ip_address' => 'IP adresa',
-    'hostname' => 'Hostname',
     'error' => 'Chyba',
     'success' => 'Úspech',
     'warning' => 'Varovanie',
@@ -54,7 +48,6 @@ return [
     'nav_audit' => 'Audit Log',
     'nav_bulk_operations' => 'Hromadné operácie',
     'nav_trace' => 'Message Trace',
-    'nav_maps' => 'Whitelist/Blacklist',
     'nav_logout' => 'Odhlásiť',
     'nav_profile' => 'Profil',
     'nav_admin' => 'Administrácia',
@@ -116,38 +109,6 @@ return [
     'msg_delete_failed' => 'Nepodarilo sa zmazať správu',
     'msg_not_found' => 'Správa nebola nájdená',
     'msg_access_denied' => 'Prístup k tejto správe bol odmietnutý',
-
-    // Maps
-    'maps_title' => 'Whitelist & Blacklist - Rspamd Quarantine',
-    'maps_heading' => 'Whitelist & Blacklist',
-    'maps_whitelist' => 'Whitelist',
-    'maps_blacklist' => 'Blacklist',
-    'maps_whitelist_desc' => 'Položky so znížením skóre (zvýhodnenie whitelistu).',
-    'maps_blacklist_desc' => 'Položky so zvýšením skóre (penalizácia blacklistu).',
-    'maps_entry_type' => 'Typ',
-    'maps_entry_value' => 'Hodnota',
-    'maps_score' => 'Skóre',
-    'maps_add_entry' => 'Pridať položku',
-    'maps_created_by' => 'Vytvoril',
-    'maps_created_at' => 'Vytvorené',
-    'maps_no_entries' => 'Zatiaľ žiadne položky.',
-    'maps_type_ip' => 'IP adresa',
-    'maps_type_email' => 'Emailová adresa',
-    'maps_value_placeholder' => 'napr. 192.0.2.10 alebo user@example.com',
-    'maps_invalid_input' => 'Neplatný vstup.',
-    'maps_invalid_value' => 'Zadajte platnú IP alebo emailovú adresu.',
-    'maps_invalid_score' => 'Zadajte platné skóre.',
-    'maps_duplicate' => 'Táto položka už existuje.',
-    'maps_added' => 'Položka bola pridaná a nahraná.',
-    'maps_deleted' => 'Položka bola odstránená a nahraná.',
-    'maps_not_found' => 'Položka nebola nájdená.',
-    'maps_confirm_delete' => 'Naozaj odstrániť túto položku?',
-    'maps_config_missing' => 'Chýba konfigurácia mapy.',
-    'maps_upload_failed' => 'Nahratie mapy zlyhalo na: {servers}.',
-    'maps_upload_failed_generic' => 'Nahratie mapy zlyhalo.',
-    'maps_add_whitelist_sender' => 'Pridať odosielateľa do whitelistu',
-    'maps_add_blacklist_sender' => 'Pridať odosielateľa do blacklistu',
-    'maps_permission_denied' => 'Nemáte oprávnenie spravovať mapy.',
 
     // Message details
     'msg_sender' => 'Odosielateľ',

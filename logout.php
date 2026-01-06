@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 require_once __DIR__ . '/config.php';
 session_start();
 

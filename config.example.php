@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 /**
  * Rspamd Quarantine - Configuration File
  * Version: 2.0.2
@@ -60,7 +55,7 @@ define('AUTOLEARN_ENABLED', true);
 // Score threshold for auto-learning as SPAM
 // Messages in quarantine (state=0) with score >= this value will be
 // automatically selected for SPAM learning
-define('AUTOLEARN_SCORE', 20.0);
+define('AUTOLEARN_SCORE', 15.0);
 
 // ============================================
 // Database Configuration
@@ -98,25 +93,11 @@ if (!defined('RSPAMD_API_URL')) {
     define('RSPAMD_API_PASSWORD', '');  // Empty if no password
 }
 
-// Optional: group of Rspamd API servers for map sync
-if (!defined('RSPAMD_API_SERVERS')) {
-    define('RSPAMD_API_SERVERS', [
-        'http://127.0.0.1:11334',
-    ]);
-}
-
-// Map names configured in Rspamd for whitelist/blacklist entries
-if (!defined('RSPAMD_MAPS')) {
-    define('RSPAMD_MAPS', [
-        'whitelist' => [
-            'ip' => 'whitelist_ip',
-            'email' => 'whitelist_email',
-        ],
-        'blacklist' => [
-            'ip' => 'blacklist_ip',
-            'email' => 'blacklist_email',
-        ],
-    ]);
+// ============================================
+// Message Release Configuration
+// ============================================
+if (!defined('RELEASE_COMMAND')) {
+    define('RELEASE_COMMAND', '/usr/local/bin/rspamd_release.sh');
 }
 
 // ============================================

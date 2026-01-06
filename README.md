@@ -1,8 +1,3 @@
-<!--
-Version: 2.0.0
-Author: Martin Pouzar
-License: GNU General Public License v3.0
--->
 # Rspamd Quarantine Web UI
 
 Rspamd Quarantine Web UI is a lightweight web application for browsing, managing, and auditing messages processed by an Rspamd‑based mail infrastructure. It is designed for system administrators and helpdesk staff who need fast, safe control over quarantined mail, message traces, and user actions.
@@ -19,7 +14,6 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - **Compact table view** with state‑based row coloring (quarantined, spam, ham, released)
 - **Quick actions**: release, learn as spam/ham, delete
 - **Advanced filtering**: sender, recipient, subject, score range, dates, and state
-- **Clickable sender and recipient values** for fast filtering and navigation
 - **Message preview** with HTML/text toggle in tooltip
 - **Symbol popup** showing Rspamd symbols and scores on hover
 
@@ -35,12 +29,6 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - Fields: timestamp, sender, recipients, IP address, authenticated user, action, score, symbols
 - Useful for debugging deliverability and spam classification issues
 - Same filtering capabilities as quarantine view
-- Click sender or recipient values to jump directly to filtered results
-
-### Whitelist / Blacklist
-- Maintain sender- and IP-based allow/deny lists via Rspamd `multimap` rules
-- Quick add actions let you whitelist/blacklist a sender or recipient directly from message views
-- Changes take effect after reloading Rspamd
 
 ### Statistics and Charts
 - **Volume statistics** for quarantine and trace data
@@ -78,10 +66,6 @@ Three access levels:
 - **viewer** – read‑only access as configured
 
 Domain filters are automatically applied in all SQL queries (quarantine, trace, stats, audit).
-
-### Language Auto‑Detection
-- UI language is selected automatically based on the browser locale
-- Supported languages: **cs**, **sk**, **en**, **de**
 
 ### Database Schema
 Complete MariaDB/MySQL schema with:
@@ -121,30 +105,12 @@ Complete MariaDB/MySQL schema with:
 
 ### Quarantine View
 Compact table with inline statistics, filters, and quick actions.
-![Quarantine view screenshot (anonymized)](docs/quarantene.png)
 
 ### Statistics Dashboard
 2×2 grid with action/state distribution charts and time-based trends.
-![Statistics dashboard screenshot (anonymized)](docs/stats.jpg)
 
 ### Audit Log
 Complete user action history with filtering and pagination.
-![Audit log screenshot (anonymized)](docs/audit_log.jpg)
-
-### Bulk Operations
-Bulk operations view with inline actions and filters.
-![Bulk operations screenshot (anonymized)](docs/bulk_operation.png)
-
-### Message Trace
-Trace view for sender/recipient activity and scoring.
-![Message trace screenshot (anonymized)](docs/trace_messages.png)
-
-### User Management
-User and role management overview.
-![User management screenshot (anonymized)](docs/users.jpg)
-
-### Whitelist / Blacklist
-![RSPAMD whitelist/blacklist](docs/whitelist_blacklist.jpg)
 
 ---
 
@@ -264,133 +230,7 @@ server {
 }
 ```
 
-### 5. Configure Rspamd
-
-Add a metadata exporter rule that posts Rspamd results to the quarantine UI. Create or edit `/etc/rspamd/local.d/metadata_exporter.conf`:
-
-```conf
-# /etc/rspamd/local.d/metadata_exporter.conf
-rules {
-    HTTP_QUARANTINE {
-        backend = "http";
-        url = "http://127.0.0.1/rspamd-quarantine/receiver.php";
-        selector = "is_spam";
-        formatter = "json_with_message";
-        mime_type = "application/json";
-        timeout = 10s;
-    }
-
-    HTTP_TRACE_ALL {
-        backend = "http";
-        url = "http://127.0.0.1/rspamd-quarantine/trace_receiver.php";
-        selector = "default";
-        formatter = "json";
-        timeout = 5s;
-    }
-}
-```
-
-Reload Rspamd after the change:
-
-```bash
-systemctl reload rspamd
-```
-
-### 5a. Configure whitelist/blacklist in Rspamd
-
-For whitelist/blacklist of email addresses and IPs, use the `multimap` module. Create or update `/etc/rspamd/local.d/multimap.conf`:
-
-```conf
-# /etc/rspamd/local.d/multimap.conf
-
-WHITELIST_EMAIL {
-    type = "from";
-    extract_from = "smtp";
-    map = "/var/lib/rspamd/whitelist_email.map";
-    symbol = "WHITELIST_EMAIL";
-    description = "Whitelist email addresses";
-    prefilter = true;
-    action = "accept";
-}
-
-BLACKLIST_EMAIL {
-    type = "from";
-    extract_from = "smtp";
-    map = "/var/lib/rspamd/blacklist_email.map";
-    symbol = "BLACKLIST_EMAIL";
-    prefilter = true;
-    action = "reject";
-    description = "Blacklist email addresses";
-}
-
-WHITELIST_IP {
-    type = "ip";
-    map = "/var/lib/rspamd/whitelist_ip.map";
-    symbol = "WHITELIST_IP";
-    prefilter = true;
-    action = "accept";
-    description = "Whitelist IP addresses";
-}
-
-BLACKLIST_IP {
-    type = "ip";
-    map = "/var/lib/rspamd/blacklist_ip.map";
-    symbol = "BLACKLIST_IP";
-    prefilter = true;
-    action = "reject";
-    description = "Blacklist IP addresses";
-}
-```
-
-Create the map files (one entry per line):
-
-```bash
-sudo touch /var/lib/rspamd/whitelist_email.map
-sudo touch /var/lib/rspamd/blacklist_email.map
-sudo touch /var/lib/rspamd/whitelist_ip.map
-sudo touch /var/lib/rspamd/blacklist_ip.map
-```
-
-Example map contents:
-
-```
-# whitelist_email.map
-user@example.com
-another.user@example.org
-
-# blacklist_email.map
-bad.sender@example.net
-
-# whitelist_ip.map
-192.0.2.10
-
-# blacklist_ip.map
-203.0.113.25
-```
-
-Reload Rspamd after the changes:
-
-```bash
-systemctl reload rspamd
-```
-
-### 6. Configure Postfix milter
-
-Add the following settings to `/etc/postfix/main.cf`:
-
-```conf
-smtpd_milters = inet:127.0.0.1:11332
-milter_default_action = accept
-milter_protocol = 6
-non_smtpd_milters =
-milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
-
-# Bypass for localhost (DISABLE milters)
-smtpd_milter_maps = cidr:/etc/postfix/smtpd_milter_maps
-milter_default_action = accept
-```
-
-### 7. Create Admin User
+### 5. Create Admin User
 
 Generate a password hash:
 
@@ -414,7 +254,7 @@ INSERT INTO user_domains (user_id, domain)
 VALUES (1, 'example.com'), (1, 'example.org');
 ```
 
-### 8. File Permissions
+### 6. File Permissions
 
 ```bash
 chown -R www-data:www-data /var/www/rspamd-quarantine-webui
@@ -436,7 +276,7 @@ chmod 600 config.php
 2. Log in with admin credentials
 
 3. Use the top navigation menu:
-   - **Quarantine** – Quarantined messages browser
+   - **Karanténa** – Quarantined messages browser
    - **Message Trace** – Complete message history
    - **Statistiky** – Statistics and charts
    - **Audit Log** – User action history (admin/domainadmin only)
@@ -458,39 +298,10 @@ chmod 600 config.php
 ### Using Filters
 
 1. Enter search criteria in the filter bar
-2. Active filters are highlighted with a blue border
+2. Active filters are highlighted with blue border
 3. Use the × button to clear individual fields
-4. Click "Search" to apply filters
+4. Click "Hledat" to apply filters
 5. Click "Reset" to clear all filters
-
----
-
-## Maintenance and Cron
-
-The application ships with a CLI-only maintenance script that deletes old rows from
-quarantine, trace, and audit tables. Retention values are configured in `config.php`:
-
-```php
-define('QUARANTINE_RETENTION_DAYS', 30);
-define('TRACE_RETENTION_DAYS', 90);
-define('AUDIT_RETENTION_DAYS', 365);
-```
-
-Run the maintenance job manually from the project directory:
-
-```bash
-php maintenance.php
-```
-
-### Cron Example
-
-Schedule daily cleanup with cron (runs at 02:30):
-
-```cron
-30 2 * * * /usr/bin/php /var/www/rspamd-quarantine-webui/maintenance.php >> /var/log/rspamd-quarantine-maintenance.log 2>&1
-```
-
-Adjust the path to PHP and the project directory to match your environment.
 
 ---
 
@@ -612,7 +423,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Security
 
-If you discover a security vulnerability, please email noc@milnet.cz instead of using the issue tracker.
+If you discover a security vulnerability, please email security@example.com instead of using the issue tracker.
 
 ---
 
