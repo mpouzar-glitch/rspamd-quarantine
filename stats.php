@@ -129,6 +129,15 @@ include 'menu.php';
         <?php endif; ?>
     </div>
 
+    <div class="stats-subnav">
+        <a href="stats.php" class="active">
+            <i class="fas fa-chart-bar"></i> <?php echo htmlspecialchars(__('stats_subnav_overview')); ?>
+        </a>
+        <a href="symbol_search.php">
+            <i class="fas fa-magnifying-glass-chart"></i> <?php echo htmlspecialchars(__('stats_subnav_symbol_search')); ?>
+        </a>
+    </div>
+
     <!-- Time Selector -->
     <div class="time-selector">
         <label><i class="fas fa-calendar-alt"></i> <?php echo htmlspecialchars(__('stats_time_range_label')); ?></label>

@@ -263,6 +263,7 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                                 </a>
                             </th>
+                            <th style="width: 90px;"><?php echo htmlspecialchars(__('size')); ?></th>
                             <th style="width: 60px;">
                                 <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
                                     <?php echo htmlspecialchars(__('msg_score')); ?>
@@ -384,6 +385,9 @@ include 'menu.php';
                                 </td>
                                 <td class="subject-field">
                                     <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
+                                </td>
+                                <td class="text-right no-wrap">
+                                    <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
                                 </td>
                                 <td class="text-center score-cell">
                                     <span class="score-badge <?php echo $scoreClass; ?>">

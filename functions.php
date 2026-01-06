@@ -630,7 +630,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, state, state_at, state_by',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1740,6 +1740,119 @@ function search_symbols($db, $search, $dateFrom = null, $dateTo = null, $limit =
     });
 
     return array_slice($symbols, 0, $limit);
+}
+
+/**
+ * Search symbols with scores for current user scope (admin/domain admin).
+ */
+function searchSymbolsWithStats($db, $search, $dateFrom, $dateTo, $domainFilter, $params, $limit = 50) {
+    $search = trim((string)$search);
+    if ($search === '') {
+        return [];
+    }
+
+    $domainFilterTrace = str_replace(['sender', 'recipients'], ['mt.sender', 'mt.recipients'], $domainFilter);
+    $sql = "SELECT mt.symbols
+            FROM message_trace mt
+            WHERE mt.timestamp BETWEEN ? AND ?
+            AND ($domainFilterTrace)
+            AND mt.symbols IS NOT NULL
+            AND mt.symbols != ''
+            AND mt.symbols LIKE ?";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$dateFrom, $dateTo], $params, ['%' . $search . '%']));
+
+    $symbolStats = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $parsedSymbols = parseSymbolsForStats($row['symbols']);
+        foreach ($parsedSymbols as $symbol) {
+            $name = $symbol['name'];
+            if (stripos($name, $search) === false) {
+                continue;
+            }
+            $score = $symbol['score'];
+            if (!isset($symbolStats[$name])) {
+                $symbolStats[$name] = [
+                    'count' => 0,
+                    'total_score' => 0.0,
+                    'max_score' => $score,
+                    'min_score' => $score
+                ];
+            }
+            $symbolStats[$name]['count']++;
+            $symbolStats[$name]['total_score'] += $score;
+            if ($score > $symbolStats[$name]['max_score']) {
+                $symbolStats[$name]['max_score'] = $score;
+            }
+            if ($score < $symbolStats[$name]['min_score']) {
+                $symbolStats[$name]['min_score'] = $score;
+            }
+        }
+    }
+
+    $symbols = [];
+    foreach ($symbolStats as $name => $data) {
+        $symbols[] = [
+            'symbol' => $name,
+            'count' => $data['count'],
+            'avg_score' => $data['count'] > 0 ? $data['total_score'] / $data['count'] : 0.0,
+            'max_score' => $data['max_score'],
+            'min_score' => $data['min_score']
+        ];
+    }
+
+    usort($symbols, function ($a, $b) {
+        if ($b['count'] === $a['count']) {
+            return $b['avg_score'] <=> $a['avg_score'];
+        }
+        return $b['count'] <=> $a['count'];
+    });
+
+    return array_slice($symbols, 0, $limit);
+}
+
+/**
+ * Get message trace entries matching a specific symbol.
+ */
+function getSymbolMessages($db, $symbol, $dateFrom, $dateTo, $domainFilter, $params, $limit = 100) {
+    $symbol = trim((string)$symbol);
+    if ($symbol === '') {
+        return [];
+    }
+
+    $domainFilterTrace = str_replace(['sender', 'recipients'], ['mt.sender', 'mt.recipients'], $domainFilter);
+    $sql = "SELECT mt.id, mt.timestamp, mt.sender, mt.recipients, mt.subject, mt.action, mt.score, mt.symbols
+            FROM message_trace mt
+            WHERE mt.timestamp BETWEEN ? AND ?
+            AND ($domainFilterTrace)
+            AND mt.symbols IS NOT NULL
+            AND mt.symbols != ''
+            AND mt.symbols LIKE ?
+            ORDER BY mt.timestamp DESC
+            LIMIT ?";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$dateFrom, $dateTo], $params, ['%' . $symbol . '%', (int)$limit]));
+
+    $messages = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $symbolScore = null;
+        $parsedSymbols = parseSymbolsForStats($row['symbols']);
+        foreach ($parsedSymbols as $symbolEntry) {
+            if (strcasecmp($symbolEntry['name'], $symbol) === 0) {
+                $symbolScore = $symbolEntry['score'];
+                break;
+            }
+        }
+        if ($symbolScore === null) {
+            continue;
+        }
+        $row['symbol_score'] = $symbolScore;
+        $messages[] = $row;
+    }
+
+    return $messages;
 }
 
 /**
