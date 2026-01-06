@@ -4,6 +4,40 @@
     padding: 20px;
 }
 
+.stats-subnav {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.stats-subnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    background: #ffffff;
+    color: #2c3e50;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e6e8eb;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.stats-subnav a:hover {
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.stats-subnav a.active {
+    background: #3498db;
+    color: #ffffff;
+    border-color: #3498db;
+}
+
 .time-selector {
     background: white;
     padding: 15px;
