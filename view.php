@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lang_helper.php';
 
 // Authentication check
 if (AUTH_ENABLED && !isset($_SESSION['authenticated'])) {
@@ -12,7 +13,7 @@ if (AUTH_ENABLED && !isset($_SESSION['authenticated'])) {
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($id <= 0) {
-    die('Invalid message ID');
+    die(__('view_invalid_message_id'));
 }
 
 $db = Database::getInstance()->getConnection();
@@ -25,7 +26,7 @@ $stmt->execute([$id]);
 $message = $stmt->fetch();
 
 if (!$message) {
-    die('Message not found');
+    die(__('msg_not_found'));
 }
 
 // Parse message headers
@@ -74,7 +75,7 @@ $from_header = $headers_lower['from'] ?? '';
 $to_header = $headers_lower['to'] ?? '';
 
 // Decode subject and from
-$subject_decoded = decodeMimeHeader($message['subject'] ?? $headers_array['Subject'] ?? '(bez předmětu)');
+$subject_decoded = decodeMimeHeader($message['subject'] ?? $headers_array['Subject'] ?? __('msg_no_subject'));
 $from_decoded = decodeMimeHeader($headers_array['From'] ?? $message['sender'] ?? '');
 $to_decoded = decodeMimeHeader($headers_array['To'] ?? $message['recipients'] ?? '');
 
@@ -171,7 +172,7 @@ $trace_logs = $stmt->fetchAll();
 // Parse Rspamd symbols (symbol + score only)
 $parsed_symbols = [];
 if (!empty($message['symbols'])) {
-    // Robustní regex pro Rspamd JSON format
+    // Robust regex for Rspamd JSON format
     if (preg_match_all('/"name":"([^"]+)".*?"score":([+-]?\d+(?:\.\d+)?)/s', $message['symbols'], $matches, PREG_SET_ORDER)) {
         foreach ($matches as $match) {
             $name = trim($match[1]);
@@ -199,8 +200,8 @@ $dkim_dmarc_symbols = array_values(array_filter($parsed_symbols, function($sym) 
 }));
 $dkim_present = !empty($dkim_header);
 $dmarc_present = !empty($dmarc_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dmarc') !== false);
-$dkim_status = $dkim_present ? 'Ano' : 'Ne';
-$dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
+$dkim_status = $dkim_present ? __('yes') : __('no');
+$dmarc_status = $dmarc_present ? __('yes') : __('no');
 
 $released = !empty($message['released']);
 $released_by = $message['released_by'] ?? '';
@@ -209,29 +210,35 @@ $released_at = $message['released_at'] ?? '';
 $action = $message['action'] ?? 'unknown';
 $actionClass = 'badge badge-pass';
 $actionIcon = 'fa-check-circle';
+$actionLabel = $action;
 
 switch (strtolower($action)) {
     case 'reject':
         $actionClass = 'badge badge-reject';
         $actionIcon = 'fa-ban';
+        $actionLabel = __('action_reject');
         break;
     case 'no action':
     case 'pass':
         $actionClass = 'badge badge-pass';
         $actionIcon = 'fa-check-circle';
+        $actionLabel = __('action_no_action');
         break;
     case 'add header':
         $actionClass = 'badge badge-header';
         $actionIcon = 'fa-tag';
+        $actionLabel = __('action_add_header');
         break;
     case 'greylist':
         $actionClass = 'badge badge-pass';
         $actionIcon = 'fa-clock';
+        $actionLabel = __('action_greylist');
         break;
     case 'soft reject':
     case 'soft_reject':
         $actionClass = 'badge badge-soft-reject';
         $actionIcon = 'fa-exclamation-triangle';
+        $actionLabel = __('action_soft_reject');
         break;
     default:
         $actionClass = 'badge badge-pass';
@@ -240,11 +247,11 @@ switch (strtolower($action)) {
 
 ?>
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="<?= htmlspecialchars(currentLang()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detail zprávy - Rspamd Quarantine</title>
+    <title><?= htmlspecialchars(__('view_page_title', ['app' => __('app_title')])) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
@@ -325,46 +332,46 @@ switch (strtolower($action)) {
 <body>
     <div class="container">
         <div class="header">
-            <a href="index.php" class="back"><i class="fas fa-arrow-left"></i> Zpět na seznam</a>
-            <h1><i class="fas fa-envelope-open-text"></i> Detail zprávy</h1>
+            <a href="index.php" class="back"><i class="fas fa-arrow-left"></i> <?= htmlspecialchars(__('view_back_to_list')) ?></a>
+            <h1><i class="fas fa-envelope-open-text"></i> <?= htmlspecialchars(__('view_title')) ?></h1>
             <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">
-                Message ID: <?= htmlspecialchars($message['message_id'] ?? 'N/A') ?>
+                <?= htmlspecialchars(__('view_message_id_label')) ?>: <?= htmlspecialchars($message['message_id'] ?? __('view_message_id_na')) ?>
             </div>
         </div>
         
         <div class="card">
-            <h2><i class="fas fa-info-circle"></i> Základní informace</h2>
+            <h2><i class="fas fa-info-circle"></i> <?= htmlspecialchars(__('view_basic_info')) ?></h2>
             <div class="info-grid">
                 <div class="info-block">
                     <table class="info-table">
                         <tr>
-                            <th>Předmět:</th>
+                            <th><?= htmlspecialchars(__('msg_subject')) ?>:</th>
                             <td><strong><?= htmlspecialchars($subject_decoded) ?></strong></td>
                         </tr>
                         <tr>
-                            <th>Odesílatel:</th>
+                            <th><?= htmlspecialchars(__('msg_sender')) ?>:</th>
                             <td><?= htmlspecialchars($from_decoded) ?></td>
                         </tr>
                         <?php if ($show_from_header): ?>
                         <tr>
-                            <th>From (hlavička):</th>
+                            <th><?= htmlspecialchars(__('view_from_header')) ?>:</th>
                             <td><?= htmlspecialchars($from_header) ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
-                            <th>Příjemce:</th>
+                            <th><?= htmlspecialchars(__('msg_recipient')) ?>:</th>
                             <td><strong><?= htmlspecialchars($to_decoded) ?></strong></td>
                         </tr>
                         <?php if ($show_to_header): ?>
                         <tr>
-                            <th>To (hlavička):</th>
+                            <th><?= htmlspecialchars(__('view_to_header')) ?>:</th>
                             <td><?= htmlspecialchars($to_header) ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
-                            <th>DKIM/DMARC:</th>
+                            <th><?= htmlspecialchars(__('view_dkim_dmarc')) ?>:</th>
                             <td>
-                                DKIM: <strong><?= $dkim_status ?></strong> · DMARC: <strong><?= $dmarc_status ?></strong>
+                                <?= htmlspecialchars(__('view_dkim_label')) ?>: <strong><?= htmlspecialchars($dkim_status) ?></strong> · <?= htmlspecialchars(__('view_dmarc_label')) ?>: <strong><?= htmlspecialchars($dmarc_status) ?></strong>
                                 <?php if (!empty($dkim_dmarc_symbols)): ?>
                                     <span class="symbol-inline">
                                         <?php foreach ($dkim_dmarc_symbols as $sym): ?>
@@ -376,52 +383,52 @@ switch (strtolower($action)) {
                         </tr>
                         <?php if (!empty($spam_header)): ?>
                         <tr>
-                            <th>Spam hlavička:</th>
+                            <th><?= htmlspecialchars(__('view_spam_header')) ?>:</th>
                             <td><?= htmlspecialchars($spam_header) ?></td>
                         </tr>
                         <?php endif; ?>
                         <?php if (!empty($user_agent_header)): ?>
                         <tr>
-                            <th>User-Agent:</th>
+                            <th><?= htmlspecialchars(__('view_user_agent')) ?>:</th>
                             <td><?= htmlspecialchars($user_agent_header) ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
-                            <th>Datum:</th>
+                            <th><?= htmlspecialchars(__('msg_date')) ?>:</th>
                             <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
                         </tr>
                         <tr>
-                            <th>IP adresa:</th>
+                            <th><?= htmlspecialchars(__('ip_address')) ?>:</th>
                             <td><?= htmlspecialchars($message['ip_address']) ?></td>
                         </tr>
                         <?php if (!empty($message['authenticated_user'])): ?>
                         <tr>
-                            <th>Autentizovaný uživatel:</th>
+                            <th><?= htmlspecialchars(__('view_authenticated_user')) ?>:</th>
                             <td><?= htmlspecialchars($message['authenticated_user']) ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
-                            <th>Akce:</th>
+                            <th><?= htmlspecialchars(__('msg_action')) ?>:</th>
                             <td>
                                 <span class="action-badge <?= $actionClass; ?>">
                                     <i class="fas <?= $actionIcon; ?>"></i>
-                                    <?= htmlspecialchars($action) ?>
+                                    <?= htmlspecialchars($actionLabel) ?>
                                 </span>
                             </td>
                         </tr>
                         <tr>
-                            <th>Spam skóre:</th>
+                            <th><?= htmlspecialchars(__('msg_score')) ?>:</th>
                             <td><strong style="color: <?= $message['score'] >= 15 ? '#e74c3c' : ($message['score'] >= 6 ? '#f39c12' : '#27ae60') ?>;"><?= number_format($message['score'], 2) ?></strong></td>
                         </tr>
                         <tr>
-                            <th>Stav:</th>
+                            <th><?= htmlspecialchars(__('status')) ?>:</th>
                             <td>
                                 <?php if ($released): ?>
-                                    <span class="timeline-action">Uvolněno</span>
+                                    <span class="timeline-action"><?= htmlspecialchars(__('view_status_released')) ?></span>
                                     <?= htmlspecialchars($released_by) ?>
                                     (<?= date('d.m.Y H:i', strtotime($released_at)) ?>)
                                 <?php else: ?>
-                                    <span class="timeline-action">V karanténě</span>
+                                    <span class="timeline-action"><?= htmlspecialchars(__('view_status_quarantined')) ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -429,7 +436,7 @@ switch (strtolower($action)) {
                 </div>
                 <div class="info-block">
                     <div class="headers-panel">
-                        <h3>Hlavička zprávy</h3>
+                        <h3><?= htmlspecialchars(__('view_message_headers')) ?></h3>
                         <pre><?= htmlspecialchars($headers_raw) ?></pre>
                     </div>
                 </div>
@@ -438,7 +445,7 @@ switch (strtolower($action)) {
         
         <?php if (!empty($parsed_symbols)): ?>
         <div class="card">
-            <h2><i class="fas fa-flag"></i> SYMBOLY detekce (<?= count($parsed_symbols) ?>)</h2>
+            <h2><i class="fas fa-flag"></i> <?= htmlspecialchars(__('symbols_header', ['count' => count($parsed_symbols)])) ?></h2>
             <div class="symbols">
                 <?php foreach ($parsed_symbols as $sym): 
                     $score = $sym['score'];
@@ -454,17 +461,17 @@ switch (strtolower($action)) {
 
         
         <div class="card">
-            <h2><i class="fas fa-file-alt"></i> Obsah zprávy</h2>
+            <h2><i class="fas fa-file-alt"></i> <?= htmlspecialchars(__('msg_body')) ?></h2>
             
             <div class="tabs">
                 <?php if (!empty($body_html)): ?>
-                    <button class="tab active" onclick="showTab('html')">HTML náhled (BEZPEČNÝ)</button>
+                    <button class="tab active" onclick="showTab('html')"><?= htmlspecialchars(__('view_html_preview_safe')) ?></button>
                 <?php endif; ?>
                 <?php if (!empty($body_text)): ?>
-                    <button class="tab <?= empty($body_html) ? 'active' : '' ?>" onclick="showTab('text')">Text</button>
+                    <button class="tab <?= empty($body_html) ? 'active' : '' ?>" onclick="showTab('text')"><?= htmlspecialchars(__('view_text_tab')) ?></button>
                 <?php endif; ?>
-                <button class="tab" onclick="showTab('source')">Zdrojový kód</button>
-                <button class="tab" onclick="showTab('headers')">Hlavičky</button>
+                <button class="tab" onclick="showTab('source')"><?= htmlspecialchars(__('view_source_tab')) ?></button>
+                <button class="tab" onclick="showTab('headers')"><?= htmlspecialchars(__('msg_headers')) ?></button>
             </div>
             
             <?php if (!empty($body_html)): ?>
@@ -473,7 +480,7 @@ switch (strtolower($action)) {
                     <iframe id="html-frame" sandbox=""></iframe>
                 </div>
                 <script>
-                    // Bezpečné zobrazení HTML v sandboxed iframe
+                    // Safe HTML rendering inside a sandboxed iframe
                     const htmlContent = <?= json_encode($body_html) ?>;
                     const iframe = document.getElementById('html-frame');
                     iframe.srcdoc = htmlContent;
@@ -504,13 +511,13 @@ switch (strtolower($action)) {
         
         <?php if (!empty($trace_logs)): ?>
         <div class="card">
-            <h2><i class="fas fa-history"></i> Historie akcí</h2>
+            <h2><i class="fas fa-history"></i> <?= htmlspecialchars(__('view_action_history')) ?></h2>
             <div class="timeline">
                 <?php foreach ($trace_logs as $log): ?>
                     <div class="timeline-item">
                         <div class="timeline-time"><?= date('d.m.Y H:i:s', strtotime($log['timestamp'])) ?></div>
                         <div class="timeline-action"><?= htmlspecialchars($log['action']) ?></div>
-                        <div class="timeline-user">Uživatel: <?= htmlspecialchars($log['user']) ?></div>
+                        <div class="timeline-user"><?= htmlspecialchars(__('user')) ?>: <?= htmlspecialchars($log['user']) ?></div>
                         <?php if (!empty($log['details'])): ?>
                             <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
                                 <?= htmlspecialchars($log['details']) ?>
@@ -523,44 +530,44 @@ switch (strtolower($action)) {
         <?php endif; ?>
         
         <div class="card">
-            <h2><i class="fas fa-tools"></i> Akce</h2>
+            <h2><i class="fas fa-tools"></i> <?= htmlspecialchars(__('actions')) ?></h2>
             <div class="actions">
                 <?php if (!$released): ?>
-                    <form method="post" action="index.php" onsubmit="return confirm('Opravdu chcete uvolnit tuto zprávu?')">
+                    <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
                         <input type="hidden" name="id" value="<?= $message['id'] ?>">
                         <input type="hidden" name="action" value="release">
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-check"></i> Uvolnit zprávu
+                            <i class="fas fa-check"></i> <?= htmlspecialchars(__('msg_release')) ?>
                         </button>
                     </form>
                 <?php endif; ?>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('Naučit jako legitimní poštu (HAM)?')">
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="id" value="<?= $message['id'] ?>">
                     <input type="hidden" name="action" value="learn_ham">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-thumbs-up"></i> Learn HAM
+                        <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
                     </button>
                 </form>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('Naučit jako SPAM?')">
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="id" value="<?= $message['id'] ?>">
                     <input type="hidden" name="action" value="learn_spam">
                     <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-thumbs-down"></i> Learn SPAM
+                        <i class="fas fa-thumbs-down"></i> <?= htmlspecialchars(__('msg_learn_spam')) ?>
                     </button>
                 </form>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('Opravdu chcete smazat tuto zprávu?')">
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_delete_message'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="id" value="<?= $message['id'] ?>">
                     <input type="hidden" name="action" value="delete">
                     <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Smazat zprávu
+                        <i class="fas fa-trash"></i> <?= htmlspecialchars(__('msg_delete')) ?>
                     </button>
                 </form>
                 
                 <a href="index.php" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> Zpět na seznam
+                    <i class="fas fa-arrow-left"></i> <?= htmlspecialchars(__('view_back_to_list')) ?>
                 </a>
             </div>
         </div>
