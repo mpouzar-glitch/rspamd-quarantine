@@ -22,6 +22,7 @@ if (!checkPermission('domain_admin')) {
 
 $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
+$userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isDomainAdmin = $userRole === 'domain_admin';
 
@@ -121,6 +122,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, score, created_by, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
         $insertStmt->execute([$listType, $entryType, $entryValue, $score, $user]);
+        $entryId = $db->lastInsertId();
+        $details = "Added {$listType} {$entryType}: {$entryValue} (score {$score})";
+        logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
         $sync = syncMapEntries($db, $listType, $entryType);
         if ($sync['success']) {
@@ -142,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $entryStmt = $db->prepare("SELECT list_type, entry_type, created_by FROM rspamd_map_entries WHERE id = ?");
+        $entryStmt = $db->prepare("SELECT list_type, entry_type, entry_value, created_by FROM rspamd_map_entries WHERE id = ?");
         $entryStmt->execute([$entryId]);
         $entry = $entryStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -160,6 +164,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $deleteStmt = $db->prepare("DELETE FROM rspamd_map_entries WHERE id = ?");
         $deleteStmt->execute([$entryId]);
+        $details = "Deleted {$entry['list_type']} {$entry['entry_type']}: {$entry['entry_value']}";
+        logAudit($userId, $user, 'map_delete', 'rspamd_map_entry', $entryId, $details);
 
         $sync = syncMapEntries($db, $entry['list_type'], $entry['entry_type']);
         if ($sync['success']) {

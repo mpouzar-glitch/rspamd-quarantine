@@ -194,6 +194,9 @@ try {
             foreach ($message_ids as $id) {
                 $stmt->execute([$id]);
                 $success_count++;
+                $msg = $message_lookup[$id] ?? null;
+                $details = $buildAuditDetails("Bulk forgot learning for ID $id", $msg);
+                logAudit($user_id, $user, 'bulk_forget', 'quarantine', $id, $details);
             }
 
             $db->commit();
@@ -204,6 +207,9 @@ try {
             foreach ($message_ids as $id) {
                 if (safeSendmailRelease($db, (int)$id, $_SESSION['username'])) {
                     $success_count++;
+                    $msg = $message_lookup[$id] ?? null;
+                    $details = $buildAuditDetails("Released message ID $id", $msg);
+                    logAudit($user_id, $user, 'release', 'quarantine', $id, $details);
                 }
             }
 

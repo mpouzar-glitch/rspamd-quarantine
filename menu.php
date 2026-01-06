@@ -341,7 +341,7 @@ try {
         </button>
 
         <div class="nav-menu" id="navMenu">
-            <a href="index.php" class="nav-item <?= $current_page === 'index.php' ? 'active' : '' ?>">
+            <a href="index.php?reset_page=1" class="nav-item <?= $current_page === 'index.php' ? 'active' : '' ?>">
                 <i class="fas fa-inbox"></i>
                 <span><?php echo htmlspecialchars(__('nav_quarantine')); ?></span>
                 <?php if ($quarantine_count > 0): ?>
@@ -350,14 +350,14 @@ try {
             </a>
 
             <?php if (checkPermission('domain_admin')): ?>
-                <a href="bulk_operations.php" class="nav-item <?= $current_page === 'bulk_operations.php' ? 'active' : '' ?>">
+                <a href="bulk_operations.php?reset_page=1" class="nav-item <?= $current_page === 'bulk_operations.php' ? 'active' : '' ?>">
                     <i class="fas fa-tasks"></i>
                     <span><?php echo htmlspecialchars(__('nav_bulk_operations')); ?></span>
                 </a>
             <?php endif; ?>
 
             <?php if (checkPermission('domain_admin')): ?>            
-                <a href="trace.php" class="nav-item <?= $current_page === 'trace.php' ? 'active' : '' ?>">
+                <a href="trace.php?reset_page=1" class="nav-item <?= $current_page === 'trace.php' ? 'active' : '' ?>">
                     <i class="fas fa-search"></i>
                     <span><?php echo htmlspecialchars(__('nav_trace')); ?></span>
                 </a>

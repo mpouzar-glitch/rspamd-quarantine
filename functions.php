@@ -1219,6 +1219,13 @@ function countTraceMessages($db, $filters = []) {
  * Build trace query with filters
  */
 function buildTraceQuery($filters = [], &$params = [], $options = []) {
+    $defaults = [
+        'order_by' => 'timestamp DESC',
+        'limit' => null,
+        'offset' => 0,
+    ];
+    $options = array_merge($defaults, $options);
+
     $where = ['1=1'];
 
     // Domain filter
@@ -1245,15 +1252,17 @@ function buildTraceQuery($filters = [], &$params = [], $options = []) {
             hostname
         FROM message_trace
         WHERE " . implode(' AND ', $where) . "
-        ORDER BY timestamp DESC
     ";
 
-    if (isset($options['limit'])) {
-        $sql .= " LIMIT " . (int)$options['limit'];
+    if ($options['order_by']) {
+        $sql .= " ORDER BY {$options['order_by']}";
     }
 
-    if (isset($options['offset'])) {
-        $sql .= " OFFSET " . (int)$options['offset'];
+    if ($options['limit']) {
+        $sql .= " LIMIT " . (int)$options['limit'];
+        if ($options['offset']) {
+            $sql .= " OFFSET " . (int)$options['offset'];
+        }
     }
 
     return $sql;
@@ -1914,6 +1923,45 @@ if (!function_exists('buildRspamdMapContent')) {
 
         return implode("\n", $lines) . "\n";
     }
+}
+
+/**
+ * Get whitelist/blacklist status for sender emails.
+ *
+ * @param PDO $db Database connection
+ * @param array $emails List of email addresses
+ * @return array ['whitelist' => [email => true], 'blacklist' => [email => true]]
+ */
+function getEmailMapStatus($db, array $emails): array {
+    $normalized = array_values(array_unique(array_filter(array_map(function ($email) {
+        return strtolower(trim((string)$email));
+    }, $emails))));
+
+    if (empty($normalized)) {
+        return ['whitelist' => [], 'blacklist' => []];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($normalized), '?'));
+    $sql = "
+        SELECT list_type, LOWER(entry_value) AS entry_value
+        FROM rspamd_map_entries
+        WHERE entry_type = 'email'
+          AND LOWER(entry_value) IN ($placeholders)
+    ";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($normalized);
+
+    $whitelist = [];
+    $blacklist = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        if ($row['list_type'] === 'whitelist') {
+            $whitelist[$row['entry_value']] = true;
+        } elseif ($row['list_type'] === 'blacklist') {
+            $blacklist[$row['entry_value']] = true;
+        }
+    }
+
+    return ['whitelist' => $whitelist, 'blacklist' => $blacklist];
 }
 
 if (!function_exists('uploadRspamdMap')) {
