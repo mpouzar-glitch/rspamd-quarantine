@@ -33,33 +33,50 @@ $is_bulk_mode = defined('BULK_PROCESSING_MODE') && BULK_PROCESSING_MODE === true
  */
 if (!function_exists('learnMessage')) {
     function learnMessage($message_content, $type = 'spam') {
-        if (!defined('RSPAMD_API_URL') || empty(RSPAMD_API_URL)) {
+        $servers = [];
+
+        if (defined('RSPAMD_API_SERVERS') && is_array(RSPAMD_API_SERVERS) && !empty(RSPAMD_API_SERVERS)) {
+            $servers = array_filter(RSPAMD_API_SERVERS, function ($server) {
+                return is_string($server) && $server !== '';
+            });
+        } elseif (defined('RSPAMD_API_URL') && !empty(RSPAMD_API_URL)) {
+            $servers = [RSPAMD_API_URL];
+        }
+
+        if (empty($servers)) {
             return ['success' => false, 'error' => 'Rspamd API není nakonfigurováno'];
         }
 
-        $rspamd_url = RSPAMD_API_URL . '/learn' . ($type === 'spam' ? 'spam' : 'ham');
+        $errors = [];
+        foreach ($servers as $server) {
+            $rspamd_url = rtrim($server, '/') . '/learn' . ($type === 'spam' ? 'spam' : 'ham');
 
-        $ch = curl_init($rspamd_url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $message_content);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $ch = curl_init($rspamd_url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $message_content);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
-        $headers = ['Content-Type: text/plain'];
-        if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
-            $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
+            $headers = ['Content-Type: text/plain'];
+            if (defined('RSPAMD_API_PASSWORD') && !empty(RSPAMD_API_PASSWORD)) {
+                $headers[] = 'Password: ' . RSPAMD_API_PASSWORD;
+            }
+
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            $response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($http_code < 200 || $http_code >= 300) {
+                $errors[] = $server . ' (HTTP ' . $http_code . ')';
+            }
         }
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        $response = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($http_code >= 200 && $http_code < 300) {
+        if (empty($errors)) {
             return ['success' => true];
         }
 
-        return ['success' => false, 'error' => 'HTTP ' . $http_code];
+        return ['success' => false, 'error' => 'Chyba na serverech: ' . implode(', ', $errors)];
     }
 }
 /**
