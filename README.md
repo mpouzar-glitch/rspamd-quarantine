@@ -458,6 +458,35 @@ chmod 600 config.php
 
 ---
 
+## Maintenance and Cron
+
+The application ships with a CLI-only maintenance script that deletes old rows from
+quarantine, trace, and audit tables. Retention values are configured in `config.php`:
+
+```php
+define('QUARANTINE_RETENTION_DAYS', 30);
+define('TRACE_RETENTION_DAYS', 90);
+define('AUDIT_RETENTION_DAYS', 365);
+```
+
+Run the maintenance job manually from the project directory:
+
+```bash
+php maintenance.php
+```
+
+### Cron Example
+
+Schedule daily cleanup with cron (runs at 02:30):
+
+```cron
+30 2 * * * /usr/bin/php /var/www/rspamd-quarantine-webui/maintenance.php >> /var/log/rspamd-quarantine-maintenance.log 2>&1
+```
+
+Adjust the path to PHP and the project directory to match your environment.
+
+---
+
 ## Project Structure
 
 ```
