@@ -187,6 +187,21 @@ usort($parsed_symbols, function($a, $b) {
     return $b['score'] <=> $a['score'];
 });
 
+$from_header_clean = trim($from_header);
+$to_header_clean = trim($to_header);
+$sender_clean = trim($message['sender'] ?? '');
+$recipient_clean = trim($message['recipients'] ?? '');
+$show_from_header = !empty($from_header_clean) && strcasecmp($from_header_clean, $sender_clean) !== 0;
+$show_to_header = !empty($to_header_clean) && strcasecmp($to_header_clean, $recipient_clean) !== 0;
+
+$dkim_dmarc_symbols = array_values(array_filter($parsed_symbols, function($sym) {
+    return stripos($sym['name'], 'dkim') !== false || stripos($sym['name'], 'dmarc') !== false;
+}));
+$dkim_present = !empty($dkim_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dkim') !== false);
+$dmarc_present = !empty($dmarc_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dmarc') !== false);
+$dkim_status = $dkim_present ? 'Ano' : 'Ne';
+$dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
+
 ?>
 <!DOCTYPE html>
 <html lang="cs">
@@ -205,17 +220,20 @@ usort($parsed_symbols, function($a, $b) {
         .header .back:hover { text-decoration: underline; }
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .card h2 { color: #2c3e50; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .info-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+        .info-grid { display: flex; gap: 20px; align-items: stretch; }
+        .info-block { flex: 1; min-width: 0; }
         table.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         table.info-table th { background: #ecf0f1; padding: 12px; text-align: left; width: 200px; font-weight: 600; color: #2c3e50; }
         table.info-table td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
         .headers-panel { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; max-height: 320px; overflow: auto; }
         .headers-panel h3 { font-size: 13px; margin-bottom: 8px; color: #2c3e50; }
         .headers-panel pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
-        @media (max-width: 1000px) { .info-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1000px) { .info-grid { flex-direction: column; } }
         .symbols { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
         .symbol-badge { background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-family: monospace; }
         .symbol-badge.low { background: #95a5a6; }
+        .symbol-inline { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
+        .symbol-inline .symbol-badge { font-size: 10px; padding: 3px 6px; }
         .body-viewer { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; max-height: 600px; overflow-y: auto; }
         .body-viewer pre { white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 12px; }
         .body-viewer iframe { width: 100%; min-height: 500px; border: none; background: white; }
@@ -275,93 +293,98 @@ usort($parsed_symbols, function($a, $b) {
         <div class="card">
             <h2><i class="fas fa-info-circle"></i> Základní informace</h2>
             <div class="info-grid">
-                <table class="info-table">
-                    <tr>
-                        <th>Předmět:</th>
-                        <td><strong><?= htmlspecialchars($subject_decoded) ?></strong></td>
-                    </tr>
-                    <tr>
-                        <th>Odesílatel:</th>
-                        <td><?= htmlspecialchars($from_decoded) ?></td>
-                    </tr>
-                    <?php if (!empty($from_header)): ?>
-                    <tr>
-                        <th>From (hlavička):</th>
-                        <td><?= htmlspecialchars($from_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <tr>
-                        <th>Příjemce:</th>
-                        <td><strong><?= htmlspecialchars($to_decoded) ?></strong></td>
-                    </tr>
-                    <?php if (!empty($to_header)): ?>
-                    <tr>
-                        <th>To (hlavička):</th>
-                        <td><?= htmlspecialchars($to_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <?php if (!empty($dkim_header)): ?>
-                    <tr>
-                        <th>DKIM:</th>
-                        <td><?= htmlspecialchars($dkim_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <?php if (!empty($dmarc_header)): ?>
-                    <tr>
-                        <th>DMARC:</th>
-                        <td><?= htmlspecialchars($dmarc_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <?php if (!empty($spam_header)): ?>
-                    <tr>
-                        <th>Spam hlavička:</th>
-                        <td><?= htmlspecialchars($spam_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <?php if (!empty($user_agent_header)): ?>
-                    <tr>
-                        <th>User-Agent:</th>
-                        <td><?= htmlspecialchars($user_agent_header) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <tr>
-                        <th>Datum:</th>
-                        <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
-                    </tr>
-                    <tr>
-                        <th>IP adresa:</th>
-                        <td><?= htmlspecialchars($message['ip_address']) ?></td>
-                    </tr>
-                    <?php if (!empty($message['authenticated_user'])): ?>
-                    <tr>
-                        <th>Autentizovaný uživatel:</th>
-                        <td><?= htmlspecialchars($message['authenticated_user']) ?></td>
-                    </tr>
-                    <?php endif; ?>
-                    <tr>
-                        <th>Akce:</th>
-                        <td><span class="badge badge-<?= $message['action'] === 'reject' ? 'danger' : 'warning' ?>"><?= htmlspecialchars($message['action']) ?></span></td>
-                    </tr>
-                    <tr>
-                        <th>Spam skóre:</th>
-                        <td><strong style="color: <?= $message['score'] >= 15 ? '#e74c3c' : ($message['score'] >= 6 ? '#f39c12' : '#27ae60') ?>;"><?= number_format($message['score'], 2) ?></strong></td>
-                    </tr>
-                    <tr>
-                        <th>Stav:</th>
-                        <td>
-                            <?php if ($message['released']): ?>
-                                <span class="badge badge-released">Uvolněno</span> 
-                                <?= htmlspecialchars($message['released_by']) ?> 
-                                (<?= date('d.m.Y H:i', strtotime($message['released_at'])) ?>)
-                            <?php else: ?>
-                                <span class="badge badge-quarantine">V karanténě</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                </table>
-                <div class="headers-panel">
-                    <h3>Hlavička zprávy</h3>
-                    <pre><?= htmlspecialchars($headers_raw) ?></pre>
+                <div class="info-block">
+                    <table class="info-table">
+                        <tr>
+                            <th>Předmět:</th>
+                            <td><strong><?= htmlspecialchars($subject_decoded) ?></strong></td>
+                        </tr>
+                        <tr>
+                            <th>Odesílatel:</th>
+                            <td><?= htmlspecialchars($from_decoded) ?></td>
+                        </tr>
+                        <?php if ($show_from_header): ?>
+                        <tr>
+                            <th>From (hlavička):</th>
+                            <td><?= htmlspecialchars($from_header) ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr>
+                            <th>Příjemce:</th>
+                            <td><strong><?= htmlspecialchars($to_decoded) ?></strong></td>
+                        </tr>
+                        <?php if ($show_to_header): ?>
+                        <tr>
+                            <th>To (hlavička):</th>
+                            <td><?= htmlspecialchars($to_header) ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr>
+                            <th>DKIM/DMARC:</th>
+                            <td>
+                                DKIM: <strong><?= $dkim_status ?></strong> · DMARC: <strong><?= $dmarc_status ?></strong>
+                                <?php if (!empty($dkim_dmarc_symbols)): ?>
+                                    <span class="symbol-inline">
+                                        <?php foreach ($dkim_dmarc_symbols as $sym): ?>
+                                            <span class="symbol-badge"><?= htmlspecialchars($sym['name']) ?></span>
+                                        <?php endforeach; ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php if (!empty($spam_header)): ?>
+                        <tr>
+                            <th>Spam hlavička:</th>
+                            <td><?= htmlspecialchars($spam_header) ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if (!empty($user_agent_header)): ?>
+                        <tr>
+                            <th>User-Agent:</th>
+                            <td><?= htmlspecialchars($user_agent_header) ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr>
+                            <th>Datum:</th>
+                            <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>IP adresa:</th>
+                            <td><?= htmlspecialchars($message['ip_address']) ?></td>
+                        </tr>
+                        <?php if (!empty($message['authenticated_user'])): ?>
+                        <tr>
+                            <th>Autentizovaný uživatel:</th>
+                            <td><?= htmlspecialchars($message['authenticated_user']) ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <tr>
+                            <th>Akce:</th>
+                            <td><span class="timeline-action"><?= htmlspecialchars($message['action']) ?></span></td>
+                        </tr>
+                        <tr>
+                            <th>Spam skóre:</th>
+                            <td><strong style="color: <?= $message['score'] >= 15 ? '#e74c3c' : ($message['score'] >= 6 ? '#f39c12' : '#27ae60') ?>;"><?= number_format($message['score'], 2) ?></strong></td>
+                        </tr>
+                        <tr>
+                            <th>Stav:</th>
+                            <td>
+                                <?php if ($message['released']): ?>
+                                    <span class="timeline-action">Uvolněno</span>
+                                    <?= htmlspecialchars($message['released_by']) ?>
+                                    (<?= date('d.m.Y H:i', strtotime($message['released_at'])) ?>)
+                                <?php else: ?>
+                                    <span class="timeline-action">V karanténě</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="info-block">
+                    <div class="headers-panel">
+                        <h3>Hlavička zprávy</h3>
+                        <pre><?= htmlspecialchars($headers_raw) ?></pre>
+                    </div>
                 </div>
             </div>
         </div>
