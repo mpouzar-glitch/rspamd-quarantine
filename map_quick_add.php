@@ -55,6 +55,7 @@ $score = $listType === 'whitelist' ? -10 : 10;
 
 $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
+$userId = $_SESSION['user_id'] ?? null;
 
 $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
 $checkStmt->execute([$listType, $entryType, $entryValue]);
@@ -67,6 +68,9 @@ if ($checkStmt->fetchColumn() > 0) {
 $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, score, created_by, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
 $insertStmt->execute([$listType, $entryType, $entryValue, $score, $user]);
+$entryId = $db->lastInsertId();
+$details = "Added {$listType} {$entryType}: {$entryValue} (score {$score})";
+logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
 $mapName = getRspamdMapName($listType, $entryType);
 if (!$mapName) {

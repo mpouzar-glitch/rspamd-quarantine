@@ -23,8 +23,46 @@ $canManageMaps = checkPermission('domain_admin');
 // Get filters from request
 $filters = getTraceFiltersFromRequest();
 
+// Reset pagination
+$resetPage = isset($_GET['reset_page']) && $_GET['reset_page'] == '1';
+
+// Sorting
+$sortableColumns = [
+    'timestamp' => 'timestamp',
+    'sender' => 'sender',
+    'recipients' => 'recipients',
+    'subject' => 'subject',
+    'action' => 'action',
+    'score' => 'score',
+    'ip_address' => 'ip_address',
+    'hostname' => 'hostname',
+];
+$sort = $_GET['sort'] ?? 'timestamp';
+$sortDir = strtolower($_GET['dir'] ?? 'desc');
+if (!isset($sortableColumns[$sort])) {
+    $sort = 'timestamp';
+}
+$sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
+$orderBy = $sortableColumns[$sort] . ' ' . strtoupper($sortDir);
+$sortParams = array_diff_key($_GET, ['page' => '', 'sort' => '', 'dir' => '', 'reset_page' => '']);
+$buildSortLink = function (string $column) use ($sort, $sortDir, $sortParams): string {
+    $nextDir = ($sort === $column && $sortDir === 'asc') ? 'desc' : 'asc';
+    $params = array_merge($sortParams, [
+        'sort' => $column,
+        'dir' => $nextDir,
+        'page' => 1,
+    ]);
+    return '?' . http_build_query($params);
+};
+$getSortIcon = function (string $column) use ($sort, $sortDir): string {
+    if ($sort !== $column) {
+        return 'fa-sort';
+    }
+    return $sortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+};
+
 // Pagination
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$page = $resetPage ? 1 : (isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1);
 $offset = ($page - 1) * ITEMS_PER_PAGE;
 
 // Get total count
@@ -36,11 +74,24 @@ $params = [];
 $sql = buildTraceQuery($filters, $params, [
     'limit' => ITEMS_PER_PAGE,
     'offset' => $offset,
+    'order_by' => $orderBy,
 ]);
 
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$listedEmails = ['whitelist' => [], 'blacklist' => []];
+if ($canManageMaps && !empty($messages)) {
+    $senderEmails = [];
+    foreach ($messages as $message) {
+        $senderEmail = extractEmailAddress(decodeMimeHeader($message['sender']));
+        if (!empty($senderEmail)) {
+            $senderEmails[] = $senderEmail;
+        }
+    }
+    $listedEmails = getEmailMapStatus($db, $senderEmails);
+}
 
 // Get statistics
 $stats = getTraceStats($db, $filters);
@@ -132,14 +183,54 @@ include 'menu.php';
                 <table class="messages-table">
                     <thead>
                         <tr>
-                            <th class="col-timestamp"><?php echo htmlspecialchars(__('time')); ?></th>
-                            <th class="col-email"><?php echo htmlspecialchars(__('msg_sender')); ?></th>
-                            <th class="col-email"><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
-                            <th class="col-subject"><?php echo htmlspecialchars(__('msg_subject')); ?></th>
-                            <th class="col-action"><?php echo htmlspecialchars(__('action')); ?></th>
-                            <th class="col-score"><?php echo htmlspecialchars(__('msg_score')); ?></th>
-                            <th class="col-ip"><?php echo htmlspecialchars(__('ip_address')); ?></th>
-                            <th class="col-hostname"><?php echo htmlspecialchars(__('hostname')); ?></th>
+                            <th class="col-timestamp">
+                                <a class="sort-link <?php echo $sort === 'timestamp' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('timestamp'); ?>">
+                                    <?php echo htmlspecialchars(__('time')); ?>
+                                    <i class="fas <?php echo $getSortIcon('timestamp'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-email">
+                                <a class="sort-link <?php echo $sort === 'sender' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('sender'); ?>">
+                                    <?php echo htmlspecialchars(__('msg_sender')); ?>
+                                    <i class="fas <?php echo $getSortIcon('sender'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-email">
+                                <a class="sort-link <?php echo $sort === 'recipients' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('recipients'); ?>">
+                                    <?php echo htmlspecialchars(__('msg_recipient')); ?>
+                                    <i class="fas <?php echo $getSortIcon('recipients'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-subject">
+                                <a class="sort-link <?php echo $sort === 'subject' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('subject'); ?>">
+                                    <?php echo htmlspecialchars(__('msg_subject')); ?>
+                                    <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-action">
+                                <a class="sort-link <?php echo $sort === 'action' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('action'); ?>">
+                                    <?php echo htmlspecialchars(__('action')); ?>
+                                    <i class="fas <?php echo $getSortIcon('action'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-score">
+                                <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
+                                    <?php echo htmlspecialchars(__('msg_score')); ?>
+                                    <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-ip">
+                                <a class="sort-link <?php echo $sort === 'ip_address' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('ip_address'); ?>">
+                                    <?php echo htmlspecialchars(__('ip_address')); ?>
+                                    <i class="fas <?php echo $getSortIcon('ip_address'); ?>"></i>
+                                </a>
+                            </th>
+                            <th class="col-hostname">
+                                <a class="sort-link <?php echo $sort === 'hostname' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('hostname'); ?>">
+                                    <?php echo htmlspecialchars(__('hostname')); ?>
+                                    <i class="fas <?php echo $getSortIcon('hostname'); ?>"></i>
+                                </a>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -148,6 +239,7 @@ include 'menu.php';
                             $msgId = $msg['id'];
                             $sender = decodeMimeHeader($msg['sender']);
                             $senderEmail = extractEmailAddress($sender);
+                            $senderEmailKey = $senderEmail ? strtolower($senderEmail) : '';
                             $recipients = decodeMimeHeader($msg['recipients']);
                             $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
@@ -237,26 +329,26 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
-                                    <?php if ($canManageMaps && $senderEmail): ?>
-                                        <span class="sender-actions">
-                                            <form method="POST" action="map_quick_add.php" class="sender-action-form">
-                                                <input type="hidden" name="list_type" value="whitelist">
-                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
-                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                                <button type="submit" class="sender-action-btn whitelist-btn" title="<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>">
-                                                    <i class="fas fa-shield-alt"></i>
-                                                </button>
-                                            </form>
-                                            <form method="POST" action="map_quick_add.php" class="sender-action-form">
-                                                <input type="hidden" name="list_type" value="blacklist">
-                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
-                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                                <button type="submit" class="sender-action-btn blacklist-btn" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
-                                                    <i class="fas fa-ban"></i>
-                                                </button>
-                                            </form>
-                                        </span>
-                                    <?php endif; ?>
+                                <?php if ($canManageMaps && $senderEmail): ?>
+                                    <span class="sender-actions">
+                                        <form method="POST" action="map_quick_add.php" class="sender-action-form">
+                                            <input type="hidden" name="list_type" value="whitelist">
+                                            <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                            <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                            <button type="submit" class="sender-action-btn whitelist-btn<?php echo isset($listedEmails['whitelist'][$senderEmailKey]) ? ' is-listed' : ''; ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="map_quick_add.php" class="sender-action-form">
+                                            <input type="hidden" name="list_type" value="blacklist">
+                                            <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                            <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                            <button type="submit" class="sender-action-btn blacklist-btn<?php echo isset($listedEmails['blacklist'][$senderEmailKey]) ? ' is-listed' : ''; ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </form>
+                                    </span>
+                                <?php endif; ?>
                                 </td>
                                 <td class="email-field">
                                     <i class="fas fa-inbox"></i> 
@@ -326,6 +418,8 @@ include 'menu.php';
                 <div class="pagination">
                     <?php
                     $currentQuery = $filters;
+                    $currentQuery['sort'] = $sort;
+                    $currentQuery['dir'] = $sortDir;
                     $maxButtons = 7;
                     $startPage = max(1, $page - floor($maxButtons / 2));
                     $endPage = min($totalPages, $startPage + $maxButtons - 1);
