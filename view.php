@@ -197,10 +197,46 @@ $show_to_header = !empty($to_header_clean) && strcasecmp($to_header_clean, $reci
 $dkim_dmarc_symbols = array_values(array_filter($parsed_symbols, function($sym) {
     return stripos($sym['name'], 'dkim') !== false || stripos($sym['name'], 'dmarc') !== false;
 }));
-$dkim_present = !empty($dkim_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dkim') !== false);
+$dkim_present = !empty($dkim_header);
 $dmarc_present = !empty($dmarc_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dmarc') !== false);
 $dkim_status = $dkim_present ? 'Ano' : 'Ne';
 $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
+
+$released = !empty($message['released']);
+$released_by = $message['released_by'] ?? '';
+$released_at = $message['released_at'] ?? '';
+
+$action = $message['action'] ?? 'unknown';
+$actionClass = 'badge badge-pass';
+$actionIcon = 'fa-check-circle';
+
+switch (strtolower($action)) {
+    case 'reject':
+        $actionClass = 'badge badge-reject';
+        $actionIcon = 'fa-ban';
+        break;
+    case 'no action':
+    case 'pass':
+        $actionClass = 'badge badge-pass';
+        $actionIcon = 'fa-check-circle';
+        break;
+    case 'add header':
+        $actionClass = 'badge badge-header';
+        $actionIcon = 'fa-tag';
+        break;
+    case 'greylist':
+        $actionClass = 'badge badge-pass';
+        $actionIcon = 'fa-clock';
+        break;
+    case 'soft reject':
+    case 'soft_reject':
+        $actionClass = 'badge badge-soft-reject';
+        $actionIcon = 'fa-exclamation-triangle';
+        break;
+    default:
+        $actionClass = 'badge badge-pass';
+        $actionIcon = 'fa-question-circle';
+}
 
 ?>
 <!DOCTYPE html>
@@ -210,6 +246,7 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail zprávy - Rspamd Quarantine</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
@@ -221,11 +258,11 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .card h2 { color: #2c3e50; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
         .info-grid { display: flex; gap: 20px; align-items: stretch; }
-        .info-block { flex: 1; min-width: 0; }
+        .info-block { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         table.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         table.info-table th { background: #ecf0f1; padding: 12px; text-align: left; width: 200px; font-weight: 600; color: #2c3e50; }
         table.info-table td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
-        .headers-panel { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; max-height: 320px; overflow: auto; }
+        .headers-panel { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; overflow: auto; flex: 1; }
         .headers-panel h3 { font-size: 13px; margin-bottom: 8px; color: #2c3e50; }
         .headers-panel pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
         @media (max-width: 1000px) { .info-grid { flex-direction: column; } }
@@ -242,9 +279,14 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
         .tab.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .badge { padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+        .badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.3; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.1); gap: 6px; }
+        .badge-reject { background: #c82333; color: #ffffff; box-shadow: 0 4px 12px rgba(200,35,51,0.4); }
+        .badge-soft-reject { background: #17a2b8; color: #ffffff; box-shadow: 0 4px 12px rgba(23,162,184,0.4); }
+        .badge-pass { background: #009933; color: #ffffff; box-shadow: 0 4px 12px rgba(51, 204, 0, 1); }
+        .badge-header { color: #000; background-color: rgba(255,193,7,1); box-shadow: 0 4px 12px rgba(255,193,7,0.5); }
         .badge-released { background: #27ae60; color: white; }
         .badge-quarantine { background: #e67e22; color: white; }
+        .action-badge { display: inline-flex; align-items: center; gap: 6px; }
         .actions { display: flex; gap: 10px; margin-top: 20px; }
         .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
         .btn i { margin-right: 5px; }
@@ -360,7 +402,12 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
                         <?php endif; ?>
                         <tr>
                             <th>Akce:</th>
-                            <td><span class="timeline-action"><?= htmlspecialchars($message['action']) ?></span></td>
+                            <td>
+                                <span class="action-badge <?= $actionClass; ?>">
+                                    <i class="fas <?= $actionIcon; ?>"></i>
+                                    <?= htmlspecialchars($action) ?>
+                                </span>
+                            </td>
                         </tr>
                         <tr>
                             <th>Spam skóre:</th>
@@ -369,10 +416,10 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
                         <tr>
                             <th>Stav:</th>
                             <td>
-                                <?php if ($message['released']): ?>
+                                <?php if ($released): ?>
                                     <span class="timeline-action">Uvolněno</span>
-                                    <?= htmlspecialchars($message['released_by']) ?>
-                                    (<?= date('d.m.Y H:i', strtotime($message['released_at'])) ?>)
+                                    <?= htmlspecialchars($released_by) ?>
+                                    (<?= date('d.m.Y H:i', strtotime($released_at)) ?>)
                                 <?php else: ?>
                                     <span class="timeline-action">V karanténě</span>
                                 <?php endif; ?>
@@ -478,7 +525,7 @@ $dmarc_status = $dmarc_present ? 'Ano' : 'Ne';
         <div class="card">
             <h2><i class="fas fa-tools"></i> Akce</h2>
             <div class="actions">
-                <?php if (!$message['released']): ?>
+                <?php if (!$released): ?>
                     <form method="post" action="index.php" onsubmit="return confirm('Opravdu chcete uvolnit tuto zprávu?')">
                         <input type="hidden" name="id" value="<?= $message['id'] ?>">
                         <input type="hidden" name="action" value="release">
