@@ -217,23 +217,6 @@ include 'menu.php';
                             case 2: $stateClass = 'state-learned-spam'; break;
                             case 3: $stateClass = 'state-released'; break;
                         }
-
-                        // Auto-learn spam detection
-                        $autoLearnEnabled = defined('AUTOLEARN_ENABLED') ? AUTOLEARN_ENABLED : false;
-                        $autoLearnScore = defined('AUTOLEARN_SCORE') ? AUTOLEARN_SCORE : 15.0;
-
-                        if ($autoLearnEnabled) {
-                            $symbols = isset($msg['symbols']) ? $msg['symbols'] : '';
-                            $hasAutoLearn = (
-                                stripos($symbols, 'BAYES_SPAM') !== false ||
-                                stripos($symbols, 'NEURAL_SPAM') !== false ||
-                                ($msg['state'] == 0 && $score >= $autoLearnScore)
-                            );
-
-                            if ($hasAutoLearn) {
-                                $stateClass = 'auto-learn-spam';
-                            }
-                        }
                         ?>
                         <tr class="message-row <?php echo $stateClass; ?>" id="row_<?php echo $msgId; ?>">
                             <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>

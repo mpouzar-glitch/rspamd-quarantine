@@ -65,7 +65,7 @@ if (!function_exists('learnMessage')) {
 /**
  * Safely release message via sendmail
  */
-if (!function_exists('learnMessage')) {
+if (!function_exists('safeSendmailRelease')) {
     function safeSendmailRelease($db, $id, $user) {
         $stmt = $db->prepare("SELECT message_content, sender, recipients FROM quarantine_messages WHERE id = ? AND state = 0");
         $stmt->execute([$id]);

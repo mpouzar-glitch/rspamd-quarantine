@@ -259,13 +259,7 @@ include 'menu.php';
                             $isAutoLearnSpam = false;
 
                             if ($autoLearnEnabled) {
-                                // Check if message has auto-learn symbols from Rspamd
-                                $symbols = isset($msg['symbols']) ? $msg['symbols'] : '';
-                                $hasAutoLearn = (
-                                    stripos($symbols, 'BAYES_SPAM') !== false ||
-                                    stripos($symbols, 'NEURAL_SPAM') !== false ||
-                                    ($msg['state'] == 0 && $score >= $autoLearnScore)
-                                );
+                                $hasAutoLearn = ($msg['state'] == 0 && $score >= $autoLearnScore);
 
                                 if ($hasAutoLearn) {
                                     $stateClass = 'auto-learn-spam';

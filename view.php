@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 session_start();
 require_once __DIR__ . '/config.php';
 
@@ -178,6 +173,10 @@ if (!empty($message['symbols'])) {
         }
     }
 }
+// Sort by score descending
+usort($parsed_symbols, function($a, $b) {
+    return $b['score'] <=> $a['score'];
+});
 
 ?>
 <!DOCTYPE html>

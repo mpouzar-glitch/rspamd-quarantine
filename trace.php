@@ -1,9 +1,4 @@
 <?php
-/*
- * Version: 2.0.0
- * Author: Martin Pouzar
- * License: GNU General Public License v3.0
- */
 /**
  * Message Trace - Full Email Traffic Log
  * Displays all messages processed by Rspamd (not just quarantined)
@@ -101,7 +96,7 @@ include 'menu.php';
             'show_sender' => true,
             'show_recipient' => true,
             'show_state' => false,
-            'show_ip' => ($filters['ip']),
+            'show_ip' => ($filters['ip'] ?? false),
             'show_auth_user' => false,
             'form_id' => 'filterForm',
             'reset_url' => 'trace.php',

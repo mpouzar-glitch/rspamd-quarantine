@@ -1649,6 +1649,7 @@ function getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, $limit =
     return array_slice($symbols, 0, $limit);
 }
 
+
 /**
  * Search symbols with scores for admin analysis
  */
@@ -1907,6 +1908,7 @@ if (!function_exists('buildRspamdMapContent')) {
         foreach ($entries as $entry) {
             $value = str_replace(["\r", "\n"], '', $entry['entry_value']);
             $score = is_numeric($entry['score']) ? $entry['score'] : 0;
+            $score = number_format($score, 1);
             $lines[] = trim($value . ' ' . $score);
         }
 
