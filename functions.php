@@ -1650,6 +1650,89 @@ function getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, $limit =
 }
 
 /**
+ * Search symbols with scores for admin analysis
+ */
+function search_symbols($db, $search, $dateFrom = null, $dateTo = null, $limit = 50) {
+    if (!checkPermission('admin')) {
+        return [];
+    }
+
+    $search = trim((string)$search);
+    if ($search === '') {
+        return [];
+    }
+
+    $params = [];
+    $where = [
+        "symbols IS NOT NULL",
+        "symbols != ''",
+        "symbols LIKE ?"
+    ];
+    $params[] = '%' . $search . '%';
+
+    if ($dateFrom && $dateTo) {
+        $where[] = "timestamp BETWEEN ? AND ?";
+        $params[] = $dateFrom;
+        $params[] = $dateTo;
+    }
+
+    $sql = "SELECT symbols
+            FROM message_trace
+            WHERE " . implode(' AND ', $where);
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    $symbolStats = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $parsedSymbols = parseSymbolsForStats($row['symbols']);
+        foreach ($parsedSymbols as $symbol) {
+            $name = $symbol['name'];
+            if (stripos($name, $search) === false) {
+                continue;
+            }
+            $score = $symbol['score'];
+            if (!isset($symbolStats[$name])) {
+                $symbolStats[$name] = [
+                    'count' => 0,
+                    'total_score' => 0.0,
+                    'max_score' => $score,
+                    'min_score' => $score
+                ];
+            }
+            $symbolStats[$name]['count']++;
+            $symbolStats[$name]['total_score'] += $score;
+            if ($score > $symbolStats[$name]['max_score']) {
+                $symbolStats[$name]['max_score'] = $score;
+            }
+            if ($score < $symbolStats[$name]['min_score']) {
+                $symbolStats[$name]['min_score'] = $score;
+            }
+        }
+    }
+
+    $symbols = [];
+    foreach ($symbolStats as $name => $data) {
+        $symbols[] = [
+            'symbol' => $name,
+            'count' => $data['count'],
+            'avg_score' => $data['count'] > 0 ? $data['total_score'] / $data['count'] : 0.0,
+            'max_score' => $data['max_score'],
+            'min_score' => $data['min_score']
+        ];
+    }
+
+    usort($symbols, function ($a, $b) {
+        if ($b['count'] === $a['count']) {
+            return $b['avg_score'] <=> $a['avg_score'];
+        }
+        return $b['count'] <=> $a['count'];
+    });
+
+    return array_slice($symbols, 0, $limit);
+}
+
+/**
  * Get volume and count statistics
  */
 function getVolumeStats($db, $dateFrom, $dateTo, $domainFilter, $params) {
