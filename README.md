@@ -302,36 +302,43 @@ For whitelist/blacklist of email addresses and IPs, use the `multimap` module. C
 
 ```conf
 # /etc/rspamd/local.d/multimap.conf
+
 WHITELIST_EMAIL {
     type = "from";
+    extract_from = "smtp";
     map = "/var/lib/rspamd/whitelist_email.map";
     symbol = "WHITELIST_EMAIL";
     description = "Whitelist email addresses";
-    score = -10.0;
+    prefilter = true;
+    action = "accept";
 }
 
 BLACKLIST_EMAIL {
     type = "from";
+    extract_from = "smtp";
     map = "/var/lib/rspamd/blacklist_email.map";
     symbol = "BLACKLIST_EMAIL";
-    description = "Blacklist email addresses";
+    prefilter = true;
     action = "reject";
+    description = "Blacklist email addresses";
 }
 
 WHITELIST_IP {
     type = "ip";
     map = "/var/lib/rspamd/whitelist_ip.map";
     symbol = "WHITELIST_IP";
+    prefilter = true;
+    action = "accept";
     description = "Whitelist IP addresses";
-    score = -10.0;
 }
 
 BLACKLIST_IP {
     type = "ip";
     map = "/var/lib/rspamd/blacklist_ip.map";
     symbol = "BLACKLIST_IP";
-    description = "Blacklist IP addresses";
+    prefilter = true;
     action = "reject";
+    description = "Blacklist IP addresses";
 }
 ```
 
