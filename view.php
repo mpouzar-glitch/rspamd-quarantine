@@ -64,6 +64,15 @@ foreach ($lines as $line) {
     }
 }
 
+$headers_lower = array_change_key_case($headers_array, CASE_LOWER);
+$dkim_header = $headers_lower['dkim-signature'] ?? '';
+$authentication_results = $headers_lower['authentication-results'] ?? '';
+$dmarc_header = $headers_lower['dmarc-filter'] ?? ($authentication_results ?: '');
+$spam_header = $headers_lower['x-spam-status'] ?? $headers_lower['x-spam-flag'] ?? $headers_lower['x-spam-level'] ?? $headers_lower['x-spam-score'] ?? '';
+$user_agent_header = $headers_lower['user-agent'] ?? $headers_lower['x-mailer'] ?? '';
+$from_header = $headers_lower['from'] ?? '';
+$to_header = $headers_lower['to'] ?? '';
+
 // Decode subject and from
 $subject_decoded = decodeMimeHeader($message['subject'] ?? $headers_array['Subject'] ?? '(bez předmětu)');
 $from_decoded = decodeMimeHeader($headers_array['From'] ?? $message['sender'] ?? '');
@@ -196,9 +205,14 @@ usort($parsed_symbols, function($a, $b) {
         .header .back:hover { text-decoration: underline; }
         .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .card h2 { color: #2c3e50; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        table.info-table { width: 100%; border-collapse: collapse; }
+        .info-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+        table.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         table.info-table th { background: #ecf0f1; padding: 12px; text-align: left; width: 200px; font-weight: 600; color: #2c3e50; }
         table.info-table td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+        .headers-panel { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; max-height: 320px; overflow: auto; }
+        .headers-panel h3 { font-size: 13px; margin-bottom: 8px; color: #2c3e50; }
+        .headers-panel pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+        @media (max-width: 1000px) { .info-grid { grid-template-columns: 1fr; } }
         .symbols { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
         .symbol-badge { background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-family: monospace; }
         .symbol-badge.low { background: #95a5a6; }
@@ -260,54 +274,96 @@ usort($parsed_symbols, function($a, $b) {
         
         <div class="card">
             <h2><i class="fas fa-info-circle"></i> Základní informace</h2>
-            <table class="info-table">
-                <tr>
-                    <th>Předmět:</th>
-                    <td><strong><?= htmlspecialchars($subject_decoded) ?></strong></td>
-                </tr>
-                <tr>
-                    <th>Odesílatel:</th>
-                    <td><?= htmlspecialchars($from_decoded) ?></td>
-                </tr>
-                <tr>
-                    <th>Příjemce:</th>
-                    <td><strong><?= htmlspecialchars($to_decoded) ?></strong></td>
-                </tr>
-                <tr>
-                    <th>Datum:</th>
-                    <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
-                </tr>
-                <tr>
-                    <th>IP adresa:</th>
-                    <td><?= htmlspecialchars($message['ip_address']) ?></td>
-                </tr>
-                <?php if (!empty($message['authenticated_user'])): ?>
-                <tr>
-                    <th>Autentizovaný uživatel:</th>
-                    <td><?= htmlspecialchars($message['authenticated_user']) ?></td>
-                </tr>
-                <?php endif; ?>
-                <tr>
-                    <th>Akce:</th>
-                    <td><span class="badge badge-<?= $message['action'] === 'reject' ? 'danger' : 'warning' ?>"><?= htmlspecialchars($message['action']) ?></span></td>
-                </tr>
-                <tr>
-                    <th>Spam skóre:</th>
-                    <td><strong style="color: <?= $message['score'] >= 15 ? '#e74c3c' : ($message['score'] >= 6 ? '#f39c12' : '#27ae60') ?>;"><?= number_format($message['score'], 2) ?></strong></td>
-                </tr>
-                <tr>
-                    <th>Stav:</th>
-                    <td>
-                        <?php if ($message['released']): ?>
-                            <span class="badge badge-released">Uvolněno</span> 
-                            <?= htmlspecialchars($message['released_by']) ?> 
-                            (<?= date('d.m.Y H:i', strtotime($message['released_at'])) ?>)
-                        <?php else: ?>
-                            <span class="badge badge-quarantine">V karanténě</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            </table>
+            <div class="info-grid">
+                <table class="info-table">
+                    <tr>
+                        <th>Předmět:</th>
+                        <td><strong><?= htmlspecialchars($subject_decoded) ?></strong></td>
+                    </tr>
+                    <tr>
+                        <th>Odesílatel:</th>
+                        <td><?= htmlspecialchars($from_decoded) ?></td>
+                    </tr>
+                    <?php if (!empty($from_header)): ?>
+                    <tr>
+                        <th>From (hlavička):</th>
+                        <td><?= htmlspecialchars($from_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <th>Příjemce:</th>
+                        <td><strong><?= htmlspecialchars($to_decoded) ?></strong></td>
+                    </tr>
+                    <?php if (!empty($to_header)): ?>
+                    <tr>
+                        <th>To (hlavička):</th>
+                        <td><?= htmlspecialchars($to_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if (!empty($dkim_header)): ?>
+                    <tr>
+                        <th>DKIM:</th>
+                        <td><?= htmlspecialchars($dkim_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if (!empty($dmarc_header)): ?>
+                    <tr>
+                        <th>DMARC:</th>
+                        <td><?= htmlspecialchars($dmarc_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if (!empty($spam_header)): ?>
+                    <tr>
+                        <th>Spam hlavička:</th>
+                        <td><?= htmlspecialchars($spam_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php if (!empty($user_agent_header)): ?>
+                    <tr>
+                        <th>User-Agent:</th>
+                        <td><?= htmlspecialchars($user_agent_header) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <th>Datum:</th>
+                        <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
+                    </tr>
+                    <tr>
+                        <th>IP adresa:</th>
+                        <td><?= htmlspecialchars($message['ip_address']) ?></td>
+                    </tr>
+                    <?php if (!empty($message['authenticated_user'])): ?>
+                    <tr>
+                        <th>Autentizovaný uživatel:</th>
+                        <td><?= htmlspecialchars($message['authenticated_user']) ?></td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <th>Akce:</th>
+                        <td><span class="badge badge-<?= $message['action'] === 'reject' ? 'danger' : 'warning' ?>"><?= htmlspecialchars($message['action']) ?></span></td>
+                    </tr>
+                    <tr>
+                        <th>Spam skóre:</th>
+                        <td><strong style="color: <?= $message['score'] >= 15 ? '#e74c3c' : ($message['score'] >= 6 ? '#f39c12' : '#27ae60') ?>;"><?= number_format($message['score'], 2) ?></strong></td>
+                    </tr>
+                    <tr>
+                        <th>Stav:</th>
+                        <td>
+                            <?php if ($message['released']): ?>
+                                <span class="badge badge-released">Uvolněno</span> 
+                                <?= htmlspecialchars($message['released_by']) ?> 
+                                (<?= date('d.m.Y H:i', strtotime($message['released_at'])) ?>)
+                            <?php else: ?>
+                                <span class="badge badge-quarantine">V karanténě</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                </table>
+                <div class="headers-panel">
+                    <h3>Hlavička zprávy</h3>
+                    <pre><?= htmlspecialchars($headers_raw) ?></pre>
+                </div>
+            </div>
         </div>
         
         <?php if (!empty($parsed_symbols)): ?>
