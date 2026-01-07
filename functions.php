@@ -630,7 +630,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0

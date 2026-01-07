@@ -258,6 +258,9 @@ if ($headers_end !== false) {
 try {
     $db = Database::getInstance()->getConnection();
 
+    $hostname = getPayloadValue($payload, $payload_meta, ['rspamd_server'])
+    ?? ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+
     $stmt = $db->prepare("
         INSERT INTO quarantine_messages (
             message_id, queue_id, sender, recipients, subject,
@@ -286,7 +289,7 @@ try {
         ':headers_from' => $headers['from'],
         ':headers_to' => $headers['to'],
         ':headers_date' => $headers['date'],
-        ':hostname' => $headers['hostname'],
+        ':hostname' => $hostname,
         ':message_content' => $message_content,
         ':metadata' => json_encode(array_merge($metadata, $headers))
     ]);

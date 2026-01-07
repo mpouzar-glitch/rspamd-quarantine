@@ -217,7 +217,7 @@ include 'menu.php';
         </div>
 
         <?php if (empty($messages)): ?>
-            <div class="no-results">
+            <div class="empty-state">
                 <i class="fas fa-inbox"></i>
                 <h3><?php echo htmlspecialchars(__('bulk_no_messages_title')); ?></h3>
                 <p><?php echo htmlspecialchars(__('bulk_no_messages_desc')); ?></p>

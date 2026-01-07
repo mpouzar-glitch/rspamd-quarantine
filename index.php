@@ -44,6 +44,8 @@ $sortableColumns = [
     'recipients' => 'recipients',
     'subject' => 'subject',
     'score' => 'score',
+    'hostname' => 'hostname',
+    'size' => 'size',
 ];
 $sort = $_GET['sort'] ?? 'timestamp';
 $sortDir = strtolower($_GET['dir'] ?? 'desc');
@@ -182,7 +184,7 @@ include 'menu.php';
         ?>
 
         <?php if (empty($messages)): ?>
-            <div class="no-results">
+            <div class="empty-state">
                 <i class="fas fa-inbox"></i>
                 <h3><?php echo htmlspecialchars(__('quarantine_no_messages')); ?></h3>
                 <p><?php echo htmlspecialchars(__('quarantine_no_messages_desc')); ?></p>
@@ -232,8 +234,19 @@ include 'menu.php';
                                 <?php echo htmlspecialchars(__('subject')); ?>
                                 <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                             </a>
+                        </th>            
+                        <th style="width: 100px;" class="col-hostname">
+                            <a class="sort-link <?php echo $sort === 'hostname' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('hostname'); ?>">
+                                <?php echo htmlspecialchars(__('hostname')); ?>
+                                <i class="fas <?php echo $getSortIcon('hostname'); ?>"></i>
+                            </a>
                         </th>
-                        <th style="width: 90px;"><?php echo htmlspecialchars(__('size')); ?></th>
+                        <th style="width: 90px;" class="col-size">
+                            <a class="sort-link <?php echo $sort === 'size' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('size'); ?>">
+                                <?php echo htmlspecialchars(__('size')); ?>
+                                <i class="fas <?php echo $getSortIcon('size'); ?>"></i>
+                            </a>
+                        </th>
                         <th style="width: 60px;">
                             <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
                                 <?php echo htmlspecialchars(__('msg_score')); ?>
@@ -253,6 +266,7 @@ include 'menu.php';
                         $recipients = decodeMimeHeader($msg['recipients']);
                         $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                         $score = round($msg['score'], 2);
+                        $hostname = $msg['hostname'] ?? '-';
 
                         // Parse symbols from JSON
                         $symbols = $msg['symbols'] ?? '';
@@ -337,6 +351,9 @@ include 'menu.php';
                             </td>
                             <td class="subject-field">
                                 <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
+                            </td>
+                            <td class="hostname-field">
+                                <?php echo htmlspecialchars($hostname); ?>
                             </td>
                             <td class="text-right no-wrap">
                                 <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
