@@ -51,8 +51,6 @@ if (!checkPermission('admin') && !checkDomainAccess($entryValue)) {
     exit;
 }
 
-$score = $listType === 'whitelist' ? -10 : 10;
-
 $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
 $userId = $_SESSION['user_id'] ?? null;
@@ -65,11 +63,11 @@ if ($checkStmt->fetchColumn() > 0) {
     exit;
 }
 
-$insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, score, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
-$insertStmt->execute([$listType, $entryType, $entryValue, $score, $user]);
+$insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, NOW(), NOW())");
+$insertStmt->execute([$listType, $entryType, $entryValue, $user]);
 $entryId = $db->lastInsertId();
-$details = "Added {$listType} {$entryType}: {$entryValue} (score {$score})";
+$details = "Added {$listType} {$entryType}: {$entryValue}";
 logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
 $mapName = getRspamdMapName($listType, $entryType);
@@ -79,7 +77,7 @@ if (!$mapName) {
     exit;
 }
 
-$stmt = $db->prepare("SELECT entry_value, score FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? ORDER BY entry_value ASC");
+$stmt = $db->prepare("SELECT entry_value FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? ORDER BY entry_value ASC");
 $stmt->execute([$listType, $entryType]);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $content = buildRspamdMapContent($entries);

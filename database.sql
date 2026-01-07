@@ -198,7 +198,6 @@ CREATE TABLE `rspamd_map_entries` (
   `list_type` enum('whitelist','blacklist') NOT NULL,
   `entry_type` enum('ip','email') NOT NULL,
   `entry_value` varchar(255) NOT NULL,
-  `score` decimal(10,2) NOT NULL DEFAULT 0.00,
   `created_by` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
