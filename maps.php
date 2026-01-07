@@ -35,10 +35,30 @@ function validateMapEntry($entryType, $value) {
     }
 
     if ($entryType === 'email') {
-        return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;
+        if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false) {
+            return true;
+        }
+
+        if (preg_match('/^@(.+)$/', $value, $matches)) {
+            return filter_var($matches[1], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+        }
+
+        return false;
     }
 
     return false;
+}
+
+function canManageMapEntry($entryType, $entryValue, $isDomainAdmin) {
+    if (!$isDomainAdmin) {
+        return true;
+    }
+
+    if ($entryType === 'email') {
+        return checkDomainAccess($entryValue);
+    }
+
+    return true;
 }
 
 function syncMapEntries($db, $listType, $entryType) {
@@ -50,7 +70,7 @@ function syncMapEntries($db, $listType, $entryType) {
         ];
     }
 
-    $stmt = $db->prepare("SELECT entry_value, score FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? ORDER BY entry_value ASC");
+    $stmt = $db->prepare("SELECT entry_value FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? ORDER BY entry_value ASC");
     $stmt->execute([$listType, $entryType]);
     $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -83,8 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $listType = $_POST['list_type'] ?? '';
         $entryType = $_POST['entry_type'] ?? '';
         $entryValue = trim($_POST['entry_value'] ?? '');
-        $scoreInput = $_POST['score'] ?? '';
-
         if (!in_array($listType, $allowedLists, true) || !in_array($entryType, $allowedTypes, true)) {
             $_SESSION['error_msg'] = __('maps_invalid_input');
             header('Location: maps.php');
@@ -97,19 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if (!is_numeric($scoreInput)) {
-            $_SESSION['error_msg'] = __('maps_invalid_score');
-            header('Location: maps.php');
-            exit;
-        }
-
-        if ($isDomainAdmin && $entryType === 'email' && !checkDomainAccess($entryValue)) {
+        if (!canManageMapEntry($entryType, $entryValue, $isDomainAdmin)) {
             $_SESSION['error_msg'] = __('maps_permission_denied');
             header('Location: maps.php');
             exit;
         }
-
-        $score = (float)$scoreInput;
 
         $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
         $checkStmt->execute([$listType, $entryType, $entryValue]);
@@ -119,11 +129,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, score, created_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
-        $insertStmt->execute([$listType, $entryType, $entryValue, $score, $user]);
+        $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NOW(), NOW())");
+        $insertStmt->execute([$listType, $entryType, $entryValue, $user]);
         $entryId = $db->lastInsertId();
-        $details = "Added {$listType} {$entryType}: {$entryValue} (score {$score})";
+        $details = "Added {$listType} {$entryType}: {$entryValue}";
         logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
         $sync = syncMapEntries($db, $listType, $entryType);
@@ -180,14 +190,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if ($isDomainAdmin) {
-    $stmt = $db->prepare("SELECT id, list_type, entry_type, entry_value, score, created_by, created_at
+    $stmt = $db->prepare("SELECT id, list_type, entry_type, entry_value, created_by, created_at
         FROM rspamd_map_entries
         WHERE created_by = ?
         ORDER BY list_type ASC, entry_type ASC, entry_value ASC");
     $stmt->execute([$user]);
     $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
-    $stmt = $db->query("SELECT id, list_type, entry_type, entry_value, score, created_by, created_at
+    $stmt = $db->query("SELECT id, list_type, entry_type, entry_value, created_by, created_at
         FROM rspamd_map_entries
         ORDER BY list_type ASC, entry_type ASC, entry_value ASC");
     $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -247,10 +257,6 @@ include 'menu.php';
                             <label for="whitelist-entry-value"><?php echo htmlspecialchars(__('maps_entry_value')); ?></label>
                             <input id="whitelist-entry-value" type="text" name="entry_value" placeholder="<?php echo htmlspecialchars(__('maps_value_placeholder')); ?>" required>
                         </div>
-                        <div class="form-group">
-                            <label for="whitelist-score"><?php echo htmlspecialchars(__('maps_score')); ?></label>
-                            <input id="whitelist-score" type="number" step="0.1" name="score" value="-10" required>
-                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
@@ -263,7 +269,6 @@ include 'menu.php';
                         <tr>
                             <th><?php echo htmlspecialchars(__('maps_entry_type')); ?></th>
                             <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
-                            <th style="width: 90px; text-align: center;"><?php echo htmlspecialchars(__('maps_score')); ?></th>
                             <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
                             <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
                             <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
@@ -272,16 +277,21 @@ include 'menu.php';
                     <tbody>
                         <?php if (empty($whitelistEntries)): ?>
                             <tr>
-                                <td colspan="6" class="no-results">
+                                <td colspan="5" class="no-results">
                                     <?php echo htmlspecialchars(__('maps_no_entries')); ?>
                                 </td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($whitelistEntries as $entry): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($entry['entry_type'] === 'ip' ? __('maps_type_ip') : __('maps_type_email')); ?></td>
+                                    <td>
+                                        <?php
+                                        echo htmlspecialchars($entry['entry_type'] === 'ip'
+                                            ? __('maps_type_ip')
+                                            : __('maps_type_email'));
+                                        ?>
+                                    </td>
                                     <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
-                                    <td style="text-align: center;"><?php echo htmlspecialchars(number_format((float)$entry['score'], 1)); ?></td>
                                     <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
                                     <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
                                     <td>
@@ -322,10 +332,6 @@ include 'menu.php';
                             <label for="blacklist-entry-value"><?php echo htmlspecialchars(__('maps_entry_value')); ?></label>
                             <input id="blacklist-entry-value" type="text" name="entry_value" placeholder="<?php echo htmlspecialchars(__('maps_value_placeholder')); ?>" required>
                         </div>
-                        <div class="form-group">
-                            <label for="blacklist-score"><?php echo htmlspecialchars(__('maps_score')); ?></label>
-                            <input id="blacklist-score" type="number" step="0.1" name="score" value="10" required>
-                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
@@ -338,7 +344,6 @@ include 'menu.php';
                         <tr>
                             <th><?php echo htmlspecialchars(__('maps_entry_type')); ?></th>
                             <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
-                            <th style="width: 90px; text-align: center;"><?php echo htmlspecialchars(__('maps_score')); ?></th>
                             <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
                             <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
                             <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
@@ -347,16 +352,21 @@ include 'menu.php';
                     <tbody>
                         <?php if (empty($blacklistEntries)): ?>
                             <tr>
-                                <td colspan="6" class="no-results">
+                                <td colspan="5" class="no-results">
                                     <?php echo htmlspecialchars(__('maps_no_entries')); ?>
                                 </td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($blacklistEntries as $entry): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($entry['entry_type'] === 'ip' ? __('maps_type_ip') : __('maps_type_email')); ?></td>
+                                    <td>
+                                        <?php
+                                        echo htmlspecialchars($entry['entry_type'] === 'ip'
+                                            ? __('maps_type_ip')
+                                            : __('maps_type_email'));
+                                        ?>
+                                    </td>
                                     <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
-                                    <td style="text-align: center;"><?php echo htmlspecialchars(number_format((float)$entry['score'], 1)); ?></td>
                                     <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
                                     <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
                                     <td>
