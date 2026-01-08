@@ -713,6 +713,22 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
         $params[] = '%' . $filters['recipient'] . '%';
     }
 
+    // Symbol filters
+    $symbolFilters = [];
+    if (!empty($filters['virus'])) {
+        $symbolFilters[] = "symbols LIKE ?";
+        $params[] = '%ESET_VIRUS%';
+        $symbolFilters[] = "symbols LIKE ?";
+        $params[] = '%CLAM_VIRUS%';
+    }
+    if (!empty($filters['bad_extension'])) {
+        $symbolFilters[] = "symbols LIKE ?";
+        $params[] = '%BAD_ATTACHMENT_EXT%';
+    }
+    if (!empty($symbolFilters)) {
+        $where[] = '(' . implode(' OR ', $symbolFilters) . ')';
+    }
+
     return implode(' AND ', $where);
 }
 

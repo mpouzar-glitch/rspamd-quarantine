@@ -178,6 +178,8 @@ return [
     'filter_ip_placeholder' => 'napr. 192.168.1.1',
     'filter_auth_user' => 'Auth používateľ',
     'filter_auth_user_placeholder' => 'napr. user@domain',
+    'filter_virus' => 'Vírus',
+    'filter_bad_extension' => 'Zlá prípona',
     'filter_clear' => 'Vymazať',
     'filter_by_sender' => 'Filtrovať podľa odosielateľa: {sender}',
     'filter_by_recipient' => 'Filtrovať podľa príjemcu: {recipient}',

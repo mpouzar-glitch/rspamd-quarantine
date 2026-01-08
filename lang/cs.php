@@ -212,6 +212,8 @@ return [
     'filter_ip_placeholder' => 'např. 192.168.1.1',
     'filter_auth_user' => 'Auth. uživatel',
     'filter_auth_user_placeholder' => 'např. user@domain',
+    'filter_virus' => 'Virus',
+    'filter_bad_extension' => 'Špatná přípona',
     'filter_clear' => 'Vymazat',
     'filter_by_sender' => 'Filtrovat podle odesílatele: {sender}',
     'filter_by_recipient' => 'Filtrovat podle příjemce: {recipient}',

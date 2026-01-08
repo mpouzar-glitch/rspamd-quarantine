@@ -65,7 +65,9 @@ function getFiltersFromRequest(string $sessionKey = 'search_filters'): array {
         'sender',
         'recipient',
         'ip',
-        'auth_user'
+        'auth_user',
+        'virus',
+        'bad_extension',
     ];
 
     $filters = [];
@@ -96,6 +98,8 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         'show_state' => true,
         'show_ip' => true,
         'show_auth_user' => true,
+        'show_virus' => false,
+        'show_bad_extension' => false,
         'columns' => 4,
         'form_id' => 'filterForm',
         'reset_url' => 'index.php?reset_filters=1',
@@ -233,6 +237,28 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-user',
             'placeholder' => __('filter_auth_user_placeholder'),
             'value' => getFilterValue('auth_user', $sessionKey),
+            'class' => 'filter-group',
+        ];
+    }
+
+    if ($opts['show_virus']) {
+        $filters['virus'] = [
+            'key' => 'virus',
+            'type' => 'checkbox',
+            'label' => __('filter_virus'),
+            'icon' => 'fas fa-virus',
+            'value' => getFilterValue('virus', $sessionKey),
+            'class' => 'filter-group',
+        ];
+    }
+
+    if ($opts['show_bad_extension']) {
+        $filters['bad_extension'] = [
+            'key' => 'bad_extension',
+            'type' => 'checkbox',
+            'label' => __('filter_bad_extension'),
+            'icon' => 'fas fa-file-circle-xmark',
+            'value' => getFilterValue('bad_extension', $sessionKey),
             'class' => 'filter-group',
         ];
     }
@@ -395,6 +421,7 @@ function renderSearchFilters(array $filters_def): string {
     <form method="GET" id="<?php echo htmlspecialchars($formId); ?>" class="compact-filter-form">
         <div class="compact-filter-row">
             <?php foreach ($filters_def as $filter): ?>
+                <?php $isChecked = ($filter['type'] === 'checkbox' && !empty($filter['value'])); ?>
                 <div class="compact-filter-item <?php echo (!empty($filter['value']) && $filter['value'] !== '') ? 'has-value' : ''; ?>">
                     <label for="<?php echo htmlspecialchars($filter['key']); ?>">
                         <?php if (!empty($filter['icon'])): ?>
@@ -417,6 +444,16 @@ function renderSearchFilters(array $filters_def): string {
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                        <?php elseif ($filter['type'] === 'checkbox'): ?>
+                            <input type="hidden" name="<?php echo htmlspecialchars($filter['key']); ?>" value="">
+                            <input
+                                type="checkbox"
+                                name="<?php echo htmlspecialchars($filter['key']); ?>"
+                                id="<?php echo htmlspecialchars($filter['key']); ?>"
+                                value="1"
+                                class="<?php echo $isChecked ? 'has-value' : ''; ?>"
+                                <?php echo $isChecked ? 'checked' : ''; ?>
+                                onchange="this.form.submit()">
                         <?php else: ?>
                             <input 
                                 type="<?php echo htmlspecialchars($filter['type']); ?>"
@@ -451,11 +488,13 @@ function renderSearchFilters(array $filters_def): string {
         const form = document.getElementById('<?php echo htmlspecialchars($formId); ?>');
         if (!form) return;
 
-        const field = form.querySelector('[name="' + fieldName + '"]');
+        const field = form.querySelector('[name="' + fieldName + '"]:not([type="hidden"])');
         if (!field) return;
 
         if (field.tagName === 'SELECT') {
             field.selectedIndex = 0;
+        } else if (field.type === 'checkbox') {
+            field.checked = false;
         } else {
             field.value = '';
         }
@@ -469,10 +508,12 @@ function renderSearchFilters(array $filters_def): string {
 
         function markActiveFields() {
             form.querySelectorAll('.compact-filter-item').forEach(function(item) {
-                const input = item.querySelector('input, select');
+                const input = item.querySelector('input:not([type="hidden"]), select');
                 if (!input) return;
 
-                const hasValue = input.value && input.value.trim() !== '';
+                const hasValue = (input.type === 'checkbox')
+                    ? input.checked
+                    : (input.value && input.value.trim() !== '');
 
                 if (hasValue) {
                     item.classList.add('has-value');
