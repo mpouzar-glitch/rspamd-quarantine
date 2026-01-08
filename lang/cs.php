@@ -213,6 +213,7 @@ return [
     'filter_auth_user' => 'Auth. uživatel',
     'filter_auth_user_placeholder' => 'např. user@domain',
     'filter_virus' => 'Virus',
+    'filter_dangerous_attachment' => 'Nebezpečná příloha',
     'filter_bad_extension' => 'Špatná přípona',
     'filter_clear' => 'Vymazat',
     'filter_by_sender' => 'Filtrovat podle odesílatele: {sender}',

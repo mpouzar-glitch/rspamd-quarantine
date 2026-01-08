@@ -247,6 +247,13 @@ body {
     font-size: 0.85em;
     vertical-align: middle;
 }
+
+.bad-attachment-icon {
+    color: #f39c12;
+    margin-left: 6px;
+    font-size: 0.85em;
+    vertical-align: middle;
+}
 /* ===== TABLES ===== */
 .table-container {
     background: white;

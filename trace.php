@@ -249,6 +249,7 @@ include 'menu.php';
                             $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
                             $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
+                            $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
 
                             // Parse symbols like in view.php
                             $parsed_symbols = [];
@@ -280,11 +281,15 @@ include 'menu.php';
                                 });
                             }
                             $hasVirusSymbol = false;
+                            $hasBadAttachmentSymbol = false;
                             if (!empty($parsed_symbols)) {
                                 foreach ($parsed_symbols as $symbol) {
                                     if (in_array($symbol['name'], $virusSymbols, true)) {
                                         $hasVirusSymbol = true;
                                         break;
+                                    }
+                                    if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
+                                        $hasBadAttachmentSymbol = true;
                                     }
                                 }
                             }
@@ -292,6 +297,14 @@ include 'menu.php';
                                 foreach ($virusSymbols as $virusSymbol) {
                                     if (stripos($symbols, $virusSymbol) !== false) {
                                         $hasVirusSymbol = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$hasBadAttachmentSymbol && !empty($symbols)) {
+                                foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
+                                    if (stripos($symbols, $badAttachmentSymbol) !== false) {
+                                        $hasBadAttachmentSymbol = true;
                                         break;
                                     }
                                 }
@@ -392,6 +405,9 @@ include 'menu.php';
                                         <?php echo number_format($score, 2); ?>
                                         <?php if ($hasVirusSymbol): ?>
                                             <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
+                                        <?php endif; ?>
+                                        <?php if ($hasBadAttachmentSymbol): ?>
+                                            <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
                                         <?php endif; ?>
 
                                         <!-- Symbols popup on hover -->
