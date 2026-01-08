@@ -409,6 +409,11 @@ return [
     'users_alias_empty' => 'Pro tuto doménu nejsou žádná přesměrování.',
     'users_alias_address' => 'Adresa',
     'users_alias_target' => 'Cíle',
+    'users_alias_edit_title' => 'Upravit přesměrování',
+    'users_alias_save' => 'Uložit přesměrování',
+    'users_alias_required_fields' => 'Adresa, cíl a doména jsou povinné.',
+    'users_alias_update_success' => 'Přesměrování bylo aktualizováno.',
+    'users_alias_update_error' => 'Nepodařilo se aktualizovat přesměrování: {error}',
 
     // User management
     'users_title' => 'Správa uživatelů',

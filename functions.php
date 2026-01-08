@@ -280,6 +280,37 @@ if (!function_exists('extractEmailAddress')) {
     }
 }
 
+if (!function_exists('isLikelyRandomEmail')) {
+    function isLikelyRandomEmail(string $email): bool {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $parts = explode('@', $email, 2);
+        $local = strtolower($parts[0] ?? '');
+        $normalized = preg_replace('/[^a-z0-9]/', '', $local);
+
+        if ($normalized === null || strlen($normalized) < 12) {
+            return false;
+        }
+
+        if (preg_match('/^[a-f0-9]+$/', $normalized)) {
+            return true;
+        }
+
+        $digitCount = preg_match_all('/[0-9]/', $normalized);
+        $alphaCount = preg_match_all('/[a-z]/', $normalized);
+        $total = $digitCount + $alphaCount;
+
+        if ($total === 0) {
+            return false;
+        }
+
+        $digitRatio = $digitCount / $total;
+        return $digitRatio >= 0.6;
+    }
+}
+
 /**
  * Generate SQL WHERE clause for domain filtering
  * OPRAVENO: Správná syntaxe LIKE '%@domain' pro hledání domény v emailech

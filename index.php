@@ -265,6 +265,7 @@ include 'menu.php';
                         $sender = decodeMimeHeader($msg['sender']);
                         $senderEmail = extractEmailAddress($sender);
                         $senderEmailKey = $senderEmail ? strtolower($senderEmail) : '';
+                        $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
                         $recipients = decodeMimeHeader($msg['recipients']);
                         $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                         $score = round($msg['score'], 2);
@@ -350,7 +351,7 @@ include 'menu.php';
                                    title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                     <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                 </a>
-                                <?php if ($canManageMaps && $senderEmail): ?>
+                                <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
                                     <span class="sender-actions">
                                         <form method="POST" action="map_quick_add.php" class="sender-action-form">
                                             <input type="hidden" name="list_type" value="whitelist">
