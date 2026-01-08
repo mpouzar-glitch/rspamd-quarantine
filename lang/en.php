@@ -179,6 +179,7 @@ return [
     'filter_auth_user' => 'Auth user',
     'filter_auth_user_placeholder' => 'e.g. user@domain',
     'filter_virus' => 'Virus',
+    'filter_dangerous_attachment' => 'Dangerous attachment',
     'filter_bad_extension' => 'Bad extension',
     'filter_clear' => 'Clear',
     'filter_by_sender' => 'Filter by sender: {sender}',

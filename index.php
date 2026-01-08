@@ -276,7 +276,10 @@ include 'menu.php';
                         $symbols = $msg['symbols'] ?? '';
                         $parsedSymbols = [];
 
+                        $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
+                        $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
                         $hasVirusSymbol = false;
+                        $hasBadAttachmentSymbol = false;
                         if (!empty($symbols)) {
                             $symbolsData = json_decode($symbols, true);
 
@@ -287,20 +290,36 @@ include 'menu.php';
                                             'name' => $symbol['name'],
                                             'score' => floatval($symbol['score'])
                                         ];
-                                        if (stripos($symbol['name'], 'VIRUS') !== false) {
+                                        if (in_array($symbol['name'], $virusSymbols, true)) {
                                             $hasVirusSymbol = true;
+                                        }
+                                        if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
+                                            $hasBadAttachmentSymbol = true;
                                         }
                                     }
                                 }
 
-                        // Sort by score descending
+                                // Sort by score descending
                                 usort($parsedSymbols, function($a, $b) {
                                     return $b['score'] <=> $a['score'];
                                 });
                             }
                         }
-                        if (!$hasVirusSymbol && stripos($symbols, 'VIRUS') !== false) {
-                            $hasVirusSymbol = true;
+                        if (!empty($symbols)) {
+                            foreach ($virusSymbols as $virusSymbol) {
+                                if (stripos($symbols, $virusSymbol) !== false) {
+                                    $hasVirusSymbol = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!$hasBadAttachmentSymbol && !empty($symbols)) {
+                            foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
+                                if (stripos($symbols, $badAttachmentSymbol) !== false) {
+                                    $hasBadAttachmentSymbol = true;
+                                    break;
+                                }
+                            }
                         }
                         $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
@@ -392,6 +411,12 @@ include 'menu.php';
                             <td class="text-center score-cell">
                                 <span class="score-badge <?php echo $scoreClass; ?>">
                                     <?php echo $score; ?>
+                                    <?php if ($hasVirusSymbol): ?>
+                                        <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
+                                    <?php endif; ?>
+                                    <?php if ($hasBadAttachmentSymbol): ?>
+                                        <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
+                                    <?php endif; ?>
 
                                     <?php if (!empty($parsedSymbols)): ?>
                                     <div class="symbols-popup">
