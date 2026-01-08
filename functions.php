@@ -322,6 +322,103 @@ function formatMessageSize($bytes) {
     return round($bytes, 2) . ' ' . $units[$pow];
 }
 
+// ============================================
+// Mailbox Storage Functions
+// ============================================
+
+function getDirectorySize(string $path): int {
+    $size = 0;
+    if (!is_dir($path) || !is_readable($path)) {
+        return $size;
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)
+    );
+
+    foreach ($iterator as $file) {
+        if ($file->isFile()) {
+            $size += $file->getSize();
+        }
+    }
+
+    return $size;
+}
+
+function getMailboxStorageStats(string $baseDir, array &$errors = []): array {
+    $stats = [];
+
+    if (!is_dir($baseDir) || !is_readable($baseDir)) {
+        $errors[] = ['type' => 'base', 'path' => $baseDir];
+        return $stats;
+    }
+
+    foreach (new DirectoryIterator($baseDir) as $domainInfo) {
+        if ($domainInfo->isDot() || !$domainInfo->isDir()) {
+            continue;
+        }
+
+        $domainName = $domainInfo->getFilename();
+        if (strpos($domainName, '.') === 0) {
+            continue;
+        }
+
+        $domainPath = $domainInfo->getPathname();
+        if (!is_readable($domainPath)) {
+            $errors[] = ['type' => 'domain', 'domain' => $domainName];
+            continue;
+        }
+
+        $mailboxes = [];
+        $totalSize = 0;
+
+        foreach (new DirectoryIterator($domainPath) as $mailboxInfo) {
+            if ($mailboxInfo->isDot() || !$mailboxInfo->isDir()) {
+                continue;
+            }
+
+            $mailboxName = $mailboxInfo->getFilename();
+            if (strpos($mailboxName, '.') === 0) {
+                continue;
+            }
+
+            $mailboxPath = $mailboxInfo->getPathname();
+            if (!is_readable($mailboxPath)) {
+                $errors[] = [
+                    'type' => 'mailbox',
+                    'domain' => $domainName,
+                    'mailbox' => $mailboxName,
+                ];
+                continue;
+            }
+
+            $mailboxSize = getDirectorySize($mailboxPath);
+            $mailboxes[] = [
+                'name' => $mailboxName,
+                'size' => $mailboxSize,
+            ];
+            $totalSize += $mailboxSize;
+        }
+
+        usort($mailboxes, function ($a, $b) {
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        $stats[] = [
+            'domain' => $domainName,
+            'mailboxes' => $mailboxes,
+            'mailbox_count' => count($mailboxes),
+            'total_size' => $totalSize,
+        ];
+    }
+
+    usort($stats, function ($a, $b) {
+        return strcasecmp($a['domain'], $b['domain']);
+    });
+
+    return $stats;
+}
+
 /**
  * UTF-8 safe truncate
  */
