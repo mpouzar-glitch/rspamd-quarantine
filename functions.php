@@ -61,6 +61,45 @@ if (!class_exists('Database')) {
     }
 }
 
+function getPostfixConnection(?string &$error = null): ?PDO {
+    static $connection = null;
+
+    if ($connection instanceof PDO) {
+        return $connection;
+    }
+
+    if (!defined('POSTFIX_DB_HOST') || !defined('POSTFIX_DB_NAME') || !defined('POSTFIX_DB_USER')) {
+        $error = 'Postfix database configuration missing.';
+        return null;
+    }
+
+    $charset = defined('POSTFIX_DB_CHARSET') ? POSTFIX_DB_CHARSET : 'utf8mb4';
+
+    try {
+        $dsn = sprintf(
+            'mysql:host=%s;dbname=%s;charset=%s',
+            POSTFIX_DB_HOST,
+            POSTFIX_DB_NAME,
+            $charset
+        );
+
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . $charset
+        ];
+
+        $password = defined('POSTFIX_DB_PASS') ? POSTFIX_DB_PASS : '';
+        $connection = new PDO($dsn, POSTFIX_DB_USER, $password, $options);
+    } catch (PDOException $e) {
+        $error = $e->getMessage();
+        return null;
+    }
+
+    return $connection;
+}
+
 // ============================================
 // Session Timeout Check
 // ============================================
@@ -185,6 +224,30 @@ function checkDomainAccess($email) {
 
     // Viewer has no access
     return false;
+}
+
+function hasDomainAccess(string $domain): bool {
+    $user_role = $_SESSION['user_role'] ?? 'viewer';
+
+    if ($user_role === 'admin') {
+        return true;
+    }
+
+    if ($user_role === 'domain_admin') {
+        $user_domains = $_SESSION['user_domains'] ?? [];
+        foreach ($user_domains as $userDomain) {
+            if (strcasecmp($domain, $userDomain) === 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function generateMd5CryptPassword(string $password): string {
+    $salt = substr(bin2hex(random_bytes(6)), 0, 8);
+    return crypt($password, '$1$' . $salt . '$');
 }
 
 if (!function_exists('extractEmailAddress')) {
@@ -343,6 +406,28 @@ function getDirectorySize(string $path): int {
     }
 
     return $size;
+}
+
+function resolveMaildirPath(string $maildir, string $baseDir): ?string {
+    $maildir = trim($maildir);
+    if ($maildir === '') {
+        return null;
+    }
+
+    if (str_starts_with($maildir, '/')) {
+        return $maildir;
+    }
+
+    return rtrim($baseDir, '/') . '/' . ltrim($maildir, '/');
+}
+
+function getMaildirSize(string $maildir, string $baseDir): int {
+    $path = resolveMaildirPath($maildir, $baseDir);
+    if (!$path) {
+        return 0;
+    }
+
+    return getDirectorySize($path);
 }
 
 function getMailboxStorageStats(string $baseDir, array &$errors = []): array {
