@@ -240,6 +240,13 @@ body {
 .sender-action-btn.blacklist-btn.is-listed {
     color: #ff1744; /* výraznější červená */
 }
+
+.virus-icon {
+    color: #c2185b;
+    margin-left: 6px;
+    font-size: 0.85em;
+    vertical-align: middle;
+}
 /* ===== TABLES ===== */
 .table-container {
     background: white;

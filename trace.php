@@ -248,6 +248,7 @@ include 'menu.php';
                             $ipAddress = $msg['ip_address'] ?? '-';
                             $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
+                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
 
                             // Parse symbols like in view.php
                             $parsed_symbols = [];
@@ -278,6 +279,25 @@ include 'menu.php';
                                     return $b['score'] <=> $a['score'];
                                 });
                             }
+                            $hasVirusSymbol = false;
+                            if (!empty($parsed_symbols)) {
+                                foreach ($parsed_symbols as $symbol) {
+                                    if (in_array($symbol['name'], $virusSymbols, true)) {
+                                        $hasVirusSymbol = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$hasVirusSymbol && !empty($symbols)) {
+                                foreach ($virusSymbols as $virusSymbol) {
+                                    if (stripos($symbols, $virusSymbol) !== false) {
+                                        $hasVirusSymbol = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            $virusClass = $hasVirusSymbol ? 'has-virus' : '';
+                            $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
 
                             // Action class - using existing badge CSS
                             $actionClass = 'badge-pass';
@@ -320,7 +340,7 @@ include 'menu.php';
                                 $scoreClass = 'score-low';
                             }
                             ?>
-                            <tr>
+                            <tr class="<?php echo $virusClass; ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                                 <td class="email-field">
                                     <i class="fas fa-paper-plane"></i> 
@@ -329,7 +349,7 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
-                                <?php if ($canManageMaps && $senderEmail): ?>
+                                <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
                                     <span class="sender-actions">
                                         <form method="POST" action="map_quick_add.php" class="sender-action-form">
                                             <input type="hidden" name="list_type" value="whitelist">
@@ -370,6 +390,9 @@ include 'menu.php';
                                 <td class="score-cell">
                                     <span class="score-badge <?php echo $scoreClass; ?>">
                                         <?php echo number_format($score, 2); ?>
+                                        <?php if ($hasVirusSymbol): ?>
+                                            <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
+                                        <?php endif; ?>
 
                                         <!-- Symbols popup on hover -->
                                         <?php if (!empty($parsed_symbols)): ?>
