@@ -266,12 +266,14 @@ include 'menu.php';
                         $recipients = decodeMimeHeader($msg['recipients']);
                         $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                         $score = round($msg['score'], 2);
+                        $action = strtolower(trim($msg['action'] ?? ''));
                         $hostname = $msg['hostname'] ?? '-';
 
                         // Parse symbols from JSON
                         $symbols = $msg['symbols'] ?? '';
                         $parsedSymbols = [];
 
+                        $hasVirusSymbol = false;
                         if (!empty($symbols)) {
                             $symbolsData = json_decode($symbols, true);
 
@@ -282,6 +284,9 @@ include 'menu.php';
                                             'name' => $symbol['name'],
                                             'score' => floatval($symbol['score'])
                                         ];
+                                        if (stripos($symbol['name'], 'VIRUS') !== false) {
+                                            $hasVirusSymbol = true;
+                                        }
                                     }
                                 }
 
@@ -291,9 +296,30 @@ include 'menu.php';
                                 });
                             }
                         }
+                        if (!$hasVirusSymbol && stripos($symbols, 'VIRUS') !== false) {
+                            $hasVirusSymbol = true;
+                        }
                         $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
-                        // Score class
+                        // Score class based on action (fallback to score)
+                        $actionScoreClass = '';
+                        switch ($action) {
+                            case 'no action':
+                                $actionScoreClass = 'score-action-no-action';
+                                break;
+                            case 'greylist':
+                                $actionScoreClass = 'score-action-greylist';
+                                break;
+                            case 'add header':
+                                $actionScoreClass = 'score-action-add-header';
+                                break;
+                            case 'rewrite subject':
+                                $actionScoreClass = 'score-action-rewrite-subject';
+                                break;
+                            case 'reject':
+                                $actionScoreClass = 'score-action-reject';
+                                break;
+                        }
                         if ($score >= 15) {
                             $scoreClass = 'score-high';
                         } elseif ($score >= 6) {
@@ -301,6 +327,7 @@ include 'menu.php';
                         } else {
                             $scoreClass = 'score-low';
                         }
+                        $scoreClass = $actionScoreClass ?: $scoreClass;
 
                         // State class for row coloring
                         $stateClass = '';
@@ -310,8 +337,9 @@ include 'menu.php';
                             case 2: $stateClass = 'state-learned-spam'; break;
                             case 3: $stateClass = 'state-released'; break;
                         }
+                        $virusClass = $hasVirusSymbol ? 'has-virus' : '';
                         ?>
-                        <tr class="message-row <?php echo $stateClass; ?>" id="row_<?php echo $msgId; ?>">
+                        <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass); ?>" id="row_<?php echo $msgId; ?>">
                             <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                             <td class="email-field">
                                 <i class="fas fa-paper-plane"></i> 

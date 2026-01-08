@@ -338,6 +338,15 @@ tr.has-action {
 tr.has-action:hover {
     background-color: #b6d4fe;
 }
+
+/* Virus symbol highlight */
+.messages-table tbody tr.has-virus {
+    background-color: #f3e5f5;
+}
+
+.messages-table tbody tr.has-virus:hover {
+    background-color: #e1bee7;
+}
         /* Email address links */
 .email-link {
     color: inherit;
