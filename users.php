@@ -18,6 +18,7 @@ if (!checkPermission('domain_admin')) {
 $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isAdmin = $userRole === 'admin';
+$canEditQuota = $isAdmin;
 $postfixError = null;
 $postfixDb = getPostfixConnection($postfixError);
 
@@ -222,21 +223,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             try {
-                $fields = [
-                    'name' => $name,
-                    'quota' => $quota,
-                    'active' => $active,
-                ];
+                $sql = "UPDATE mailbox SET name = ?, active = ?";
+                $params = [$name, $active];
 
-                $sql = "UPDATE mailbox SET name = ?, quota = ?, active = ?, modified = NOW()";
-                $params = [$fields['name'], $fields['quota'], $fields['active']];
+                if ($canEditQuota) {
+                    $sql .= ", quota = ?";
+                    $params[] = $quota;
+                }
 
                 if ($password !== '') {
                     $sql .= ", password = ?";
                     $params[] = generateMd5CryptPassword($password);
                 }
 
-                $sql .= " WHERE username = ? AND domain = ?";
+                $sql .= ", modified = NOW() WHERE username = ? AND domain = ?";
                 $params[] = $mailbox;
                 $params[] = $domain;
 
@@ -246,6 +246,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['success_msg'] = __('users_mailbox_update_success');
             } catch (Exception $e) {
                 $_SESSION['error_msg'] = __('users_mailbox_update_error', ['error' => $e->getMessage()]);
+            }
+            break;
+
+        case 'alias_update':
+            $address = trim($_POST['address'] ?? '');
+            $domain = trim($_POST['domain'] ?? '');
+            $goto = trim($_POST['goto'] ?? '');
+            $active = isset($_POST['active']) ? 1 : 0;
+
+            if ($address === '' || $domain === '' || $goto === '') {
+                $_SESSION['error_msg'] = __('users_alias_required_fields');
+                break;
+            }
+
+            if (!hasDomainAccess($domain)) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
+
+            if (!$postfixDb) {
+                $_SESSION['error_msg'] = __('users_mailbox_db_unavailable');
+                break;
+            }
+
+            try {
+                $stmt = $postfixDb->prepare("
+                    UPDATE alias
+                    SET goto = ?, active = ?, modified = NOW()
+                    WHERE address = ? AND domain = ?
+                ");
+                $stmt->execute([$goto, $active, $address, $domain]);
+
+                $_SESSION['success_msg'] = __('users_alias_update_success');
+            } catch (Exception $e) {
+                $_SESSION['error_msg'] = __('users_alias_update_error', ['error' => $e->getMessage()]);
             }
             break;
     }
@@ -321,7 +356,7 @@ if ($postfixDb) {
         $mailboxes = $stmt->fetchAll();
 
         $stmt = $postfixDb->prepare("
-            SELECT address, goto, active
+            SELECT address, goto, active, domain
             FROM alias
             WHERE domain = ?
             ORDER BY address
@@ -677,6 +712,17 @@ include 'menu.php';
             font-weight: 600;
         }
 
+        .alias-target {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #2c3e50;
+        }
+
+        .alias-target i {
+            color: #3498db;
+        }
+
         .mailbox-actions button {
             padding: 4px 8px;
             font-size: 11px;
@@ -690,6 +736,11 @@ include 'menu.php';
         .domain-empty {
             color: #7f8c8d;
             font-size: 13px;
+        }
+
+        .readonly-field {
+            background: #f4f6f8;
+            color: #7f8c8d;
         }
 
         /* Modal Styling */
@@ -1084,13 +1135,19 @@ include 'menu.php';
                                 <th><?php echo htmlspecialchars(__('users_alias_address')); ?></th>
                                 <th><?php echo htmlspecialchars(__('users_alias_target')); ?></th>
                                 <th><?php echo htmlspecialchars(__('status')); ?></th>
+                                <th><?php echo htmlspecialchars(__('actions')); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($aliases as $alias): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($alias['address']); ?></td>
-                                    <td><?php echo htmlspecialchars($alias['goto']); ?></td>
+                                    <td>
+                                        <span class="alias-target">
+                                            <i class="fas fa-arrow-right"></i>
+                                            <?php echo htmlspecialchars($alias['goto']); ?>
+                                        </span>
+                                    </td>
                                     <td>
                                         <?php if ($alias['active']): ?>
                                             <span class="status-badge status-active">
@@ -1101,6 +1158,11 @@ include 'menu.php';
                                                 <i class="fas fa-times-circle"></i> <?php echo htmlspecialchars(__('users_inactive')); ?>
                                             </span>
                                         <?php endif; ?>
+                                    </td>
+                                    <td class="mailbox-actions">
+                                        <button class="action-btn btn-edit" onclick='openAliasModal(<?php echo json_encode($alias); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1233,7 +1295,7 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?></label>
-                    <input type="number" name="quota" id="mailboxQuota" min="0">
+                    <input type="number" name="quota" id="mailboxQuota" min="0" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?></label>
@@ -1248,6 +1310,41 @@ include 'menu.php';
                 <button type="button" class="btn-cancel" onclick="closeMailboxModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_save')); ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Alias Modal -->
+<div id="aliasModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_edit_title')); ?></h2>
+            <span class="close" onclick="closeAliasModal()">&times;</span>
+        </div>
+        <form method="POST" action="">
+            <input type="hidden" name="action" value="alias_update">
+            <input type="hidden" name="address" id="aliasAddress">
+            <input type="hidden" name="domain" id="aliasDomain">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_alias_address')); ?></label>
+                    <input type="text" id="aliasAddressDisplay" readonly>
+                </div>
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
+                    <textarea name="goto" id="aliasGoto" required></textarea>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="active" id="aliasActive">
+                    <label for="aliasActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeAliasModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_save')); ?>
                 </button>
             </div>
         </form>
@@ -1305,6 +1402,20 @@ function closeMailboxModal() {
     document.getElementById('mailboxModal').style.display = 'none';
 }
 
+function openAliasModal(alias) {
+    document.getElementById('aliasAddress').value = alias.address;
+    document.getElementById('aliasDomain').value = alias.domain;
+    document.getElementById('aliasAddressDisplay').value = alias.address;
+    document.getElementById('aliasGoto').value = alias.goto;
+    document.getElementById('aliasActive').checked = alias.active == 1;
+
+    document.getElementById('aliasModal').style.display = 'block';
+}
+
+function closeAliasModal() {
+    document.getElementById('aliasModal').style.display = 'none';
+}
+
 function toggleDomains(roleId, domainsId) {
     const role = document.getElementById(roleId).value;
     const domainsDiv = document.getElementById(domainsId);
@@ -1328,6 +1439,7 @@ window.onclick = function(event) {
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
     const mailboxModal = document.getElementById('mailboxModal');
+    const aliasModal = document.getElementById('aliasModal');
 
     if (event.target == addModal) {
         closeAddModal();
@@ -1337,6 +1449,9 @@ window.onclick = function(event) {
     }
     if (event.target == mailboxModal) {
         closeMailboxModal();
+    }
+    if (event.target == aliasModal) {
+        closeAliasModal();
     }
 }
 </script>

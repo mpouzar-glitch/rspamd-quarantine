@@ -375,6 +375,11 @@ return [
     'users_alias_empty' => 'No forwarding entries for this domain.',
     'users_alias_address' => 'Address',
     'users_alias_target' => 'Targets',
+    'users_alias_edit_title' => 'Edit forwarding',
+    'users_alias_save' => 'Save forwarding',
+    'users_alias_required_fields' => 'Address, target, and domain are required.',
+    'users_alias_update_success' => 'Forwarding entry updated.',
+    'users_alias_update_error' => 'Failed to update forwarding entry: {error}',
 
     // User management
     'users_title' => 'User Management',
