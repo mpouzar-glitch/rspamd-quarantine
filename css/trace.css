@@ -310,6 +310,15 @@
     background-color: #d1ecf1;
 }
 
+/* Virus symbol highlight */
+.messages-table tbody tr.has-virus {
+    background-color: #f3e5f5;
+}
+
+.messages-table tbody tr.has-virus:hover {
+    background-color: #e1bee7;
+}
+
 /* Auto-learned spam highlight (Rspamd already learned) */
 .auto-learn-spam {
     background-color: #fff3cd;

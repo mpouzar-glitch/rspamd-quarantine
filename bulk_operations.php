@@ -289,6 +289,7 @@ include 'menu.php';
                             $symbols = $msg['symbols'] ?? '';
                             $parsedSymbols = [];
 
+                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
                             $hasVirusSymbol = false;
                             if (!empty($symbols)) {
                                 $symbolsData = json_decode($symbols, true);
@@ -300,7 +301,7 @@ include 'menu.php';
                                                 'name' => $symbol['name'],
                                                 'score' => floatval($symbol['score'])
                                             ];
-                                            if (stripos($symbol['name'], 'VIRUS') !== false) {
+                                            if (in_array($symbol['name'], $virusSymbols, true)) {
                                                 $hasVirusSymbol = true;
                                             }
                                         }
@@ -312,8 +313,13 @@ include 'menu.php';
                                     });
                                 }
                             }
-                            if (!$hasVirusSymbol && stripos($symbols, 'VIRUS') !== false) {
-                                $hasVirusSymbol = true;
+                            if (!$hasVirusSymbol && !empty($symbols)) {
+                                foreach ($virusSymbols as $virusSymbol) {
+                                    if (stripos($symbols, $virusSymbol) !== false) {
+                                        $hasVirusSymbol = true;
+                                        break;
+                                    }
+                                }
                             }
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
@@ -372,6 +378,7 @@ include 'menu.php';
                                 }
                             }
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
+                            $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
                             ?>
                             <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass); ?>" id="row_<?php echo $msgId; ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
@@ -382,7 +389,7 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_sender', ['sender' => $sender])); ?>">
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
-                                <?php if ($canManageMaps && $senderEmail): ?>
+                                <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
                                     <span class="sender-actions">
                                         <form method="POST" action="map_quick_add.php" class="sender-action-form">
                                             <input type="hidden" name="list_type" value="whitelist">
@@ -420,6 +427,9 @@ include 'menu.php';
                                 <td class="text-center score-cell">
                                     <span class="score-badge <?php echo $scoreClass; ?>">
                                         <?php echo $score; ?>
+                                        <?php if ($hasVirusSymbol): ?>
+                                            <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
+                                        <?php endif; ?>
 
                                         <?php if (!empty($parsedSymbols)): ?>
                                         <div class="symbols-popup">

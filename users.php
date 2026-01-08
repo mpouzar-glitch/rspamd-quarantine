@@ -203,7 +203,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mailbox = trim($_POST['mailbox'] ?? '');
             $domain = trim($_POST['domain'] ?? '');
             $name = trim($_POST['name'] ?? '');
-            $quota = isset($_POST['quota']) ? max(0, (int)$_POST['quota']) : 0;
+            $quotaGb = isset($_POST['quota']) ? max(0, (float)$_POST['quota']) : 0;
+            $quota = (int) round($quotaGb * 1024);
             $active = isset($_POST['active']) ? 1 : 0;
             $password = $_POST['password'] ?? '';
 
@@ -1086,7 +1087,7 @@ include 'menu.php';
                             <tr>
                                 <th><?php echo htmlspecialchars(__('users_mailbox_address')); ?></th>
                                 <th><?php echo htmlspecialchars(__('users_mailbox_name')); ?></th>
-                                <th><?php echo htmlspecialchars(__('users_mailbox_quota')); ?></th>
+                                <th><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</th>
                                 <th><?php echo htmlspecialchars(__('users_mailbox_size')); ?></th>
                                 <th><?php echo htmlspecialchars(__('status')); ?></th>
                                 <th><?php echo htmlspecialchars(__('actions')); ?></th>
@@ -1097,7 +1098,8 @@ include 'menu.php';
                                 <tr>
                                     <td><?php echo htmlspecialchars($mailbox['username']); ?></td>
                                     <td><?php echo htmlspecialchars($mailbox['name']); ?></td>
-                                    <td><?php echo htmlspecialchars(number_format((int)$mailbox['quota'])); ?></td>
+                                    <?php $quotaGb = ($mailbox['quota'] ?? 0) / 1024; ?>
+                                    <td><?php echo htmlspecialchars(number_format($quotaGb, 2)); ?> GB</td>
                                     <td class="mailbox-size">
                                         <?php echo htmlspecialchars(formatMessageSize($mailboxSizes[$mailbox['username']] ?? 0)); ?>
                                     </td>
@@ -1294,8 +1296,8 @@ include 'menu.php';
                     <input type="text" name="name" id="mailboxName" required>
                 </div>
                 <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?></label>
-                    <input type="number" name="quota" id="mailboxQuota" min="0" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
+                    <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
+                    <input type="number" name="quota" id="mailboxQuota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?></label>
@@ -1391,7 +1393,8 @@ function openMailboxModal(mailbox) {
     document.getElementById('mailboxDomain').value = mailbox.domain;
     document.getElementById('mailboxAddressDisplay').value = mailbox.username;
     document.getElementById('mailboxName').value = mailbox.name;
-    document.getElementById('mailboxQuota').value = mailbox.quota;
+    const quotaGb = mailbox.quota ? (mailbox.quota / 1024) : 0;
+    document.getElementById('mailboxQuota').value = quotaGb.toFixed(2);
     document.getElementById('mailboxPassword').value = '';
     document.getElementById('mailboxActive').checked = mailbox.active == 1;
 
