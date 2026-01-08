@@ -263,7 +263,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    height: 32px;
+    padding: 4px 12px;
+    box-sizing: border-box;
     border-radius: 8px;
     background: #f8f9fa;
 }
