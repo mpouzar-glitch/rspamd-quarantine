@@ -178,6 +178,8 @@ return [
     'filter_ip_placeholder' => 'e.g. 192.168.1.1',
     'filter_auth_user' => 'Auth user',
     'filter_auth_user_placeholder' => 'e.g. user@domain',
+    'filter_virus' => 'Virus',
+    'filter_bad_extension' => 'Bad extension',
     'filter_clear' => 'Clear',
     'filter_by_sender' => 'Filter by sender: {sender}',
     'filter_by_recipient' => 'Filter by recipient: {recipient}',

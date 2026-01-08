@@ -178,6 +178,8 @@ include 'menu.php';
             'show_state' => true,
             'show_ip' => false,
             'show_auth_user' => false,
+            'show_virus' => true,
+            'show_bad_extension' => true,
             'form_id' => 'filterForm',
             'reset_url' => 'index.php?reset_filters=1',
         ]));
