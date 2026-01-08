@@ -110,6 +110,42 @@ $body_text = '';
 $body_html = '';
 $attachments = [];
 
+function parsePartHeaders($raw_headers) {
+    $headers = [];
+    $lines = explode("\n", $raw_headers);
+    $current_header = '';
+
+    foreach ($lines as $line) {
+        $line = rtrim($line, "\r");
+        if (preg_match('/^[\s\t]/', $line) && $current_header) {
+            $headers[$current_header] .= ' ' . trim($line);
+        } else {
+            if (preg_match('/^([^:]+):\s*(.*)$/', $line, $matches)) {
+                $current_header = $matches[1];
+                $headers[$current_header] = $matches[2];
+            }
+        }
+    }
+
+    return $headers;
+}
+
+function decodeAttachmentFilename($value) {
+    $value = trim($value);
+    $value = trim($value, "\"'");
+
+    if (stripos($value, "''") !== false) {
+        [$charset, $lang, $encoded] = array_pad(explode("''", $value, 3), 3, '');
+        $decoded = rawurldecode($encoded);
+        if (!empty($charset) && strtoupper($charset) !== 'UTF-8') {
+            $decoded = @iconv($charset, 'UTF-8//IGNORE', $decoded) ?: $decoded;
+        }
+        $value = $decoded;
+    }
+
+    return decodeMimeHeader($value);
+}
+
 if ($is_multipart) {
     // Extract boundary
     if (preg_match('/boundary\s*=\s*["\']?([^"\'\s;]+)/i', $content_type, $matches)) {
@@ -130,25 +166,44 @@ if ($is_multipart) {
             $part_headers = substr($part, 0, $part_headers_end);
             $part_body = substr($part, $part_headers_end + 4);
             
-            // Parse part content type
-            if (preg_match('/Content-Type:\s*([^\r\n;]+)/i', $part_headers, $ct_match)) {
-                $part_type = trim($ct_match[1]);
-                
-                // Decode part body
-                if (preg_match('/Content-Transfer-Encoding:\s*(\S+)/i', $part_headers, $enc_match)) {
-                    $part_encoding = strtolower(trim($enc_match[1]));
-                    if ($part_encoding === 'base64') {
-                        $part_body = base64_decode($part_body);
-                    } elseif ($part_encoding === 'quoted-printable') {
-                        $part_body = quoted_printable_decode($part_body);
-                    }
+            $part_headers_array = parsePartHeaders($part_headers);
+            $part_content_type = $part_headers_array['Content-Type'] ?? 'text/plain';
+            $part_disposition = $part_headers_array['Content-Disposition'] ?? '';
+            $part_type = trim(preg_split('/\s*;/', $part_content_type)[0]);
+
+            // Decode part body
+            if (preg_match('/Content-Transfer-Encoding:\s*(\S+)/i', $part_headers, $enc_match)) {
+                $part_encoding = strtolower(trim($enc_match[1]));
+                if ($part_encoding === 'base64') {
+                    $part_body = base64_decode($part_body);
+                } elseif ($part_encoding === 'quoted-printable') {
+                    $part_body = quoted_printable_decode($part_body);
                 }
-                
-                if (stripos($part_type, 'text/plain') !== false) {
-                    $body_text = $part_body;
-                } elseif (stripos($part_type, 'text/html') !== false) {
-                    $body_html = $part_body;
-                }
+            }
+
+            $filename = '';
+            if (preg_match('/filename\*?=\s*([^;\r\n]+)/i', $part_disposition, $filename_match)) {
+                $filename = decodeAttachmentFilename($filename_match[1]);
+            } elseif (preg_match('/name\*?=\s*([^;\r\n]+)/i', $part_content_type, $name_match)) {
+                $filename = decodeAttachmentFilename($name_match[1]);
+            }
+
+            $is_attachment = !empty($filename) || stripos($part_disposition, 'attachment') !== false;
+
+            if ($is_attachment) {
+                $attachments[] = [
+                    'filename' => $filename ?: 'attachment-' . (count($attachments) + 1),
+                    'content_type' => $part_type ?: 'application/octet-stream',
+                    'content' => $part_body,
+                    'size' => strlen($part_body),
+                ];
+                continue;
+            }
+            
+            if (stripos($part_type, 'text/plain') !== false) {
+                $body_text = $part_body;
+            } elseif (stripos($part_type, 'text/html') !== false) {
+                $body_html = $part_body;
             }
         }
     }
@@ -158,6 +213,25 @@ if ($is_multipart) {
     } else {
         $body_text = $body_decoded;
     }
+}
+
+$attachment_index = isset($_GET['attachment']) ? intval($_GET['attachment']) : null;
+if ($attachment_index !== null && $attachment_index >= 0) {
+    if (!isset($attachments[$attachment_index])) {
+        die(__('msg_not_found'));
+    }
+    $attachment = $attachments[$attachment_index];
+    $safe_filename = str_replace(["\r", "\n", '"'], '', $attachment['filename']);
+    $safe_filename = $safe_filename ?: 'attachment-' . $attachment_index;
+    $content_type = $attachment['content_type'] ?: 'application/octet-stream';
+
+    header('Content-Type: ' . $content_type);
+    header('Content-Length: ' . $attachment['size']);
+    header(
+        'Content-Disposition: attachment; filename="' . $safe_filename . '"; filename*=UTF-8\'\'' . rawurlencode($safe_filename)
+    );
+    echo $attachment['content'];
+    exit;
 }
 
 // Get trace log
@@ -326,6 +400,12 @@ switch (strtolower($action)) {
             white-space: nowrap;
             font-weight: 500;
         }
+        .attachments-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .attachments-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #ecf0f1; border-radius: 6px; background: #f8f9fa; }
+        .attachment-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .attachment-name { font-weight: 600; color: #2c3e50; word-break: break-word; }
+        .attachment-meta { font-size: 12px; color: #7f8c8d; }
+        .btn-attachment { font-size: 12px; padding: 6px 12px; }
 
     </style>
 </head>
@@ -459,7 +539,32 @@ switch (strtolower($action)) {
         </div>
         <?php endif; ?>
 
-        
+        <div class="card">
+            <h2><i class="fas fa-paperclip"></i> <?= htmlspecialchars(__('msg_attachments')) ?></h2>
+            <?php if (!empty($attachments)): ?>
+                <ul class="attachments-list">
+                    <?php foreach ($attachments as $index => $attachment): ?>
+                        <li>
+                            <div class="attachment-info">
+                                <span class="attachment-name"><?= htmlspecialchars($attachment['filename']) ?></span>
+                                <span class="attachment-meta">
+                                    <?= htmlspecialchars(formatMessageSize($attachment['size'])) ?>
+                                    <?php if (!empty($attachment['content_type'])): ?>
+                                        · <?= htmlspecialchars($attachment['content_type']) ?>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <a class="btn btn-primary btn-attachment" href="view.php?id=<?= $message['id'] ?>&attachment=<?= $index ?>">
+                                <i class="fas fa-download"></i> <?= htmlspecialchars(__('download')) ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p><?= htmlspecialchars(__('msg_no_attachments')) ?></p>
+            <?php endif; ?>
+        </div>
+
         <div class="card">
             <h2><i class="fas fa-file-alt"></i> <?= htmlspecialchars(__('msg_body')) ?></h2>
             
