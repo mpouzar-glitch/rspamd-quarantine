@@ -107,6 +107,11 @@ include 'menu.php';
             <a href="symbol_search.php" class="active">
                 <i class="fas fa-magnifying-glass-chart"></i> <?php echo htmlspecialchars(__('stats_subnav_symbol_search')); ?>
             </a>
+            <?php if ($userRole === 'admin'): ?>
+            <a href="stats_mailboxes.php">
+                <i class="fas fa-hard-drive"></i> <?php echo htmlspecialchars(__('stats_subnav_mailboxes')); ?>
+            </a>
+            <?php endif; ?>
         </div>
 
         <div class="time-selector">
