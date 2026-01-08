@@ -68,6 +68,22 @@ if (!defined('DB_HOST')) {
     define('DB_CHARSET', 'utf8mb4');
 }
 
+// ============================================
+// Postfix Admin Database Configuration
+// ============================================
+if (!defined('POSTFIX_DB_HOST')) {
+    define('POSTFIX_DB_HOST', 'localhost');
+    define('POSTFIX_DB_NAME', 'postfix');
+    define('POSTFIX_DB_USER', 'postfix');
+    define('POSTFIX_DB_PASS', 'set postfix password');
+    define('POSTFIX_DB_CHARSET', 'utf8mb4');
+}
+
+// Base path for maildir storage (used for mailbox size calculation)
+if (!defined('VMAIL_BASE_DIR')) {
+    define('VMAIL_BASE_DIR', '/var/vmail/vmail1');
+}
+
 // Security - použít databázové uživatele
 define('AUTH_ENABLED', true);
 define('USE_DATABASE_AUTH', true); // Nové: použít DB auth místo statického
