@@ -938,6 +938,31 @@ tr.selected {
     color: #721c24;
 }
 
+.score-action-no-action {
+    background: #d4edda;
+    color: #155724;
+}
+
+.score-action-greylist {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.score-action-add-header {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.score-action-rewrite-subject {
+    background: #ffe5b4;
+    color: #8a4b00;
+}
+
+.score-action-reject {
+    background: #f8d7da;
+    color: #721c24;
+}
+
 
 /* ========================================================================
    BUTTON GROUP - INLINE OPERATIONS
