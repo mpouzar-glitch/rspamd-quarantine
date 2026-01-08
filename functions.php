@@ -288,6 +288,22 @@ if (!function_exists('isLikelyRandomEmail')) {
 
         $parts = explode('@', $email, 2);
         $local = strtolower($parts[0] ?? '');
+        if ($local === '') {
+            return false;
+        }
+
+        $randomPatterns = [
+            '/^(prvs|msprvs\\d*)=.+$/',
+            '/^bounce-[0-9a-f]{12,}$/',
+            '/^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}-[0-9]{4,}$/',
+        ];
+
+        foreach ($randomPatterns as $pattern) {
+            if (preg_match($pattern, $local)) {
+                return true;
+            }
+        }
+
         $normalized = preg_replace('/[^a-z0-9]/', '', $local);
 
         if ($normalized === null || strlen($normalized) < 12) {
