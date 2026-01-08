@@ -290,7 +290,7 @@ include 'menu.php';
                             $parsedSymbols = [];
 
                             $hasVirusSymbol = false;
-                            if (!empty($symbols)) {
+                            if (!empty($symbols)) { 
                                 $symbolsData = json_decode($symbols, true);
 
                                 if (is_array($symbolsData)) {
@@ -300,8 +300,12 @@ include 'menu.php';
                                                 'name' => $symbol['name'],
                                                 'score' => floatval($symbol['score'])
                                             ];
-                                            if (stripos($symbol['name'], 'VIRUS') !== false) {
-                                                $hasVirusSymbol = true;
+                                            $virusSymbols = ['CLAM_VIRUS', 'ESET_VIRUS'];
+                                            foreach ($virusSymbols as $virusSymbol) {
+                                                if (stripos($symbol['name'], $virusSymbol) !== false) {
+                                                    $hasVirusSymbol = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
@@ -311,9 +315,6 @@ include 'menu.php';
                                         return $b['score'] <=> $a['score'];
                                     });
                                 }
-                            }
-                            if (!$hasVirusSymbol && stripos($symbols, 'VIRUS') !== false) {
-                                $hasVirusSymbol = true;
                             }
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
