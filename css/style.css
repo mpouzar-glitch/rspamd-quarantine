@@ -240,6 +240,20 @@ body {
 .sender-action-btn.blacklist-btn.is-listed {
     color: #ff1744; /* výraznější červená */
 }
+
+.virus-icon {
+    color: #c2185b;
+    margin-left: 6px;
+    font-size: 0.85em;
+    vertical-align: middle;
+}
+
+.bad-attachment-icon {
+    color: #f39c12;
+    margin-left: 6px;
+    font-size: 0.85em;
+    vertical-align: middle;
+}
 /* ===== TABLES ===== */
 .table-container {
     background: white;
@@ -963,7 +977,7 @@ tr.selected {
     color: #721c24;
 }
 
- 
+
 /* ========================================================================
    BUTTON GROUP - INLINE OPERATIONS
    ======================================================================== */

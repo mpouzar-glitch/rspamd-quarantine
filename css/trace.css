@@ -5,7 +5,7 @@
     border-radius: 6px;
     margin-bottom: 15px;
     font-size: 12px;
-} 
+}
 
 .bulk-actions-info i {
     color: #856404;
@@ -308,6 +308,15 @@
 
 .messages-table tbody tr.state-released:hover {
     background-color: #d1ecf1;
+}
+
+/* Virus symbol highlight */
+.messages-table tbody tr.has-virus {
+    background-color: #f3e5f5;
+}
+
+.messages-table tbody tr.has-virus:hover {
+    background-color: #e1bee7;
 }
 
 /* Auto-learned spam highlight (Rspamd already learned) */

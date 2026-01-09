@@ -179,6 +179,7 @@ return [
     'filter_auth_user' => 'Auth používateľ',
     'filter_auth_user_placeholder' => 'napr. user@domain',
     'filter_virus' => 'Vírus',
+    'filter_dangerous_attachment' => 'Nebezpečná príloha',
     'filter_bad_extension' => 'Zlá prípona',
     'filter_clear' => 'Vymazať',
     'filter_by_sender' => 'Filtrovať podľa odosielateľa: {sender}',

@@ -61,6 +61,45 @@ if (!class_exists('Database')) {
     }
 }
 
+function getPostfixConnection(?string &$error = null): ?PDO {
+    static $connection = null;
+
+    if ($connection instanceof PDO) {
+        return $connection;
+    }
+
+    if (!defined('POSTFIX_DB_HOST') || !defined('POSTFIX_DB_NAME') || !defined('POSTFIX_DB_USER')) {
+        $error = 'Postfix database configuration missing.';
+        return null;
+    }
+
+    $charset = defined('POSTFIX_DB_CHARSET') ? POSTFIX_DB_CHARSET : 'utf8mb4';
+
+    try {
+        $dsn = sprintf(
+            'mysql:host=%s;dbname=%s;charset=%s',
+            POSTFIX_DB_HOST,
+            POSTFIX_DB_NAME,
+            $charset
+        );
+
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . $charset
+        ];
+
+        $password = defined('POSTFIX_DB_PASS') ? POSTFIX_DB_PASS : '';
+        $connection = new PDO($dsn, POSTFIX_DB_USER, $password, $options);
+    } catch (PDOException $e) {
+        $error = $e->getMessage();
+        return null;
+    }
+
+    return $connection;
+}
+
 // ============================================
 // Session Timeout Check
 // ============================================
@@ -187,6 +226,30 @@ function checkDomainAccess($email) {
     return false;
 }
 
+function hasDomainAccess(string $domain): bool {
+    $user_role = $_SESSION['user_role'] ?? 'viewer';
+
+    if ($user_role === 'admin') {
+        return true;
+    }
+
+    if ($user_role === 'domain_admin') {
+        $user_domains = $_SESSION['user_domains'] ?? [];
+        foreach ($user_domains as $userDomain) {
+            if (strcasecmp($domain, $userDomain) === 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function generateMd5CryptPassword(string $password): string {
+    $salt = substr(bin2hex(random_bytes(6)), 0, 8);
+    return crypt($password, '$1$' . $salt . '$');
+}
+
 if (!function_exists('extractEmailAddress')) {
     function extractEmailAddress($value) {
         $value = trim($value);
@@ -214,6 +277,53 @@ if (!function_exists('extractEmailAddress')) {
         }
 
         return null;
+    }
+}
+
+if (!function_exists('isLikelyRandomEmail')) {
+    function isLikelyRandomEmail(string $email): bool {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $parts = explode('@', $email, 2);
+        $local = strtolower($parts[0] ?? '');
+        if ($local === '') {
+            return false;
+        }
+
+        $randomPatterns = [
+            '/^(prvs|msprvs\\d*)=.+$/',
+            '/^bounce-[0-9a-f]{12,}$/',
+            '/^[a-f0-9]{16}-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}-[0-9]{4,}$/',
+        ];
+
+        foreach ($randomPatterns as $pattern) {
+            if (preg_match($pattern, $local)) {
+                return true;
+            }
+        }
+
+        $normalized = preg_replace('/[^a-z0-9]/', '', $local);
+
+        if ($normalized === null || strlen($normalized) < 12) {
+            return false;
+        }
+
+        if (preg_match('/^[a-f0-9]+$/', $normalized)) {
+            return true;
+        }
+
+        $digitCount = preg_match_all('/[0-9]/', $normalized);
+        $alphaCount = preg_match_all('/[a-z]/', $normalized);
+        $total = $digitCount + $alphaCount;
+
+        if ($total === 0) {
+            return false;
+        }
+
+        $digitRatio = $digitCount / $total;
+        return $digitRatio >= 0.6;
     }
 }
 
@@ -343,6 +453,28 @@ function getDirectorySize(string $path): int {
     }
 
     return $size;
+}
+
+function resolveMaildirPath(string $maildir, string $baseDir): ?string {
+    $maildir = trim($maildir);
+    if ($maildir === '') {
+        return null;
+    }
+
+    if (str_starts_with($maildir, '/')) {
+        return $maildir;
+    }
+
+    return rtrim($baseDir, '/') . '/' . ltrim($maildir, '/');
+}
+
+function getMaildirSize(string $maildir, string $baseDir): int {
+    $path = resolveMaildirPath($maildir, $baseDir);
+    if (!$path) {
+        return 0;
+    }
+
+    return getDirectorySize($path);
 }
 
 function getMailboxStorageStats(string $baseDir, array &$errors = []): array {
