@@ -442,13 +442,29 @@ function getDirectorySize(string $path): int {
         return $size;
     }
 
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)
-    );
+    try {
+        $iterator = new DirectoryIterator($path);
+    } catch (UnexpectedValueException $exception) {
+        return $size;
+    }
 
     foreach ($iterator as $file) {
+        if ($file->isDot()) {
+            continue;
+        }
+
+        $filePath = $file->getPathname();
+        if ($file->isLink()) {
+            continue;
+        }
+
         if ($file->isFile()) {
             $size += $file->getSize();
+            continue;
+        }
+
+        if ($file->isDir() && is_readable($filePath)) {
+            $size += getDirectorySize($filePath);
         }
     }
 
