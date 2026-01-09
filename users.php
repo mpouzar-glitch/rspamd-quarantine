@@ -244,6 +244,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $postfixDb->prepare($sql);
                 $stmt->execute($params);
 
+                logAudit(
+                    $_SESSION['user_id'],
+                    $_SESSION['username'],
+                    'mailbox_updated',
+                    'mailbox',
+                    null,
+                    'Updated mailbox: ' . $mailbox . ' (' . $domain . ')'
+                );
                 $_SESSION['success_msg'] = __('users_mailbox_update_success');
             } catch (Exception $e) {
                 $_SESSION['error_msg'] = __('users_mailbox_update_error', ['error' => $e->getMessage()]);
@@ -279,6 +287,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
                 $stmt->execute([$goto, $active, $address, $domain]);
 
+                logAudit(
+                    $_SESSION['user_id'],
+                    $_SESSION['username'],
+                    'alias_updated',
+                    'alias',
+                    null,
+                    'Updated alias: ' . $address . ' (' . $domain . ')'
+                );
                 $_SESSION['success_msg'] = __('users_alias_update_success');
             } catch (Exception $e) {
                 $_SESSION['error_msg'] = __('users_alias_update_error', ['error' => $e->getMessage()]);

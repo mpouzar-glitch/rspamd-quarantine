@@ -217,6 +217,9 @@ include 'menu.php';
                     } elseif (strpos($action, 'login') !== false) {
                         $actionClass = 'action-login';
                         $actionIcon = 'fa-sign-in-alt';
+                    } elseif (strpos($action, 'user_') !== false || strpos($action, 'mailbox_') !== false || strpos($action, 'alias_') !== false) {
+                        $actionClass = 'action-user';
+                        $actionIcon = 'fa-user-gear';
                     } else {
                         $actionClass = 'action-default';
                         $actionIcon = 'fa-circle';
