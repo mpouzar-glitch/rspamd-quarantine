@@ -363,7 +363,7 @@ try {
                 </a>
             <?php endif; ?>
 
-            <?php if (checkPermission('admin')): ?>
+            <?php if (checkPermission('domain_admin')): ?>
                 <a href="audit.php" class="nav-item <?= $current_page === 'audit.php' ? 'active' : '' ?>">
                     <i class="fas fa-clipboard-list"></i>
                     <span><?php echo htmlspecialchars(__('nav_audit')); ?></span>
