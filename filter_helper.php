@@ -286,7 +286,7 @@ function renderSearchFilters(array $filters_def): string {
 
     <style>
     .compact-filter-form {
-        background: #f8f9fa;
+        background: #ddd;
         padding: 12px;
         border-radius: 6px;
         margin-bottom: 15px;

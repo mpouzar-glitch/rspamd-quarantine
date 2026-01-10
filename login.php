@@ -263,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 <body>
     <div class="login-container">
         <div class="login-header">
-            <i class="fas fa-shield-alt"></i>
+            <i class="fas fa-envelope-circle-check"></i>
             <h1><?php echo htmlspecialchars(__('app_title')); ?></h1>
             <p><?php echo htmlspecialchars(__('login_subtitle')); ?></p>
         </div>

@@ -332,7 +332,7 @@ try {
 <nav class="top-nav">
     <div class="nav-container">
         <div class="nav-brand">
-            <i class="fas fa-shield-alt"></i>
+            <i class="fas fa-envelope-circle-check"></i>
             <span><?php echo htmlspecialchars(__('app_title')); ?></span>
         </div>
 
