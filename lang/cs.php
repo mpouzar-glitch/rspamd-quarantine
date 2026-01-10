@@ -4,7 +4,7 @@
  */
 return [
     // Common
-    'app_title' => 'Rspamd Karanténa',
+    'app_title' => 'Email karanténa',
     'loading' => 'Načítání...',
     'search' => 'Hledat',
     'filter' => 'Filtrovat',
