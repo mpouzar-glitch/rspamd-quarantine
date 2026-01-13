@@ -30,7 +30,6 @@ $allowedLists = ['whitelist', 'blacklist'];
 $entryTypes = [
     'ip' => __('maps_type_ip'),
     'email' => __('maps_type_email_domain'),
-    'email_regex' => __('maps_type_email_regex'),
     'subject' => __('maps_type_subject'),
 ];
 $allowedTypes = array_keys($entryTypes);
@@ -41,11 +40,7 @@ function validateMapEntry($entryType, $value) {
     }
 
     if ($entryType === 'email') {
-        return isValidMapEmailEntry($value);
-    }
-
-    if ($entryType === 'email_regex') {
-        return isRegexMapEntry($value);
+        return isValidMapEmailEntry($value) || isRegexMapEntry($value);
     }
 
     if ($entryType === 'subject') {
@@ -60,7 +55,7 @@ function canManageMapEntry($entryType, $entryValue, $isDomainAdmin) {
         return true;
     }
 
-    if ($entryType === 'email' || $entryType === 'email_regex') {
+    if ($entryType === 'email') {
         return canManageEmailMapEntry($entryValue);
     }
 

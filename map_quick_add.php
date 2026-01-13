@@ -29,9 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $listType = $_POST['list_type'] ?? '';
 $entryValue = trim($_POST['entry_value'] ?? '');
-$entryType = 'email';
+$entryType = $_POST['entry_type'] ?? 'email';
 
 $allowedLists = ['whitelist', 'blacklist'];
+$allowedEntryTypes = ['email', 'subject'];
 
 if (!in_array($listType, $allowedLists, true)) {
     $_SESSION['error_msg'] = __('maps_invalid_input');
@@ -39,13 +40,25 @@ if (!in_array($listType, $allowedLists, true)) {
     exit;
 }
 
-if (empty($entryValue) || !isValidMapEmailEntry($entryValue)) {
+if (!in_array($entryType, $allowedEntryTypes, true)) {
+    $_SESSION['error_msg'] = __('maps_invalid_input');
+    header('Location: ' . $returnUrl);
+    exit;
+}
+
+if ($entryType === 'email' && (empty($entryValue) || !isValidMapEmailEntry($entryValue))) {
     $_SESSION['error_msg'] = __('maps_invalid_value');
     header('Location: ' . $returnUrl);
     exit;
 }
 
-if (!canManageEmailMapEntry($entryValue)) {
+if ($entryType === 'subject' && (empty($entryValue) || !isRegexMapEntry($entryValue))) {
+    $_SESSION['error_msg'] = __('maps_invalid_value');
+    header('Location: ' . $returnUrl);
+    exit;
+}
+
+if ($entryType === 'email' && !canManageEmailMapEntry($entryValue)) {
     $_SESSION['error_msg'] = __('maps_permission_denied');
     header('Location: ' . $returnUrl);
     exit;

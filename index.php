@@ -400,7 +400,17 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
+                                <span class="subject-text"><?php echo htmlspecialchars(truncateText($subject, 70)); ?></span>
+                                <?php if ($canManageMaps && !empty(trim($subject))): ?>
+                                    <span class="sender-actions subject-actions">
+                                        <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
+                                            <i class="fas fa-shield-alt"></i>
+                                        </button>
+                                        <button type="button" class="sender-action-btn blacklist-btn subject-map-btn" data-list-type="blacklist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    </span>
+                                <?php endif; ?>
                             </td>
                             <td class="hostname-field">
                                 <?php echo htmlspecialchars($hostname); ?>
@@ -517,6 +527,33 @@ include 'menu.php';
         <?php endif; ?>
     </div>
 
+    <div id="subjectMapModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="subjectMapModalTitle"><i class="fas fa-tag"></i> <?php echo htmlspecialchars(__('maps_add_subject')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="subjectMapForm" method="POST" action="map_quick_add.php">
+                    <input type="hidden" name="list_type" id="subjectMapListType" value="">
+                    <input type="hidden" name="entry_type" value="subject">
+                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                    <div class="form-group">
+                        <label for="subjectMapValue"><?php echo htmlspecialchars(__('msg_subject')); ?></label>
+                        <input type="text" id="subjectMapValue" name="entry_value" class="form-control" placeholder="<?php echo htmlspecialchars(__('maps_subject_placeholder')); ?>" required>
+                        <small><?php echo htmlspecialchars(__('maps_subject_hint')); ?></small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                        <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Preview Tooltip -->
     <div id="previewTooltip" class="preview-tooltip">
         <div class="preview-loading">
@@ -525,6 +562,50 @@ include 'menu.php';
     </div>
 
     <script>
+    const subjectModal = document.getElementById('subjectMapModal');
+    const subjectModalTitle = document.getElementById('subjectMapModalTitle');
+    const subjectModalValue = document.getElementById('subjectMapValue');
+    const subjectModalListType = document.getElementById('subjectMapListType');
+    const subjectStrings = {
+        whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>",
+        blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>"
+    };
+
+    function escapeRegex(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/');
+    }
+
+    function openSubjectModal(listType, subject) {
+        subjectModalListType.value = listType;
+        subjectModalTitle.innerHTML = `<i class="fas fa-tag"></i> ${subjectStrings[listType]}`;
+        const trimmedSubject = subject.trim();
+        subjectModalValue.value = trimmedSubject ? `/${escapeRegex(trimmedSubject)}/` : '';
+        subjectModal.classList.add('active');
+        subjectModal.setAttribute('aria-hidden', 'false');
+        subjectModalValue.focus();
+    }
+
+    function closeSubjectModal() {
+        subjectModal.classList.remove('active');
+        subjectModal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.querySelectorAll('.subject-map-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            openSubjectModal(button.dataset.listType, button.dataset.subject || '');
+        });
+    });
+
+    subjectModal.querySelectorAll('.modal-close').forEach((button) => {
+        button.addEventListener('click', closeSubjectModal);
+    });
+
+    subjectModal.addEventListener('click', (event) => {
+        if (event.target === subjectModal) {
+            closeSubjectModal();
+        }
+    });
+
     // Preview tooltip functionality
     let previewFormat = 'text';
     let previewTimeout = null;
