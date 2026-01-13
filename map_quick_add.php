@@ -39,13 +39,13 @@ if (!in_array($listType, $allowedLists, true)) {
     exit;
 }
 
-if (empty($entryValue) || !filter_var($entryValue, FILTER_VALIDATE_EMAIL)) {
+if (empty($entryValue) || !isValidMapEmailEntry($entryValue)) {
     $_SESSION['error_msg'] = __('maps_invalid_value');
     header('Location: ' . $returnUrl);
     exit;
 }
 
-if (!checkPermission('admin') && !checkDomainAccess($entryValue)) {
+if (!canManageEmailMapEntry($entryValue)) {
     $_SESSION['error_msg'] = __('maps_permission_denied');
     header('Location: ' . $returnUrl);
     exit;

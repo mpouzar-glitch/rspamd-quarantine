@@ -35,15 +35,7 @@ function validateMapEntry($entryType, $value) {
     }
 
     if ($entryType === 'email') {
-        if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false) {
-            return true;
-        }
-
-        if (preg_match('/^@(.+)$/', $value, $matches)) {
-            return filter_var($matches[1], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
-        }
-
-        return false;
+        return isValidMapEmailEntry($value);
     }
 
     return false;
@@ -55,7 +47,7 @@ function canManageMapEntry($entryType, $entryValue, $isDomainAdmin) {
     }
 
     if ($entryType === 'email') {
-        return checkDomainAccess($entryValue);
+        return canManageEmailMapEntry($entryValue);
     }
 
     return true;
