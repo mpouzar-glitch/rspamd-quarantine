@@ -1783,10 +1783,8 @@ function getTopSenderDomains($db, $dateFrom, $dateTo, $domainFilter, $params, $s
             WHERE mt.timestamp BETWEEN ? AND ?
             AND ($domainFilterTrace)
             AND mt.sender LIKE '%@%'
-            AND (
-                mt.action IN ('reject', 'add header', 'soft reject')
-                OR (mt.score >= ? AND mt.score <= ?)
-            )
+            AND mt.score >= ?
+            AND mt.score <= ?
             GROUP BY sender_domain
             ORDER BY count DESC
             LIMIT ?";
