@@ -442,13 +442,29 @@ function getDirectorySize(string $path): int {
         return $size;
     }
 
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)
-    );
+    try {
+        $iterator = new DirectoryIterator($path);
+    } catch (UnexpectedValueException $exception) {
+        return $size;
+    }
 
     foreach ($iterator as $file) {
+        if ($file->isDot()) {
+            continue;
+        }
+
+        $filePath = $file->getPathname();
+        if ($file->isLink()) {
+            continue;
+        }
+
         if ($file->isFile()) {
             $size += $file->getSize();
+            continue;
+        }
+
+        if ($file->isDir() && is_readable($filePath)) {
+            $size += getDirectorySize($filePath);
         }
     }
 
@@ -2278,6 +2294,75 @@ if (!function_exists('buildRspamdMapContent')) {
         }
 
         return implode("\n", $lines) . "\n";
+    }
+}
+
+if (!function_exists('isRegexMapEntry')) {
+    function isRegexMapEntry(string $value): bool {
+        $value = trim($value);
+
+        if ($value === '' || $value[0] !== '/') {
+            return false;
+        }
+
+        $lastSlash = strrpos($value, '/');
+        if ($lastSlash === 0) {
+            return false;
+        }
+
+        $match = @preg_match($value, '');
+
+        return $match !== false && preg_last_error() === PREG_NO_ERROR;
+    }
+}
+
+if (!function_exists('isValidMapEmailEntry')) {
+    function isValidMapEmailEntry(string $value): bool {
+        if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false) {
+            return true;
+        }
+
+        if (preg_match('/^@(.+)$/', $value, $matches)) {
+            return filter_var($matches[1], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+        }
+
+        return isRegexMapEntry($value);
+    }
+}
+
+if (!function_exists('canManageEmailMapEntry')) {
+    function canManageEmailMapEntry(string $entryValue): bool {
+        $userRole = $_SESSION['user_role'] ?? 'viewer';
+
+        if ($userRole === 'admin') {
+            return true;
+        }
+
+        if ($userRole !== 'domain_admin') {
+            return false;
+        }
+
+        if (checkDomainAccess($entryValue)) {
+            return true;
+        }
+
+        if (!isRegexMapEntry($entryValue)) {
+            return false;
+        }
+
+        $userDomains = $_SESSION['user_domains'] ?? [];
+        if (empty($userDomains)) {
+            return false;
+        }
+
+        foreach ($userDomains as $domain) {
+            $probe = 'test@' . $domain;
+            if (@preg_match($entryValue, $probe) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

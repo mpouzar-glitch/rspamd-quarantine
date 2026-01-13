@@ -35,15 +35,7 @@ function validateMapEntry($entryType, $value) {
     }
 
     if ($entryType === 'email') {
-        if (filter_var($value, FILTER_VALIDATE_EMAIL) !== false) {
-            return true;
-        }
-
-        if (preg_match('/^@(.+)$/', $value, $matches)) {
-            return filter_var($matches[1], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
-        }
-
-        return false;
+        return isValidMapEmailEntry($value);
     }
 
     return false;
@@ -55,7 +47,7 @@ function canManageMapEntry($entryType, $entryValue, $isDomainAdmin) {
     }
 
     if ($entryType === 'email') {
-        return checkDomainAccess($entryValue);
+        return canManageEmailMapEntry($entryValue);
     }
 
     return true;
@@ -133,7 +125,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?, ?, ?, ?, NOW(), NOW())");
         $insertStmt->execute([$listType, $entryType, $entryValue, $user]);
         $entryId = $db->lastInsertId();
-        $details = "Added {$listType} {$entryType}: {$entryValue}";
+        $details = sprintf(
+            'Added %s %s entry: %s (created by %s)',
+            $listType,
+            $entryType,
+            $entryValue,
+            $user
+        );
         logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
         $sync = syncMapEntries($db, $listType, $entryType);
@@ -174,7 +172,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $deleteStmt = $db->prepare("DELETE FROM rspamd_map_entries WHERE id = ?");
         $deleteStmt->execute([$entryId]);
-        $details = "Deleted {$entry['list_type']} {$entry['entry_type']}: {$entry['entry_value']}";
+        $details = sprintf(
+            'Deleted %s %s entry: %s (created by %s)',
+            $entry['list_type'],
+            $entry['entry_type'],
+            $entry['entry_value'],
+            $entry['created_by']
+        );
         logAudit($userId, $user, 'map_delete', 'rspamd_map_entry', $entryId, $details);
 
         $sync = syncMapEntries($db, $entry['list_type'], $entry['entry_type']);

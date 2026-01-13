@@ -20,8 +20,8 @@ $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 
-// Only admins can access the audit log
-if (!checkPermission('admin')) {
+// Only admins and domain admins can access the audit log
+if (!checkPermission('domain_admin')) {
     $_SESSION['error_msg'] = __('audit_access_denied');
     header('Location: index.php');
     exit;
@@ -44,8 +44,8 @@ $offset = ($page - 1) * ITEMS_PER_PAGE;
 $params = [];
 $where = ['1=1'];
 
-// Limit to current user for admin scope (legacy behavior)
-if ($userRole === 'admin') {
+// Limit to current user for domain admins
+if ($userRole === 'domain_admin') {
     $where[] = 'username = ?';
     $params[] = $user;
 }

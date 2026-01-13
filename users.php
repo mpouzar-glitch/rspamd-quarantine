@@ -116,6 +116,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             try {
+                $currentStmt = $db->prepare("SELECT username, email, role, active FROM users WHERE id = ?");
+                $currentStmt->execute([$user_id]);
+                $currentUser = $currentStmt->fetch();
+                if (!$currentUser) {
+                    $_SESSION['error_msg'] = __('users_update_error', ['error' => __('users_not_found')]);
+                    break;
+                }
+
+                $domainStmt = $db->prepare("SELECT domain FROM user_domains WHERE user_id = ? ORDER BY domain");
+                $domainStmt->execute([$user_id]);
+                $currentDomains = $domainStmt->fetchAll(PDO::FETCH_COLUMN);
+                $updatedDomains = [];
+                if ($role === 'domain_admin' && !empty($domains_text)) {
+                    $updatedDomains = array_filter(array_map('trim', explode("\n", $domains_text)));
+                }
+
                 $db->beginTransaction();
 
                 // Update user
@@ -151,7 +167,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $db->commit();
-                logAudit($_SESSION['user_id'], $_SESSION['username'], 'user_updated', 'users', $user_id, "Updated user: $username");
+                $changes = [];
+                if ($currentUser['username'] !== $username) {
+                    $changes[] = "username: {$currentUser['username']} → {$username}";
+                }
+                if ($currentUser['email'] !== $email) {
+                    $changes[] = "email: {$currentUser['email']} → {$email}";
+                }
+                if ($currentUser['role'] !== $role) {
+                    $changes[] = "role: {$currentUser['role']} → {$role}";
+                }
+                if ((int)$currentUser['active'] !== $active) {
+                    $changes[] = 'active: ' . ((int)$currentUser['active'] ? 'yes' : 'no') . ' → ' . ($active ? 'yes' : 'no');
+                }
+                if (!empty($password)) {
+                    $changes[] = 'password updated';
+                }
+
+                if ($role === 'domain_admin') {
+                    $addedDomains = array_diff($updatedDomains, $currentDomains);
+                    $removedDomains = array_diff($currentDomains, $updatedDomains);
+                    if (!empty($addedDomains)) {
+                        $changes[] = 'domains added: ' . implode(', ', $addedDomains);
+                    }
+                    if (!empty($removedDomains)) {
+                        $changes[] = 'domains removed: ' . implode(', ', $removedDomains);
+                    }
+                } elseif (!empty($currentDomains)) {
+                    $changes[] = 'domains cleared';
+                }
+
+                $details = 'Updated user: ' . $username;
+                if (!empty($changes)) {
+                    $details .= ' | Changes: ' . implode('; ', $changes);
+                }
+                logAudit($_SESSION['user_id'], $_SESSION['username'], 'user_updated', 'users', $user_id, $details);
                 $_SESSION['success_msg'] = __('users_update_success');
 
             } catch (Exception $e) {
@@ -196,6 +246,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Exception $e) {
                 $db->rollBack();
                 $_SESSION['error_msg'] = __('users_delete_error', ['error' => $e->getMessage()]);
+            }
+            break;
+
+        case 'mailbox_create':
+            $localPart = trim($_POST['mailbox_local'] ?? '');
+            $domain = trim($_POST['domain'] ?? '');
+            $name = trim($_POST['name'] ?? '');
+            $quotaGb = isset($_POST['quota']) ? max(0, (float)$_POST['quota']) : 0;
+            $quota = (int) round($quotaGb * 1024);
+            $active = isset($_POST['active']) ? 1 : 0;
+            $password = $_POST['password'] ?? '';
+
+            if ($localPart === '' || $domain === '' || $name === '' || $password === '') {
+                $_SESSION['error_msg'] = __('users_mailbox_create_required_fields');
+                break;
+            }
+
+            if (str_contains($localPart, '@')) {
+                $_SESSION['error_msg'] = __('users_mailbox_invalid_localpart');
+                break;
+            }
+
+            $mailbox = $localPart . '@' . $domain;
+            if (!filter_var($mailbox, FILTER_VALIDATE_EMAIL)) {
+                $_SESSION['error_msg'] = __('users_mailbox_invalid_address');
+                break;
+            }
+
+            if (!hasDomainAccess($domain)) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
+
+            if (!$postfixDb) {
+                $_SESSION['error_msg'] = __('users_mailbox_db_unavailable');
+                break;
+            }
+
+            try {
+                $stmt = $postfixDb->prepare("SELECT username FROM mailbox WHERE username = ? AND domain = ?");
+                $stmt->execute([$mailbox, $domain]);
+                if ($stmt->fetch()) {
+                    $_SESSION['error_msg'] = __('users_mailbox_exists');
+                    break;
+                }
+
+                $stmt = $postfixDb->prepare("SELECT address FROM alias WHERE address = ? AND domain = ?");
+                $stmt->execute([$mailbox, $domain]);
+                if ($stmt->fetch()) {
+                    $_SESSION['error_msg'] = __('users_alias_exists');
+                    break;
+                }
+
+                $maildir = $domain . '/' . $localPart . '/';
+                $passwordHash = generateMd5CryptPassword($password);
+
+                $postfixDb->beginTransaction();
+                $stmt = $postfixDb->prepare("
+                    INSERT INTO mailbox (username, password, name, maildir, quota, domain, active, created, modified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                ");
+                $stmt->execute([$mailbox, $passwordHash, $name, $maildir, $canEditQuota ? $quota : 0, $domain, $active]);
+
+                $stmt = $postfixDb->prepare("
+                    INSERT INTO alias (address, domain, goto, active, created, modified)
+                    VALUES (?, ?, ?, ?, NOW(), NOW())
+                ");
+                $stmt->execute([$mailbox, $domain, $mailbox, $active]);
+                $postfixDb->commit();
+
+                logAudit(
+                    $_SESSION['user_id'],
+                    $_SESSION['username'],
+                    'mailbox_created',
+                    'mailbox',
+                    null,
+                    'Created mailbox: ' . $mailbox . ' (' . $domain . ') + system alias'
+                );
+                $_SESSION['success_msg'] = __('users_mailbox_create_success');
+            } catch (Exception $e) {
+                if ($postfixDb->inTransaction()) {
+                    $postfixDb->rollBack();
+                }
+                $_SESSION['error_msg'] = __('users_mailbox_create_error', ['error' => $e->getMessage()]);
             }
             break;
 
@@ -255,6 +389,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['success_msg'] = __('users_mailbox_update_success');
             } catch (Exception $e) {
                 $_SESSION['error_msg'] = __('users_mailbox_update_error', ['error' => $e->getMessage()]);
+            }
+            break;
+
+        case 'alias_create':
+            $localPart = trim($_POST['alias_local'] ?? '');
+            $domain = trim($_POST['domain'] ?? '');
+            $goto = trim($_POST['goto'] ?? '');
+            $active = isset($_POST['active']) ? 1 : 0;
+
+            if ($localPart === '' || $domain === '' || $goto === '') {
+                $_SESSION['error_msg'] = __('users_alias_required_fields');
+                break;
+            }
+
+            if (str_contains($localPart, '@')) {
+                $_SESSION['error_msg'] = __('users_alias_invalid_localpart');
+                break;
+            }
+
+            $address = $localPart . '@' . $domain;
+            if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {
+                $_SESSION['error_msg'] = __('users_alias_invalid_address');
+                break;
+            }
+
+            if (!hasDomainAccess($domain)) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
+
+            if (!$postfixDb) {
+                $_SESSION['error_msg'] = __('users_mailbox_db_unavailable');
+                break;
+            }
+
+            try {
+                $stmt = $postfixDb->prepare("SELECT address FROM alias WHERE address = ? AND domain = ?");
+                $stmt->execute([$address, $domain]);
+                if ($stmt->fetch()) {
+                    $_SESSION['error_msg'] = __('users_alias_exists');
+                    break;
+                }
+
+                $stmt = $postfixDb->prepare("
+                    INSERT INTO alias (address, domain, goto, active, created, modified)
+                    VALUES (?, ?, ?, ?, NOW(), NOW())
+                ");
+                $stmt->execute([$address, $domain, $goto, $active]);
+
+                logAudit(
+                    $_SESSION['user_id'],
+                    $_SESSION['username'],
+                    'alias_created',
+                    'alias',
+                    null,
+                    'Created alias: ' . $address . ' (' . $domain . ') → ' . $goto
+                );
+                $_SESSION['success_msg'] = __('users_alias_create_success');
+            } catch (Exception $e) {
+                $_SESSION['error_msg'] = __('users_alias_create_error', ['error' => $e->getMessage()]);
             }
             break;
 
@@ -341,6 +535,7 @@ $domainOptions = [];
 $selectedDomain = '';
 $mailboxes = [];
 $aliases = [];
+$hideSystemAliases = true;
 
 if ($postfixDb) {
     if ($isAdmin) {
@@ -380,7 +575,17 @@ if ($postfixDb) {
         ");
         $stmt->execute([$selectedDomain]);
         $aliases = $stmt->fetchAll();
+
+        if (isset($_GET['hide_system_aliases'])) {
+            $hideSystemAliases = $_GET['hide_system_aliases'] === '1';
+        }
     }
+}
+
+if ($hideSystemAliases) {
+    $aliases = array_values(array_filter($aliases, function ($alias) {
+        return trim($alias['address']) !== trim($alias['goto']);
+    }));
 }
 
 $baseMailDir = defined('VMAIL_BASE_DIR') ? VMAIL_BASE_DIR : '/var/vmail/vmail1';
@@ -507,6 +712,39 @@ include 'menu.php';
         .btn-add-user:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(39, 174, 96, 0.4);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .section-header h3 {
+            margin: 0;
+        }
+
+        .section-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .alias-filter-form {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #2c3e50;
         }
 
         /* Users Table - MAX 32px HEIGHT */
@@ -1072,6 +1310,7 @@ include 'menu.php';
             <?php if (!empty($domainOptions)): ?>
                 <form method="GET" action="" class="domain-selector">
                     <label for="domainSelect"><?php echo htmlspecialchars(__('users_domain_select_label')); ?></label>
+                    <input type="hidden" name="hide_system_aliases" value="<?php echo $hideSystemAliases ? '1' : '0'; ?>">
                     <select name="domain" id="domainSelect" onchange="this.form.submit()">
                         <?php foreach ($domainOptions as $domainOption): ?>
                             <option value="<?php echo htmlspecialchars($domainOption); ?>" <?php echo $domainOption === $selectedDomain ? 'selected' : ''; ?>>
@@ -1094,7 +1333,12 @@ include 'menu.php';
             </div>
         <?php else: ?>
             <div class="section-card">
-                <h3><?php echo htmlspecialchars(__('users_mailbox_users_title')); ?></h3>
+                <div class="section-header">
+                    <h3><?php echo htmlspecialchars(__('users_mailbox_users_title')); ?></h3>
+                    <button class="btn-add-user" type="button" onclick="openMailboxCreateModal()">
+                        <i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_add')); ?>
+                    </button>
+                </div>
                 <?php if (empty($mailboxes)): ?>
                     <p class="domain-empty"><?php echo htmlspecialchars(__('users_mailbox_empty')); ?></p>
                 <?php else: ?>
@@ -1143,7 +1387,22 @@ include 'menu.php';
             </div>
 
             <div class="section-card">
-                <h3><?php echo htmlspecialchars(__('users_alias_title')); ?></h3>
+                <div class="section-header">
+                    <h3><?php echo htmlspecialchars(__('users_alias_title')); ?></h3>
+                    <div class="section-header-actions">
+                        <form method="GET" action="" class="alias-filter-form">
+                            <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
+                            <input type="hidden" name="hide_system_aliases" value="0">
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="hide_system_aliases" value="1" <?php echo $hideSystemAliases ? 'checked' : ''; ?> onchange="this.form.submit()">
+                                <?php echo htmlspecialchars(__('users_alias_hide_system')); ?>
+                            </label>
+                        </form>
+                        <button class="btn-add-user" type="button" onclick="openAliasCreateModal()">
+                            <i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_add')); ?>
+                        </button>
+                    </div>
+                </div>
                 <?php if (empty($aliases)): ?>
                     <p class="domain-empty"><?php echo htmlspecialchars(__('users_alias_empty')); ?></p>
                 <?php else: ?>
@@ -1291,6 +1550,84 @@ include 'menu.php';
     </div>
 </div>
 
+<!-- Create Mailbox Modal -->
+<div id="mailboxCreateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_create_title')); ?></h2>
+            <span class="close" onclick="closeMailboxCreateModal()">&times;</span>
+        </div>
+        <form method="POST" action="">
+            <input type="hidden" name="action" value="mailbox_create">
+            <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_mailbox_localpart')); ?> *</label>
+                    <input type="text" name="mailbox_local" required>
+                    <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
+                </div>
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_mailbox_name')); ?> *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
+                    <input type="number" name="quota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
+                </div>
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?> *</label>
+                    <input type="password" name="password" required>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="active" id="mailboxCreateActive" checked>
+                    <label for="mailboxCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeMailboxCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_create')); ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Alias Modal -->
+<div id="aliasCreateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_create_title')); ?></h2>
+            <span class="close" onclick="closeAliasCreateModal()">&times;</span>
+        </div>
+        <form method="POST" action="">
+            <input type="hidden" name="action" value="alias_create">
+            <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_alias_localpart')); ?> *</label>
+                    <input type="text" name="alias_local" required>
+                    <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
+                </div>
+                <div class="form-group">
+                    <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
+                    <textarea name="goto" required></textarea>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="active" id="aliasCreateActive" checked>
+                    <label for="aliasCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeAliasCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_create')); ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Edit Mailbox Modal -->
 <div id="mailboxModal" class="modal">
     <div class="modal-content">
@@ -1404,6 +1741,22 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+function openMailboxCreateModal() {
+    document.getElementById('mailboxCreateModal').style.display = 'block';
+}
+
+function closeMailboxCreateModal() {
+    document.getElementById('mailboxCreateModal').style.display = 'none';
+}
+
+function openAliasCreateModal() {
+    document.getElementById('aliasCreateModal').style.display = 'block';
+}
+
+function closeAliasCreateModal() {
+    document.getElementById('aliasCreateModal').style.display = 'none';
+}
+
 function openMailboxModal(mailbox) {
     document.getElementById('mailboxUsername').value = mailbox.username;
     document.getElementById('mailboxDomain').value = mailbox.domain;
@@ -1457,6 +1810,8 @@ function confirmDelete(userId, username) {
 window.onclick = function(event) {
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
+    const mailboxCreateModal = document.getElementById('mailboxCreateModal');
+    const aliasCreateModal = document.getElementById('aliasCreateModal');
     const mailboxModal = document.getElementById('mailboxModal');
     const aliasModal = document.getElementById('aliasModal');
 
@@ -1465,6 +1820,12 @@ window.onclick = function(event) {
     }
     if (event.target == editModal) {
         closeEditModal();
+    }
+    if (event.target == mailboxCreateModal) {
+        closeMailboxCreateModal();
+    }
+    if (event.target == aliasCreateModal) {
+        closeAliasCreateModal();
     }
     if (event.target == mailboxModal) {
         closeMailboxModal();
