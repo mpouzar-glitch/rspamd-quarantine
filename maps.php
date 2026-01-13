@@ -32,6 +32,9 @@ $entryTypes = [
     'email' => __('maps_type_email_domain'),
     'subject' => __('maps_type_subject'),
 ];
+$entryTypeAliases = [
+    'email_regex' => 'email',
+];
 $allowedTypes = array_keys($entryTypes);
 
 function validateMapEntry($entryType, $value) {
@@ -110,20 +113,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        $resolvedEntryType = $entryType;
+        if ($entryType === 'email' && isRegexMapEntry($entryValue)) {
+            $resolvedEntryType = 'email_regex';
+        }
+
         if (empty($entryValue) || !validateMapEntry($entryType, $entryValue)) {
             $_SESSION['error_msg'] = __('maps_invalid_value');
             header('Location: maps.php');
             exit;
         }
 
-        if (!canManageMapEntry($entryType, $entryValue, $isDomainAdmin)) {
+        if (!canManageMapEntry($resolvedEntryType, $entryValue, $isDomainAdmin)) {
             $_SESSION['error_msg'] = __('maps_permission_denied');
             header('Location: maps.php');
             exit;
         }
 
         $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
-        $checkStmt->execute([$listType, $entryType, $entryValue]);
+        $checkStmt->execute([$listType, $resolvedEntryType, $entryValue]);
         if ($checkStmt->fetchColumn() > 0) {
             $_SESSION['error_msg'] = __('maps_duplicate');
             header('Location: maps.php');
@@ -132,18 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
             VALUES (?, ?, ?, ?, NOW(), NOW())");
-        $insertStmt->execute([$listType, $entryType, $entryValue, $user]);
+        $insertStmt->execute([$listType, $resolvedEntryType, $entryValue, $user]);
         $entryId = $db->lastInsertId();
         $details = sprintf(
             'Added %s %s entry: %s (created by %s)',
             $listType,
-            $entryType,
+            $resolvedEntryType,
             $entryValue,
             $user
         );
         logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
-        $sync = syncMapEntries($db, $listType, $entryType);
+        $sync = syncMapEntries($db, $listType, $resolvedEntryType);
         if ($sync['success']) {
             $_SESSION['success_msg'] = __('maps_added');
         } else {
@@ -224,24 +232,25 @@ $blacklistEntries = array_values(array_filter($entries, function ($entry) {
     return $entry['list_type'] === 'blacklist';
 }));
 
-$groupEntriesByType = function (array $entries, array $types) {
+$groupEntriesByType = function (array $entries, array $types, array $aliases) {
     $grouped = [];
     foreach ($types as $type => $label) {
         $grouped[$type] = [];
     }
 
     foreach ($entries as $entry) {
-        if (!isset($grouped[$entry['entry_type']])) {
+        $entryType = $aliases[$entry['entry_type']] ?? $entry['entry_type'];
+        if (!isset($grouped[$entryType])) {
             continue;
         }
-        $grouped[$entry['entry_type']][] = $entry;
+        $grouped[$entryType][] = $entry;
     }
 
     return $grouped;
 };
 
-$whitelistEntriesByType = $groupEntriesByType($whitelistEntries, $entryTypes);
-$blacklistEntriesByType = $groupEntriesByType($blacklistEntries, $entryTypes);
+$whitelistEntriesByType = $groupEntriesByType($whitelistEntries, $entryTypes, $entryTypeAliases);
+$blacklistEntriesByType = $groupEntriesByType($blacklistEntries, $entryTypes, $entryTypeAliases);
 
 $page_title = __('maps_title');
 include 'menu.php';
