@@ -46,10 +46,6 @@ function validateMapEntry($entryType, $value) {
         return isValidMapEmailEntry($value) || isRegexMapEntry($value);
     }
 
-    if ($entryType === 'email_regex') {
-        return isRegexMapEntry($value);
-    }
-
     if ($entryType === 'subject') {
         return isRegexMapEntry($value);
     }
@@ -62,7 +58,7 @@ function canManageMapEntry($entryType, $entryValue, $isDomainAdmin) {
         return true;
     }
 
-    if ($entryType === 'email' || $entryType === 'email_regex') {
+    if ($entryType === 'email') {
         return canManageEmailMapEntry($entryValue);
     }
 
