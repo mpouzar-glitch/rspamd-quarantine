@@ -29,6 +29,16 @@ $days = isset($_GET['days']) ? max(1, min(365, (int)$_GET['days'])) : 30;
 $dateFrom = date('Y-m-d 00:00:00', strtotime("-$days days"));
 $dateTo = date('Y-m-d 23:59:59');
 
+// Score range for spam/high-score domain stats
+$scoreMinInput = $_GET['score_min'] ?? '6';
+$scoreMaxInput = $_GET['score_max'] ?? '100';
+$scoreMin = is_numeric($scoreMinInput) ? (float)$scoreMinInput : 6.0;
+$scoreMax = is_numeric($scoreMaxInput) ? (float)$scoreMaxInput : 100.0;
+if ($scoreMax < $scoreMin) {
+    $scoreMax = $scoreMin;
+    $scoreMaxInput = (string)$scoreMax;
+}
+
 // Get domain filter SQL
 $params = [];
 $domainFilter = getDomainFilterSQL($params);
@@ -36,6 +46,7 @@ $domainFilter = getDomainFilterSQL($params);
 // Get all statistics
 $topRecipients = getTopRecipients($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
 $topSenders = getTopSenders($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
+$topSenderDomains = getTopSenderDomains($db, $dateFrom, $dateTo, $domainFilter, $params, $scoreMin, $scoreMax, 40);
 $volumeStats = getVolumeStats($db, $dateFrom, $dateTo, $domainFilter, $params);
 $actionDist = getActionDistribution($db, $dateFrom, $dateTo, $domainFilter, $params);
 $stateDist = getStateDistribution($db, $dateFrom, $dateTo, $domainFilter, $params);
@@ -146,12 +157,23 @@ include 'menu.php';
     <!-- Time Selector -->
     <div class="time-selector">
         <label><i class="fas fa-calendar-alt"></i> <?php echo htmlspecialchars(__('stats_time_range_label')); ?></label>
-        <a href="?days=7" class="<?php echo $days == 7 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 7])); ?></a>
-        <a href="?days=14" class="<?php echo $days == 14 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 14])); ?></a>
-        <a href="?days=30" class="<?php echo $days == 30 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 30])); ?></a>
-        <a href="?days=60" class="<?php echo $days == 60 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 60])); ?></a>
-        <a href="?days=90" class="<?php echo $days == 90 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 90])); ?></a>
+        <?php
+        $scoreQuery = '&score_min=' . urlencode($scoreMinInput) . '&score_max=' . urlencode($scoreMaxInput);
+        ?>
+        <a href="?days=7<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 7 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 7])); ?></a>
+        <a href="?days=14<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 14 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 14])); ?></a>
+        <a href="?days=30<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 30 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 30])); ?></a>
+        <a href="?days=60<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 60 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 60])); ?></a>
+        <a href="?days=90<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 90 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 90])); ?></a>
     </div>
+    <form class="score-selector" method="get">
+        <input type="hidden" name="days" value="<?php echo htmlspecialchars((string)$days); ?>">
+        <label><i class="fas fa-filter"></i> <?php echo htmlspecialchars(__('stats_score_range_label')); ?></label>
+        <input type="number" step="0.1" name="score_min" value="<?php echo htmlspecialchars((string)$scoreMinInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_from')); ?>">
+        <span class="score-range-separator">-</span>
+        <input type="number" step="0.1" name="score_max" value="<?php echo htmlspecialchars((string)$scoreMaxInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_to')); ?>">
+        <button type="submit"><?php echo htmlspecialchars(__('stats_apply_button')); ?></button>
+    </form>
 
     <div class="charts-grid">
     <!-- Action Distribution Chart -->
@@ -299,6 +321,46 @@ include 'menu.php';
                     <td>
                         <?php
                         $score = $symbol['max_score'] ?? 0;
+                        $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
+                        ?>
+                        <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top Sender Domains Table -->
+    <div class="table-container">
+        <h2><i class="fas fa-globe"></i> <?php echo htmlspecialchars(__('stats_top_sender_domains')); ?></h2>
+        <table class="messages-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 300px;"><?php echo htmlspecialchars(__('stats_sender_domain')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($topSenderDomains as $i => $domain): ?>
+                <?php if ($i > 40) break; ?>
+                <tr>
+                    <td><?php echo $i + 1; ?></td>
+                    <td><strong><?php echo truncateWithTooltip($domain['sender_domain'], 40); ?></strong></td>
+                    <td><?php echo number_format($domain['count']); ?></td>
+                    <td>
+                        <?php
+                        $score = $domain['avg_score'] ?? 0;
+                        $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
+                        ?>
+                        <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
+                    </td>
+                    <td>
+                        <?php
+                        $score = $domain['max_score'] ?? 0;
                         $scoreClass = $score >= 15 ? 'badge-high' : ($score >= 6 ? 'badge-medium' : 'badge-low');
                         ?>
                         <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>

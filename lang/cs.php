@@ -302,6 +302,10 @@ return [
     'stats_filtered_domains' => 'Filtrováno pro domény: {domains}',
     'stats_time_range_label' => 'Časové období:',
     'stats_days' => '{days} dní',
+    'stats_score_range_label' => 'Rozsah skóre:',
+    'stats_score_from' => 'Od',
+    'stats_score_to' => 'Do',
+    'stats_apply_button' => 'Použít',
     'stats_action_distribution' => 'Rozložení podle akcí (Message Trace)',
     'stats_state_distribution' => 'Rozložení podle stavu (Karanténa)',
     'stats_daily_trace' => 'Denní graf zpráv (Message Trace)',
@@ -309,6 +313,8 @@ return [
     'stats_count' => 'Počet',
     'stats_avg_score_column' => 'Průměrné skóre',
     'stats_max_score_column' => 'Max skóre',
+    'stats_top_sender_domains' => 'Nejčastější domény odesílatelů (spam/vyšší skóre)',
+    'stats_sender_domain' => 'Doména odesílatele',
     'stats_messages_label' => 'zpráv',
 
     // Symbol search
