@@ -34,6 +34,37 @@
     margin-bottom: 15px;
 }
 
+.maps-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.maps-tab {
+    border: 1px solid #d0d4d9;
+    background: #f1f3f5;
+    color: #343a40;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.maps-tab.active {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.maps-group {
+    display: none;
+}
+
+.maps-group.active {
+    display: block;
+}
+
 .maps-table {
     width: 100%;
 }
