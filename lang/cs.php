@@ -128,10 +128,12 @@ return [
     'maps_no_entries' => 'Zatím žádné položky.',
     'maps_type_ip' => 'IP adresa',
     'maps_type_email' => 'Emailová adresa',
-    'maps_type_email_domain' => 'Email/doména',
+    'maps_type_email_domain' => 'Email/doména/regex',
     'maps_type_email_regex' => 'Email regex',
     'maps_type_subject' => 'Předmět',
     'maps_value_placeholder' => 'např. 192.0.2.10, user@example.com, @example.com, /@example\\.com$/ nebo /urgent/i',
+    'maps_subject_placeholder' => 'např. /urgent/i',
+    'maps_subject_hint' => 'Zadejte regex pro předmět zprávy.',
     'maps_invalid_input' => 'Neplatný vstup.',
     'maps_invalid_value' => 'Zadejte platnou IP adresu, email/@doménu nebo regex.',
     'maps_invalid_score' => 'Zadejte platné skóre.',
@@ -145,6 +147,9 @@ return [
     'maps_upload_failed_generic' => 'Nahrání mapy selhalo.',
     'maps_add_whitelist_sender' => 'Přidat odesílatele do whitelistu',
     'maps_add_blacklist_sender' => 'Přidat odesílatele do blacklistu',
+    'maps_add_subject' => 'Přidat předmět',
+    'maps_add_whitelist_subject' => 'Přidat předmět do whitelistu',
+    'maps_add_blacklist_subject' => 'Přidat předmět do blacklistu',
     'maps_permission_denied' => 'Nemáte oprávnění spravovat mapy.',
 
     // Message details
