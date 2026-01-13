@@ -23,6 +23,8 @@ if (!isAuthenticated()) {
 $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
+$canManageMaps = checkPermission('domain_admin');
+$returnUrl = $_SERVER['REQUEST_URI'] ?? 'stats.php';
 
 // Time range for stats (default: last 30 days)
 $days = isset($_GET['days']) ? max(1, min(365, (int)$_GET['days'])) : 30;
@@ -53,6 +55,17 @@ $stateDist = getStateDistribution($db, $dateFrom, $dateTo, $domainFilter, $param
 $dailyTrace = getDailyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $weeklyTrace = getWeeklyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $topSymbols = getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
+$listedEmails = ['whitelist' => [], 'blacklist' => []];
+if ($canManageMaps && !empty($topSenders)) {
+    $senderEmails = [];
+    foreach ($topSenders as $senderStat) {
+        $senderEmail = extractEmailAddress(decodeMimeHeader($senderStat['sender'] ?? ''));
+        if (!empty($senderEmail) && !isLikelyRandomEmail($senderEmail)) {
+            $senderEmails[] = $senderEmail;
+        }
+    }
+    $listedEmails = getEmailMapStatus($db, $senderEmails);
+}
 
 $page_title = __('stats_page_title', ['app' => __('app_title')]);
 
@@ -166,15 +179,6 @@ include 'menu.php';
         <a href="?days=60<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 60 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 60])); ?></a>
         <a href="?days=90<?php echo htmlspecialchars($scoreQuery); ?>" class="<?php echo $days == 90 ? 'active' : ''; ?>"><?php echo htmlspecialchars(__('stats_days', ['days' => 90])); ?></a>
     </div>
-    <form class="score-selector" method="get">
-        <input type="hidden" name="days" value="<?php echo htmlspecialchars((string)$days); ?>">
-        <label><i class="fas fa-filter"></i> <?php echo htmlspecialchars(__('stats_score_range_label')); ?></label>
-        <input type="number" step="0.1" name="score_min" value="<?php echo htmlspecialchars((string)$scoreMinInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_from')); ?>">
-        <span class="score-range-separator">-</span>
-        <input type="number" step="0.1" name="score_max" value="<?php echo htmlspecialchars((string)$scoreMaxInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_to')); ?>">
-        <button type="submit"><?php echo htmlspecialchars(__('stats_apply_button')); ?></button>
-    </form>
-
     <div class="charts-grid">
     <!-- Action Distribution Chart -->
     <div class="chart-container">
@@ -267,9 +271,28 @@ include 'menu.php';
             <tbody>
                 <?php foreach ($topSenders as $i => $sender): ?>
                 <?php if($i>40) break; ?>
+                <?php
+                $senderEmail = extractEmailAddress(decodeMimeHeader($sender['sender'] ?? ''));
+                $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
+                $senderEmailKey = $senderEmail ? strtolower($senderEmail) : '';
+                ?>
                 <tr>
                     <td><?php echo $i + 1; ?></td>
-                    <td><strong><?php echo truncateWithTooltip($sender['sender'], 40); ?></strong></td>
+                    <td>
+                        <strong><?php echo truncateWithTooltip($sender['sender'], 40); ?></strong>
+                        <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
+                            <span class="sender-actions">
+                                <form method="POST" action="map_quick_add.php" class="sender-action-form">
+                                    <input type="hidden" name="list_type" value="blacklist">
+                                    <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                    <button type="submit" class="sender-action-btn blacklist-btn<?php echo isset($listedEmails['blacklist'][$senderEmailKey]) ? ' is-listed' : ''; ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                </form>
+                            </span>
+                        <?php endif; ?>
+                    </td>
                     <td><?php echo number_format($sender['count']); ?></td>
                     <td>
                         <?php 
@@ -333,7 +356,21 @@ include 'menu.php';
 
     <!-- Top Sender Domains Table -->
     <div class="table-container">
-        <h2><i class="fas fa-globe"></i> <?php echo htmlspecialchars(__('stats_top_sender_domains')); ?></h2>
+        <h2 class="table-header-with-filter">
+            <i class="fas fa-globe"></i> <?php echo htmlspecialchars(__('stats_top_sender_domains')); ?>
+            <form class="score-filter-mini" method="get">
+                <input type="hidden" name="days" value="<?php echo htmlspecialchars((string)$days); ?>">
+                <label aria-label="<?php echo htmlspecialchars(__('stats_score_range_label')); ?>">
+                    <i class="fas fa-filter"></i>
+                </label>
+                <input type="number" step="0.1" name="score_min" value="<?php echo htmlspecialchars((string)$scoreMinInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_from')); ?>" aria-label="<?php echo htmlspecialchars(__('stats_score_from')); ?>">
+                <span class="score-range-separator">-</span>
+                <input type="number" step="0.1" name="score_max" value="<?php echo htmlspecialchars((string)$scoreMaxInput); ?>" placeholder="<?php echo htmlspecialchars(__('stats_score_to')); ?>" aria-label="<?php echo htmlspecialchars(__('stats_score_to')); ?>">
+                <button type="submit" title="<?php echo htmlspecialchars(__('stats_apply_button')); ?>">
+                    <i class="fas fa-check"></i>
+                </button>
+            </form>
+        </h2>
         <table class="messages-table">
             <thead>
                 <tr>
@@ -347,9 +384,16 @@ include 'menu.php';
             <tbody>
                 <?php foreach ($topSenderDomains as $i => $domain): ?>
                 <?php if ($i > 40) break; ?>
+                <?php $domainValue = $domain['sender_domain'] ?? ''; ?>
                 <tr>
                     <td><?php echo $i + 1; ?></td>
-                    <td><strong><?php echo truncateWithTooltip($domain['sender_domain'], 40); ?></strong></td>
+                    <td>
+                        <strong>
+                            <a class="domain-link" href="trace.php?sender=<?php echo urlencode('@' . $domainValue); ?>&reset_page=1">
+                                <?php echo truncateWithTooltip($domainValue, 40); ?>
+                            </a>
+                        </strong>
+                    </td>
                     <td><?php echo number_format($domain['count']); ?></td>
                     <td>
                         <?php
