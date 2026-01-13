@@ -268,6 +268,10 @@ return [
     'stats_filtered_domains' => 'Gefiltert für Domains: {domains}',
     'stats_time_range_label' => 'Zeitraum:',
     'stats_days' => '{days} Tage',
+    'stats_score_range_label' => 'Score-Bereich:',
+    'stats_score_from' => 'Von',
+    'stats_score_to' => 'Bis',
+    'stats_apply_button' => 'Anwenden',
     'stats_action_distribution' => 'Verteilung nach Aktionen (Message Trace)',
     'stats_state_distribution' => 'Verteilung nach Status (Quarantäne)',
     'stats_daily_trace' => 'Tagesdiagramm der Nachrichten (Message Trace)',
@@ -275,6 +279,8 @@ return [
     'stats_count' => 'Anzahl',
     'stats_avg_score_column' => 'Durchschnittliche Punktzahl',
     'stats_max_score_column' => 'Maximale Punktzahl',
+    'stats_top_sender_domains' => 'Top Absender-Domains (Spam/hoher Score)',
+    'stats_sender_domain' => 'Absender-Domain',
     'stats_messages_label' => 'Nachrichten',
 
     // Symbol search

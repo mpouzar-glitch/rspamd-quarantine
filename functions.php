@@ -1763,6 +1763,41 @@ function getTopSenders($db, $filters = [], $limit = 10) {
 }
 
 /**
+ * Get top sender domains for spam or high-score messages
+ */
+function getTopSenderDomains($db, $dateFrom, $dateTo, $domainFilter, $params, $scoreMin, $scoreMax, $limit = 10) {
+    $domainFilterTrace = str_replace(['sender', 'recipients'], ['mt.sender', 'mt.recipients'], $domainFilter);
+
+    $scoreMin = is_numeric($scoreMin) ? (float)$scoreMin : 0.0;
+    $scoreMax = is_numeric($scoreMax) ? (float)$scoreMax : $scoreMin;
+    if ($scoreMax < $scoreMin) {
+        $scoreMax = $scoreMin;
+    }
+
+    $sql = "SELECT 
+                LOWER(SUBSTRING_INDEX(mt.sender, '@', -1)) as sender_domain,
+                COUNT(*) as count,
+                AVG(mt.score) as avg_score,
+                MAX(mt.score) as max_score
+            FROM message_trace mt
+            WHERE mt.timestamp BETWEEN ? AND ?
+            AND ($domainFilterTrace)
+            AND mt.sender LIKE '%@%'
+            AND (
+                mt.action IN ('reject', 'add header', 'soft reject')
+                OR (mt.score >= ? AND mt.score <= ?)
+            )
+            GROUP BY sender_domain
+            ORDER BY count DESC
+            LIMIT ?";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$dateFrom, $dateTo], $params, [$scoreMin, $scoreMax, (int)$limit]));
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
  * Get top recipients from trace
  */
 function getTopRecipients($db, $filters = [], $limit = 10) {
