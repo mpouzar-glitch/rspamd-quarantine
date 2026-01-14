@@ -29,6 +29,11 @@ if (!$message) {
     die(__('msg_not_found'));
 }
 
+if (!canAccessQuarantineMessage($message)) {
+    http_response_code(403);
+    die(__('users_access_denied'));
+}
+
 // Parse message headers
 $headers_end = strpos($message['message_content'], "\r\n\r\n");
 if ($headers_end === false) {
@@ -663,13 +668,15 @@ switch (strtolower($action)) {
                     </button>
                 </form>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_delete_message'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="action" value="delete">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> <?= htmlspecialchars(__('msg_delete')) ?>
-                    </button>
-                </form>
+                <?php if (checkPermission('domain_admin')): ?>
+                    <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_delete_message'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="id" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="action" value="delete">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> <?= htmlspecialchars(__('msg_delete')) ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
                 
                 <a href="index.php" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> <?= htmlspecialchars(__('view_back_to_list')) ?>

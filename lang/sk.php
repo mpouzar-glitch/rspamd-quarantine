@@ -70,6 +70,7 @@ return [
     // User roles
     'role_admin' => 'Administrátor',
     'role_domain_admin' => 'Správca domény',
+    'role_quarantine_user' => 'Správca karantény',
     'role_viewer' => 'Pozorovateľ',
 
     // Quarantine
@@ -347,6 +348,7 @@ return [
     'users_active_label' => 'Aktívni',
     'users_admin_label' => 'Admini',
     'users_domain_admin_label' => 'Domain Admin',
+    'users_quarantine_user_label' => 'Karanténa',
     'users_no_users_title' => 'Žiadni používatelia',
     'users_no_users_desc' => 'Pridajte prvého používateľa pomocou tlačidla vyššie',
     'users_label_you' => 'VY',
