@@ -330,45 +330,13 @@ include 'menu.php';
                             }
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
-                            // Score class based on action (fallback to score)
-                            $actionScoreClass = '';
-                            switch ($action) {
-                                case 'no action':
-                                    $actionScoreClass = 'score-action-no-action';
-                                    break;
-                                case 'greylist':
-                                    $actionScoreClass = 'score-action-greylist';
-                                    break;
-                                case 'add header':
-                                    $actionScoreClass = 'score-action-add-header';
-                                    break;
-                                case 'rewrite subject':
-                                    $actionScoreClass = 'score-action-rewrite-subject';
-                                    break;
-                                case 'reject':
-                                    $actionScoreClass = 'score-action-reject';
-                                    break;
-                            }
-                            if ($score >= 15) {
-                                $scoreClass = 'score-high';
-                            } elseif ($score >= 6) {
-                                $scoreClass = 'score-medium';
-                            } else {
-                                $scoreClass = 'score-low';
-                            }
-                            $scoreClass = $actionScoreClass ?: $scoreClass;
+                            $scoreClass = getScoreBadgeClass($score, $action);
 
                             // Unique name for radio group
                             $radioName = 'action_' . $msgId;
 
                             // State class for row coloring
-                            $stateClass = '';
-                            switch ((int)$msg['state']) {
-                                case 0: $stateClass = 'state-quarantined'; break;
-                                case 1: $stateClass = 'state-learned-ham'; break;
-                                case 2: $stateClass = 'state-learned-spam'; break;
-                                case 3: $stateClass = 'state-released'; break;
-                            }
+                            $stateClass = getMessageStateClass((int)$msg['state']);
 
                             // Auto-learn spam detection by Rspamd
                             // Check if Rspamd already auto-learned this message
@@ -451,7 +419,7 @@ include 'menu.php';
                                             <div class="symbols-grid">
                                                 <?php foreach ($parsedSymbols as $sym): 
                                                     $symScore = $sym['score'];
-                                                    $bgcolor = ($symScore >= 1) ? '#e74c3c' : (($symScore > 0) ? '#f39c12' : (($symScore < 0) ? '#27ae60' : '#95a5a6'));
+                                                    $bgcolor = getSymbolBadgeColor($symScore);
                                                 ?>
                                                 <span class="symbol-badge" style="background: <?php echo $bgcolor; ?>">
                                                     <span class="symbol-name" title="<?php echo htmlspecialchars($sym['name']); ?>">
