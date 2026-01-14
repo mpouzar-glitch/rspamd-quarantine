@@ -737,46 +737,7 @@ include 'menu.php';
         detailModalSubtitle.textContent = `${detailStrings.messageIdLabel}: ${messageIdText} · ${data.timestamp}`;
 
         const senderValue = data.sender_decoded || data.sender || '';
-        const recipientValue = data.recipients_decoded || data.recipients || '';
         const subjectValue = data.subject_decoded || data.subject || '';
-
-        const statusLabel = getStateLabel(data.state, data.state_by, data.state_at);
-        const actionBadge = buildActionBadge(data.action);
-        const dkimLabel = data.dkim_present ? detailStrings.yes : detailStrings.no;
-        const dmarcLabel = data.dmarc_present ? detailStrings.yes : detailStrings.no;
-        const dkimSymbols = Array.isArray(data.dkim_dmarc_symbols)
-            ? data.dkim_dmarc_symbols.map((sym) => `<span class="detail-symbol">${escapeHtml(sym.name)}</span>`).join('')
-            : '';
-
-        const infoRows = [
-            { label: detailStrings.subject, value: `<strong>${escapeHtml(subjectValue)}</strong>` },
-            { label: detailStrings.sender, value: escapeHtml(senderValue) },
-            data.from_header && data.from_header !== senderValue
-                ? { label: detailStrings.fromHeader, value: escapeHtml(data.from_header) }
-                : null,
-            { label: detailStrings.recipient, value: `<strong>${escapeHtml(recipientValue)}</strong>` },
-            data.to_header && data.to_header !== recipientValue
-                ? { label: detailStrings.toHeader, value: escapeHtml(data.to_header) }
-                : null,
-            {
-                label: detailStrings.dkimDmarc,
-                value: `${detailStrings.dkimLabel}: <strong>${dkimLabel}</strong> · ${detailStrings.dmarcLabel}: <strong>${dmarcLabel}</strong>${dkimSymbols ? `<span class="detail-symbols">${dkimSymbols}</span>` : ''}`
-            },
-            data.spam_header ? { label: detailStrings.spamHeader, value: escapeHtml(data.spam_header) } : null,
-            data.user_agent ? { label: detailStrings.userAgent, value: escapeHtml(data.user_agent) } : null,
-            { label: detailStrings.ipAddress, value: escapeHtml(data.ip_address || '-') },
-            data.authenticated_user ? { label: detailStrings.authUser, value: escapeHtml(data.authenticated_user) } : null,
-            { label: detailStrings.action, value: actionBadge },
-            { label: detailStrings.score, value: `<strong>${escapeHtml(String(data.score))}</strong>` },
-            { label: detailStrings.status, value: statusLabel }
-        ].filter(Boolean);
-
-        const infoTableHtml = infoRows.map((row) => `
-            <tr>
-                <th>${row.label}:</th>
-                <td>${row.value}</td>
-            </tr>
-        `).join('');
 
         const formatIndicator = data.is_html
             ? `<span class="preview-format-indicator"><i class="fas fa-code"></i> ${detailStrings.previewModeHtml}</span>`
@@ -797,12 +758,6 @@ include 'menu.php';
 
         detailModalContent.innerHTML = `
             <div class="detail-modal-grid">
-                <div class="detail-info-panel">
-                    <h4 class="detail-panel-title"><i class="fas fa-info-circle"></i> ${detailStrings.infoTitle}</h4>
-                    <table class="detail-info-table">
-                        ${infoTableHtml}
-                    </table>
-                </div>
                 <div class="detail-preview-panel">
                     ${previewHeader}
                     ${previewBody}
