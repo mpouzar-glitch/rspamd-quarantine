@@ -27,7 +27,15 @@ $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isDomainAdmin = $userRole === 'domain_admin';
 
 $allowedLists = ['whitelist', 'blacklist'];
-$allowedTypes = ['ip', 'email'];
+$entryTypes = [
+    'ip' => __('maps_type_ip'),
+    'email' => __('maps_type_email_domain'),
+    'subject' => __('maps_type_subject'),
+];
+$entryTypeAliases = [
+    'email_regex' => 'email',
+];
+$allowedTypes = array_keys($entryTypes);
 
 function validateMapEntry($entryType, $value) {
     if ($entryType === 'ip') {
@@ -35,7 +43,11 @@ function validateMapEntry($entryType, $value) {
     }
 
     if ($entryType === 'email') {
-        return isValidMapEmailEntry($value);
+        return isValidMapEmailEntry($value) || isRegexMapEntry($value);
+    }
+
+    if ($entryType === 'subject') {
+        return isRegexMapEntry($value);
     }
 
     return false;
@@ -101,20 +113,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        $resolvedEntryType = $entryType;
+        if ($entryType === 'email' && isRegexMapEntry($entryValue)) {
+            $resolvedEntryType = 'email_regex';
+        }
+
         if (empty($entryValue) || !validateMapEntry($entryType, $entryValue)) {
             $_SESSION['error_msg'] = __('maps_invalid_value');
             header('Location: maps.php');
             exit;
         }
 
-        if (!canManageMapEntry($entryType, $entryValue, $isDomainAdmin)) {
+        if (!canManageMapEntry($resolvedEntryType, $entryValue, $isDomainAdmin)) {
             $_SESSION['error_msg'] = __('maps_permission_denied');
             header('Location: maps.php');
             exit;
         }
 
         $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
-        $checkStmt->execute([$listType, $entryType, $entryValue]);
+        $checkStmt->execute([$listType, $resolvedEntryType, $entryValue]);
         if ($checkStmt->fetchColumn() > 0) {
             $_SESSION['error_msg'] = __('maps_duplicate');
             header('Location: maps.php');
@@ -123,18 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
             VALUES (?, ?, ?, ?, NOW(), NOW())");
-        $insertStmt->execute([$listType, $entryType, $entryValue, $user]);
+        $insertStmt->execute([$listType, $resolvedEntryType, $entryValue, $user]);
         $entryId = $db->lastInsertId();
         $details = sprintf(
             'Added %s %s entry: %s (created by %s)',
             $listType,
-            $entryType,
+            $resolvedEntryType,
             $entryValue,
             $user
         );
         logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
 
-        $sync = syncMapEntries($db, $listType, $entryType);
+        $sync = syncMapEntries($db, $listType, $resolvedEntryType);
         if ($sync['success']) {
             $_SESSION['success_msg'] = __('maps_added');
         } else {
@@ -215,6 +232,26 @@ $blacklistEntries = array_values(array_filter($entries, function ($entry) {
     return $entry['list_type'] === 'blacklist';
 }));
 
+$groupEntriesByType = function (array $entries, array $types, array $aliases) {
+    $grouped = [];
+    foreach ($types as $type => $label) {
+        $grouped[$type] = [];
+    }
+
+    foreach ($entries as $entry) {
+        $entryType = $aliases[$entry['entry_type']] ?? $entry['entry_type'];
+        if (!isset($grouped[$entryType])) {
+            continue;
+        }
+        $grouped[$entryType][] = $entry;
+    }
+
+    return $grouped;
+};
+
+$whitelistEntriesByType = $groupEntriesByType($whitelistEntries, $entryTypes, $entryTypeAliases);
+$blacklistEntriesByType = $groupEntriesByType($blacklistEntries, $entryTypes, $entryTypeAliases);
+
 $page_title = __('maps_title');
 include 'menu.php';
 ?>
@@ -253,8 +290,11 @@ include 'menu.php';
                         <div class="form-group">
                             <label for="whitelist-entry-type"><?php echo htmlspecialchars(__('maps_entry_type')); ?></label>
                             <select id="whitelist-entry-type" name="entry_type" required>
-                                <option value="ip"><?php echo htmlspecialchars(__('maps_type_ip')); ?></option>
-                                <option value="email"><?php echo htmlspecialchars(__('maps_type_email')); ?></option>
+                                <?php foreach ($entryTypes as $type => $label): ?>
+                                    <option value="<?php echo htmlspecialchars($type); ?>">
+                                        <?php echo htmlspecialchars($label); ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -268,50 +308,58 @@ include 'menu.php';
                     </button>
                 </form>
 
-                <table class="messages-table maps-table">
-                    <thead>
-                        <tr>
-                            <th><?php echo htmlspecialchars(__('maps_entry_type')); ?></th>
-                            <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
-                            <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
-                            <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
-                            <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($whitelistEntries)): ?>
-                            <tr>
-                                <td colspan="5" class="no-results">
-                                    <?php echo htmlspecialchars(__('maps_no_entries')); ?>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($whitelistEntries as $entry): ?>
+                <div class="maps-tabs" data-list="whitelist">
+                    <?php $firstTab = true; ?>
+                    <?php foreach ($entryTypes as $type => $label): ?>
+                        <button type="button" class="maps-tab<?php echo $firstTab ? ' active' : ''; ?>" data-target="whitelist-<?php echo htmlspecialchars($type); ?>">
+                            <?php echo htmlspecialchars($label); ?>
+                        </button>
+                        <?php $firstTab = false; ?>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php $firstGroup = true; ?>
+                <?php foreach ($entryTypes as $type => $label): ?>
+                    <div class="maps-group<?php echo $firstGroup ? ' active' : ''; ?>" data-group="whitelist-<?php echo htmlspecialchars($type); ?>">
+                        <table class="messages-table maps-table">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <?php
-                                        echo htmlspecialchars($entry['entry_type'] === 'ip'
-                                            ? __('maps_type_ip')
-                                            : __('maps_type_email'));
-                                        ?>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
-                                    <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
-                                    <td>
-                                        <form method="post" class="inline-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="id" value="<?php echo (int)$entry['id']; ?>">
-                                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('delete')); ?>">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
+                                    <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
+                                    <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
+                                    <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($whitelistEntriesByType[$type])): ?>
+                                    <tr>
+                                        <td colspan="4" class="no-results">
+                                            <?php echo htmlspecialchars(__('maps_no_entries')); ?>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($whitelistEntriesByType[$type] as $entry): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
+                                            <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
+                                            <td>
+                                                <form method="post" class="inline-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$entry['id']; ?>">
+                                                    <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('delete')); ?>">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php $firstGroup = false; ?>
+                <?php endforeach; ?>
             </div>
 
             <div class="maps-panel">
@@ -328,8 +376,11 @@ include 'menu.php';
                         <div class="form-group">
                             <label for="blacklist-entry-type"><?php echo htmlspecialchars(__('maps_entry_type')); ?></label>
                             <select id="blacklist-entry-type" name="entry_type" required>
-                                <option value="ip"><?php echo htmlspecialchars(__('maps_type_ip')); ?></option>
-                                <option value="email"><?php echo htmlspecialchars(__('maps_type_email')); ?></option>
+                                <?php foreach ($entryTypes as $type => $label): ?>
+                                    <option value="<?php echo htmlspecialchars($type); ?>">
+                                        <?php echo htmlspecialchars($label); ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -343,52 +394,85 @@ include 'menu.php';
                     </button>
                 </form>
 
-                <table class="messages-table maps-table">
-                    <thead>
-                        <tr>
-                            <th><?php echo htmlspecialchars(__('maps_entry_type')); ?></th>
-                            <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
-                            <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
-                            <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
-                            <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($blacklistEntries)): ?>
-                            <tr>
-                                <td colspan="5" class="no-results">
-                                    <?php echo htmlspecialchars(__('maps_no_entries')); ?>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($blacklistEntries as $entry): ?>
+                <div class="maps-tabs" data-list="blacklist">
+                    <?php $firstTab = true; ?>
+                    <?php foreach ($entryTypes as $type => $label): ?>
+                        <button type="button" class="maps-tab<?php echo $firstTab ? ' active' : ''; ?>" data-target="blacklist-<?php echo htmlspecialchars($type); ?>">
+                            <?php echo htmlspecialchars($label); ?>
+                        </button>
+                        <?php $firstTab = false; ?>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php $firstGroup = true; ?>
+                <?php foreach ($entryTypes as $type => $label): ?>
+                    <div class="maps-group<?php echo $firstGroup ? ' active' : ''; ?>" data-group="blacklist-<?php echo htmlspecialchars($type); ?>">
+                        <table class="messages-table maps-table">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <?php
-                                        echo htmlspecialchars($entry['entry_type'] === 'ip'
-                                            ? __('maps_type_ip')
-                                            : __('maps_type_email'));
-                                        ?>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
-                                    <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
-                                    <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
-                                    <td>
-                                        <form method="post" class="inline-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="id" value="<?php echo (int)$entry['id']; ?>">
-                                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('delete')); ?>">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th><?php echo htmlspecialchars(__('maps_entry_value')); ?></th>
+                                    <th><?php echo htmlspecialchars(__('maps_created_by')); ?></th>
+                                    <th style="width: 160px;"><?php echo htmlspecialchars(__('maps_created_at')); ?></th>
+                                    <th style="width: 90px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($blacklistEntriesByType[$type])): ?>
+                                    <tr>
+                                        <td colspan="4" class="no-results">
+                                            <?php echo htmlspecialchars(__('maps_no_entries')); ?>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($blacklistEntriesByType[$type] as $entry): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($entry['entry_value']); ?></td>
+                                            <td><?php echo htmlspecialchars($entry['created_by'] ?? '-'); ?></td>
+                                            <td><?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($entry['created_at']))); ?></td>
+                                            <td>
+                                                <form method="post" class="inline-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$entry['id']; ?>">
+                                                    <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('delete')); ?>">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php $firstGroup = false; ?>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
+
+    <script>
+        document.querySelectorAll('.maps-tabs').forEach((tabContainer) => {
+            tabContainer.addEventListener('click', (event) => {
+                const target = event.target.closest('.maps-tab');
+                if (!target) {
+                    return;
+                }
+
+                const panel = tabContainer.closest('.maps-panel');
+                if (!panel) {
+                    return;
+                }
+
+                panel.querySelectorAll('.maps-tab').forEach((tab) => {
+                    tab.classList.toggle('active', tab === target);
+                });
+
+                const groupId = target.getAttribute('data-target');
+                panel.querySelectorAll('.maps-group').forEach((group) => {
+                    group.classList.toggle('active', group.getAttribute('data-group') === groupId);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

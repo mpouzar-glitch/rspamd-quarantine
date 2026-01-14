@@ -1783,10 +1783,8 @@ function getTopSenderDomains($db, $dateFrom, $dateTo, $domainFilter, $params, $s
             WHERE mt.timestamp BETWEEN ? AND ?
             AND ($domainFilterTrace)
             AND mt.sender LIKE '%@%'
-            AND (
-                mt.action IN ('reject', 'add header', 'soft reject')
-                OR (mt.score >= ? AND mt.score <= ?)
-            )
+            AND mt.score >= ?
+            AND mt.score <= ?
             GROUP BY sender_domain
             ORDER BY count DESC
             LIMIT ?";
@@ -2303,10 +2301,14 @@ if (!function_exists('getRspamdMapName')) {
             'whitelist' => [
                 'ip' => 'whitelist_ip',
                 'email' => 'whitelist_email',
+                'email_regex' => 'whitelist_email_regex',
+                'subject' => 'wl_subject_regex',
             ],
             'blacklist' => [
                 'ip' => 'blacklist_ip',
                 'email' => 'blacklist_email',
+                'email_regex' => 'blacklist_email_regex',
+                'subject' => 'bl_subject_regex',
             ],
         ];
 
@@ -2361,7 +2363,7 @@ if (!function_exists('isValidMapEmailEntry')) {
             return filter_var($matches[1], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
         }
 
-        return isRegexMapEntry($value);
+        return false;
     }
 }
 

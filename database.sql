@@ -196,7 +196,7 @@ CREATE TABLE `user_domains` (
 CREATE TABLE `rspamd_map_entries` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `list_type` enum('whitelist','blacklist') NOT NULL,
-  `entry_type` enum('ip','email') NOT NULL,
+  `entry_type` enum('ip','email','subject') NOT NULL,
   `entry_value` varchar(255) NOT NULL,
   `created_by` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
