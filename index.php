@@ -252,9 +252,7 @@ include 'menu.php';
                                 <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                             </a>
                         </th>
-                        <th style="width: 180px;">
-                            <?php echo htmlspecialchars(__('status_explanation')); ?>
-                        </th>
+                        <th style="width: 180px;">STATUS</th>
                         <th style="width: 150px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                     </tr>
                 </thead>
@@ -284,9 +282,10 @@ include 'menu.php';
 
                         // State class for row coloring
                         $stateClass = getMessageStateClass((int)$msg['state']);
+                        $statusRowClass = getStatusRowClass($statusSymbolMatches);
                         $virusClass = $hasVirusSymbol ? 'has-virus' : '';
                         ?>
-                        <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass); ?>" id="row_<?php echo $msgId; ?>">
+                        <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusRowClass); ?>" id="row_<?php echo $msgId; ?>">
                             <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                             <td class="email-field">
                                 <i class="fas fa-paper-plane"></i> 
@@ -325,9 +324,9 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <a href="view.php?id=<?php echo $msgId; ?>" class="subject-preview-btn email-link">
+                                <button type="button" class="subject-preview-btn email-link" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
                                     <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
-                                </a>
+                                </button>
                                 <?php if ($canManageMaps && !empty(trim($subject))): ?>
                                     <span class="sender-actions subject-actions">
                                         <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
@@ -507,17 +506,56 @@ include 'menu.php';
         </div>
     </div>
 
-    <div id="messagePreviewModal" class="modal preview-modal" aria-hidden="true">
+    <div id="messageDetailModal" class="modal preview-modal message-detail-modal" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="previewModalTitle"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?></h3>
+                <div class="modal-header-title">
+                    <h3 id="detailModalTitle"><i class="fas fa-envelope-open-text"></i> <?php echo htmlspecialchars(__('view_title')); ?></h3>
+                    <div class="modal-subtitle" id="detailModalSubtitle"></div>
+                </div>
+                <div class="modal-header-actions">
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionSpamId" value="">
+                        <input type="hidden" name="operation" value="learn_spam">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn learn-spam-btn" title="<?php echo htmlspecialchars(__('msg_learn_spam')); ?>">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionHamId" value="">
+                        <input type="hidden" name="operation" value="learn_ham">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
+                        <input type="hidden" name="operation" value="release">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                    <?php if ($canDeleteMessages): ?>
+                        <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
+                            <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
+                            <input type="hidden" name="operation" value="delete">
+                            <input type="hidden" name="return_url" value="index.php">
+                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
                 <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
-                <div id="previewModalContent" class="preview-modal-content">
-                    <div class="preview-loading">
+                <div id="detailModalContent" class="detail-modal-content">
+                    <div class="detail-loading">
                         <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
                     </div>
                 </div>
@@ -570,41 +608,99 @@ include 'menu.php';
         }
     });
 
-    // Preview modal functionality
+    // Detail modal functionality
     let activeRequest = null;
-    const previewModal = document.getElementById('messagePreviewModal');
-    const previewModalContent = document.getElementById('previewModalContent');
+    const detailModal = document.getElementById('messageDetailModal');
+    const detailModalContent = document.getElementById('detailModalContent');
+    const detailModalSubtitle = document.getElementById('detailModalSubtitle');
+    const actionIdFields = [
+        document.getElementById('detailActionSpamId'),
+        document.getElementById('detailActionHamId'),
+        document.getElementById('detailActionReleaseId'),
+        document.getElementById('detailActionDeleteId')
+    ].filter(Boolean);
+
+    const detailStrings = {
+        loading: "<?php echo htmlspecialchars(__('preview_loading')); ?>",
+        previewTitle: "<?php echo htmlspecialchars(__('preview_message_title')); ?>",
+        previewModeHtml: "<?php echo htmlspecialchars(__('preview_mode_html')); ?>",
+        previewModeText: "<?php echo htmlspecialchars(__('preview_mode_text')); ?>",
+        previewError: "<?php echo htmlspecialchars(__('preview_error')); ?>",
+        previewParseError: "<?php echo htmlspecialchars(__('preview_parse_error')); ?>",
+        previewLoadFailed: "<?php echo htmlspecialchars(__('preview_load_failed')); ?>",
+        previewNetworkError: "<?php echo htmlspecialchars(__('preview_network_error')); ?>",
+        infoTitle: "<?php echo htmlspecialchars(__('view_basic_info')); ?>",
+        subject: "<?php echo htmlspecialchars(__('msg_subject')); ?>",
+        sender: "<?php echo htmlspecialchars(__('msg_sender')); ?>",
+        recipient: "<?php echo htmlspecialchars(__('msg_recipient')); ?>",
+        fromHeader: "<?php echo htmlspecialchars(__('view_from_header')); ?>",
+        toHeader: "<?php echo htmlspecialchars(__('view_to_header')); ?>",
+        dkimDmarc: "<?php echo htmlspecialchars(__('view_dkim_dmarc')); ?>",
+        dkimLabel: "<?php echo htmlspecialchars(__('view_dkim_label')); ?>",
+        dmarcLabel: "<?php echo htmlspecialchars(__('view_dmarc_label')); ?>",
+        spamHeader: "<?php echo htmlspecialchars(__('view_spam_header')); ?>",
+        userAgent: "<?php echo htmlspecialchars(__('view_user_agent')); ?>",
+        ipAddress: "<?php echo htmlspecialchars(__('ip_address')); ?>",
+        authUser: "<?php echo htmlspecialchars(__('view_authenticated_user')); ?>",
+        action: "<?php echo htmlspecialchars(__('msg_action')); ?>",
+        score: "<?php echo htmlspecialchars(__('msg_score')); ?>",
+        status: "<?php echo htmlspecialchars(__('status')); ?>",
+        yes: "<?php echo htmlspecialchars(__('yes')); ?>",
+        no: "<?php echo htmlspecialchars(__('no')); ?>",
+        stateQuarantined: "<?php echo htmlspecialchars(__('state_quarantined')); ?>",
+        stateLearnedHam: "<?php echo htmlspecialchars(__('state_learned_ham')); ?>",
+        stateLearnedSpam: "<?php echo htmlspecialchars(__('state_learned_spam')); ?>",
+        stateReleased: "<?php echo htmlspecialchars(__('state_released')); ?>",
+        messageIdLabel: "<?php echo htmlspecialchars(__('view_message_id_label')); ?>",
+        messageIdNa: "<?php echo htmlspecialchars(__('view_message_id_na')); ?>",
+        actionReject: "<?php echo htmlspecialchars(__('action_reject')); ?>",
+        actionNoAction: "<?php echo htmlspecialchars(__('action_no_action')); ?>",
+        actionAddHeader: "<?php echo htmlspecialchars(__('action_add_header')); ?>",
+        actionGreylist: "<?php echo htmlspecialchars(__('action_greylist')); ?>",
+        actionSoftReject: "<?php echo htmlspecialchars(__('action_soft_reject')); ?>"
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
-        previewModal.querySelectorAll('.modal-close').forEach((button) => {
-            button.addEventListener('click', closePreviewModal);
+        document.querySelectorAll('.subject-preview-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openDetailModal(button.dataset.messageId);
+            });
         });
 
-        previewModal.addEventListener('click', (event) => {
-            if (event.target === previewModal) {
-                closePreviewModal();
+        detailModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closeDetailModal);
+        });
+
+        detailModal.addEventListener('click', (event) => {
+            if (event.target === detailModal) {
+                closeDetailModal();
             }
         });
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && previewModal.classList.contains('active')) {
-                closePreviewModal();
+            if (event.key === 'Escape' && detailModal.classList.contains('active')) {
+                closeDetailModal();
             }
         });
     });
 
-    function openPreviewModal(msgId) {
+    function openDetailModal(msgId) {
         if (!msgId) {
             return;
         }
+
+        actionIdFields.forEach((field) => {
+            field.value = msgId;
+        });
 
         if (activeRequest) {
             activeRequest.abort();
         }
 
-        previewModalContent.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?></div>';
-        previewModal.classList.add('active');
-        previewModal.setAttribute('aria-hidden', 'false');
+        detailModalContent.innerHTML = `<div class="detail-loading"><i class="fas fa-spinner fa-spin"></i> ${detailStrings.loading}</div>`;
+        detailModalSubtitle.textContent = '';
+        detailModal.classList.add('active');
+        detailModal.setAttribute('aria-hidden', 'false');
 
         activeRequest = new XMLHttpRequest();
         activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
@@ -615,77 +711,155 @@ include 'menu.php';
                     const data = JSON.parse(activeRequest.responseText);
 
                     if (data.success) {
-                        renderPreview(data);
+                        renderDetailModal(data);
                     } else {
-                        previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_error')); ?>: ' + escapeHtml(data.error) + '</div>';
+                        detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewError}: ${escapeHtml(data.error)}</div>`;
                     }
                 } catch (e) {
-                    previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_parse_error')); ?></div>';
+                    detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewParseError}</div>`;
                 }
             } else {
-                previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_load_failed')); ?></div>';
+                detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewLoadFailed}</div>`;
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_network_error')); ?></div>';
+            detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewNetworkError}</div>`;
             activeRequest = null;
         };
 
         activeRequest.send();
     }
 
-    function renderPreview(data) {
-        let formatIndicator = '';
-        if (data.is_html) {
-            formatIndicator = `<span class="preview-format-indicator">
-                <i class="fas fa-code"></i> <?php echo htmlspecialchars(__('preview_mode_html')); ?>
-            </span>`;
-        } else if (data.has_html) {
-            formatIndicator = `<span class="preview-format-indicator muted">
-                <i class="fas fa-align-left"></i> <?php echo htmlspecialchars(__('preview_mode_text')); ?>
-            </span>`;
-        }
+    function renderDetailModal(data) {
+        const messageIdText = data.message_id ? data.message_id : detailStrings.messageIdNa;
+        detailModalSubtitle.textContent = `${detailStrings.messageIdLabel}: ${messageIdText} · ${data.timestamp}`;
 
-        const metaHtml = `
-            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('from')); ?>:</strong> ${escapeHtml(data.sender)}</div>
-            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('subject')); ?>:</strong> ${escapeHtml(data.subject)}</div>
-            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong><?php echo htmlspecialchars(__('msg_score')); ?>:</strong> ${data.score}</div>
+        const senderValue = data.sender_decoded || data.sender || '';
+        const recipientValue = data.recipients_decoded || data.recipients || '';
+        const subjectValue = data.subject_decoded || data.subject || '';
+
+        const statusLabel = getStateLabel(data.state, data.state_by, data.state_at);
+        const actionBadge = buildActionBadge(data.action);
+        const dkimLabel = data.dkim_present ? detailStrings.yes : detailStrings.no;
+        const dmarcLabel = data.dmarc_present ? detailStrings.yes : detailStrings.no;
+        const dkimSymbols = Array.isArray(data.dkim_dmarc_symbols)
+            ? data.dkim_dmarc_symbols.map((sym) => `<span class="detail-symbol">${escapeHtml(sym.name)}</span>`).join('')
+            : '';
+
+        const infoRows = [
+            { label: detailStrings.subject, value: `<strong>${escapeHtml(subjectValue)}</strong>` },
+            { label: detailStrings.sender, value: escapeHtml(senderValue) },
+            data.from_header && data.from_header !== senderValue
+                ? { label: detailStrings.fromHeader, value: escapeHtml(data.from_header) }
+                : null,
+            { label: detailStrings.recipient, value: `<strong>${escapeHtml(recipientValue)}</strong>` },
+            data.to_header && data.to_header !== recipientValue
+                ? { label: detailStrings.toHeader, value: escapeHtml(data.to_header) }
+                : null,
+            {
+                label: detailStrings.dkimDmarc,
+                value: `${detailStrings.dkimLabel}: <strong>${dkimLabel}</strong> · ${detailStrings.dmarcLabel}: <strong>${dmarcLabel}</strong>${dkimSymbols ? `<span class="detail-symbols">${dkimSymbols}</span>` : ''}`
+            },
+            data.spam_header ? { label: detailStrings.spamHeader, value: escapeHtml(data.spam_header) } : null,
+            data.user_agent ? { label: detailStrings.userAgent, value: escapeHtml(data.user_agent) } : null,
+            { label: detailStrings.ipAddress, value: escapeHtml(data.ip_address || '-') },
+            data.authenticated_user ? { label: detailStrings.authUser, value: escapeHtml(data.authenticated_user) } : null,
+            { label: detailStrings.action, value: actionBadge },
+            { label: detailStrings.score, value: `<strong>${escapeHtml(String(data.score))}</strong>` },
+            { label: detailStrings.status, value: statusLabel }
+        ].filter(Boolean);
+
+        const infoTableHtml = infoRows.map((row) => `
+            <tr>
+                <th>${row.label}:</th>
+                <td>${row.value}</td>
+            </tr>
+        `).join('');
+
+        const formatIndicator = data.is_html
+            ? `<span class="preview-format-indicator"><i class="fas fa-code"></i> ${detailStrings.previewModeHtml}</span>`
+            : (data.has_html ? `<span class="preview-format-indicator muted"><i class="fas fa-align-left"></i> ${detailStrings.previewModeText}</span>` : '');
+
+        const previewHeader = `
+            <div class="detail-preview-header">
+                <h4><i class="fas fa-envelope"></i> ${detailStrings.previewTitle} ${formatIndicator}</h4>
+                <div class="preview-meta"><strong>${detailStrings.sender}:</strong> ${escapeHtml(senderValue)}</div>
+                <div class="preview-meta"><strong>${detailStrings.subject}:</strong> ${escapeHtml(subjectValue)}</div>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong>${detailStrings.score}:</strong> ${escapeHtml(String(data.score))}</div>
+            </div>
+        `;
+
+        const previewBody = data.is_html
+            ? `<div class="detail-preview-body"><iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe></div>`
+            : `<div class="detail-preview-body"><pre>${escapeHtml(data.preview)}</pre></div>`;
+
+        detailModalContent.innerHTML = `
+            <div class="detail-modal-grid">
+                <div class="detail-info-panel">
+                    <h4 class="detail-panel-title"><i class="fas fa-info-circle"></i> ${detailStrings.infoTitle}</h4>
+                    <table class="detail-info-table">
+                        ${infoTableHtml}
+                    </table>
+                </div>
+                <div class="detail-preview-panel">
+                    ${previewHeader}
+                    ${previewBody}
+                </div>
+            </div>
         `;
 
         if (data.is_html) {
-            previewModalContent.innerHTML = `
-                <div class="preview-header" style="flex: 1 1 0; overflow: auto;">
-                    <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
-                    ${metaHtml}
-                </div>
-                <div class="preview-message-body" style="flex: 1 1 0; overflow: auto; max-height: none;">
-                    <iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe>
-                </div>
-            `;
-            const iframe = previewModalContent.querySelector('.preview-iframe');
+            const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
-        } else {
-            previewModalContent.innerHTML = `
-                <div class="preview-header" style="flex: 1 1 0; overflow: auto;">
-                    <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
-                    ${metaHtml}
-                </div>
-                <div class="preview-message-body" style="flex: 1 1 0; overflow: auto; max-height: none;">
-                    <pre>${escapeHtml(data.preview)}</pre>
-                </div>
-            `;
         }
-        previewModalContent.style.display = 'flex';
-        previewModalContent.style.flexDirection = 'column';
-        previewModalContent.style.gap = '12px';
-        previewModalContent.style.height = '60vh';
     }
 
-    function closePreviewModal() {
-        previewModal.classList.remove('active');
-        previewModal.setAttribute('aria-hidden', 'true');
+    function buildActionBadge(action) {
+        const actionKey = (action || '').toLowerCase();
+        const actionMap = {
+            'reject': { label: detailStrings.actionReject, className: 'badge badge-reject', icon: 'fa-ban' },
+            'no action': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'pass': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'add header': { label: detailStrings.actionAddHeader, className: 'badge badge-header', icon: 'fa-tag' },
+            'greylist': { label: detailStrings.actionGreylist, className: 'badge badge-pass', icon: 'fa-clock' },
+            'soft reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' },
+            'soft_reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' }
+        };
+
+        const actionData = actionMap[actionKey] || { label: action || '-', className: 'badge badge-pass', icon: 'fa-question-circle' };
+        return `<span class="${actionData.className}"><i class="fas ${actionData.icon}"></i> ${escapeHtml(actionData.label)}</span>`;
+    }
+
+    function getStateLabel(state, stateBy, stateAt) {
+        let label = detailStrings.stateQuarantined;
+        switch (parseInt(state, 10)) {
+            case 1:
+                label = detailStrings.stateLearnedHam;
+                break;
+            case 2:
+                label = detailStrings.stateLearnedSpam;
+                break;
+            case 3:
+                label = detailStrings.stateReleased;
+                break;
+            default:
+                label = detailStrings.stateQuarantined;
+        }
+        const parts = [label];
+        if (stateBy) {
+            parts.push(escapeHtml(stateBy));
+        }
+        if (stateAt) {
+            parts.push(escapeHtml(stateAt));
+        }
+        return parts.join(' · ');
+    }
+
+    function closeDetailModal() {
+        detailModal.classList.remove('active');
+        detailModal.setAttribute('aria-hidden', 'true');
 
         if (activeRequest) {
             activeRequest.abort();
@@ -695,7 +869,7 @@ include 'menu.php';
 
     function escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text ?? '';
         return div.innerHTML;
     }
     </script>
