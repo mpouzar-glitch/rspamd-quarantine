@@ -20,6 +20,7 @@ $page_title = $page_title ?? ($pageTitle ?? __('app_title'));
 $role_labels = [
     'admin' => __('role_admin'),
     'domain_admin' => __('role_domain_admin'),
+    'quarantine_user' => __('role_quarantine_user'),
     'viewer' => __('role_viewer'),
 ];
 $user_role_label = $role_labels[$user_role] ?? $user_role;

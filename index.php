@@ -6,7 +6,7 @@
  */
 /**
  * Rspamd Quarantine - Main Index
- * Updated: Compact table, state colors, preview tooltip, icon-only buttons, clickable emails
+ * Updated: Compact table, state colors, preview modal, icon-only buttons, clickable emails
  */
 
 session_start(); 
@@ -25,6 +25,7 @@ $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 $returnUrl = $_SERVER['REQUEST_URI'] ?? 'index.php';
 $canManageMaps = checkPermission('domain_admin');
+$canDeleteMessages = checkPermission('domain_admin');
 
 // Get filters from request
 $pageSessionKey = 'index_page';
@@ -204,10 +205,6 @@ include 'menu.php';
                         ]
                     ); ?>
                 </div>
-                <label class="preview-toggle">
-                    <input type="checkbox" id="htmlPreviewToggle" onchange="toggleHtmlPreview(this.checked)" style="width: 14px; height: 14px; cursor: pointer;">
-                    <i class="fas fa-code"></i> <strong><?php echo htmlspecialchars(__('preview_html_toggle')); ?></strong>
-                </label>
             </div>
 
             <table class="messages-table">
@@ -400,7 +397,9 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <span class="subject-text"><?php echo htmlspecialchars(truncateText($subject, 70)); ?></span>
+                                <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
+                                    <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
+                                </button>
                                 <?php if ($canManageMaps && !empty(trim($subject))): ?>
                                     <span class="sender-actions subject-actions">
                                         <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
@@ -481,14 +480,16 @@ include 'menu.php';
                                             <i class="fas fa-paper-plane"></i>
                                         </button>
                                     </form>
-                                    <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
-                                        <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
-                                        <input type="hidden" name="operation" value="delete">
-                                        <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    <?php if ($canDeleteMessages): ?>
+                                        <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
+                                            <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
+                                            <input type="hidden" name="operation" value="delete">
+                                            <input type="hidden" name="return_url" value="index.php">
+                                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -554,10 +555,21 @@ include 'menu.php';
         </div>
     </div>
 
-    <!-- Preview Tooltip -->
-    <div id="previewTooltip" class="preview-tooltip">
-        <div class="preview-loading">
-            <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
+    <div id="messagePreviewModal" class="modal preview-modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="previewModalTitle"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="previewModalContent" class="preview-modal-content">
+                    <div class="preview-loading">
+                        <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -606,86 +618,50 @@ include 'menu.php';
         }
     });
 
-    // Preview tooltip functionality
-    let previewFormat = 'text';
-    let previewTimeout = null;
+    // Preview modal functionality
     let activeRequest = null;
-
-    function loadPreviewFormat() {
-        const saved = sessionStorage.getItem('previewFormat');
-        if (saved) {
-            previewFormat = saved;
-            const checkbox = document.getElementById('htmlPreviewToggle');
-            if (checkbox) {
-                checkbox.checked = (previewFormat === 'html');
-            }
-        }
-    }
-
-    function toggleHtmlPreview(enabled) {
-        previewFormat = enabled ? 'html' : 'text';
-        sessionStorage.setItem('previewFormat', previewFormat);
-        hidePreview();
-    }
+    const previewModal = document.getElementById('messagePreviewModal');
+    const previewModalContent = document.getElementById('previewModalContent');
 
     document.addEventListener('DOMContentLoaded', function() {
-        loadPreviewFormat();
-
-        const rows = document.querySelectorAll('.message-row');
-        const tooltip = document.getElementById('previewTooltip');
-
-        rows.forEach(function(row) {
-            const subjectCell = row.querySelector('.subject-field');
-            if (!subjectCell) return;
-
-            const msgId = row.id.replace('row_', '');
-
-            subjectCell.addEventListener('mouseenter', function(e) {
-                previewTimeout = setTimeout(function() {
-                    showPreview(msgId, e.clientX, e.clientY);
-                }, 500);
-            });
-
-            subjectCell.addEventListener('mouseleave', function() {
-                clearTimeout(previewTimeout);
-                hidePreview();
-            });
-
-            subjectCell.addEventListener('mousemove', function(e) {
-                if (tooltip.classList.contains('active')) {
-                    positionTooltip(e.clientX, e.clientY);
-                }
+        document.querySelectorAll('.subject-preview-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openPreviewModal(button.dataset.messageId);
             });
         });
 
-        tooltip.addEventListener('mouseenter', function() {
-            clearTimeout(previewTimeout);
+        previewModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closePreviewModal);
         });
 
-        tooltip.addEventListener('mouseleave', function() {
-            hidePreview();
-        });
-
-        window.addEventListener('scroll', function() {
-            if (tooltip.classList.contains('active')) {
-                hidePreview();
+        previewModal.addEventListener('click', (event) => {
+            if (event.target === previewModal) {
+                closePreviewModal();
             }
-        }, { passive: true });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && previewModal.classList.contains('active')) {
+                closePreviewModal();
+            }
+        });
     });
 
-    function showPreview(msgId, x, y) {
-        const tooltip = document.getElementById('previewTooltip');
+    function openPreviewModal(msgId) {
+        if (!msgId) {
+            return;
+        }
 
         if (activeRequest) {
             activeRequest.abort();
         }
 
-        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?></div>';
-        tooltip.classList.add('active');
-        positionTooltip(x, y);
+        previewModalContent.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?></div>';
+        previewModal.classList.add('active');
+        previewModal.setAttribute('aria-hidden', 'false');
 
         activeRequest = new XMLHttpRequest();
-        activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=' + previewFormat, true);
+        activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
 
         activeRequest.onload = function() {
             if (activeRequest.status === 200) {
@@ -695,19 +671,19 @@ include 'menu.php';
                     if (data.success) {
                         renderPreview(data);
                     } else {
-                        tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_error')); ?>: ' + escapeHtml(data.error) + '</div>';
+                        previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_error')); ?>: ' + escapeHtml(data.error) + '</div>';
                     }
                 } catch (e) {
-                    tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_parse_error')); ?></div>';
+                    previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_parse_error')); ?></div>';
                 }
             } else {
-                tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_load_failed')); ?></div>';
+                previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_load_failed')); ?></div>';
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            tooltip.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_network_error')); ?></div>';
+            previewModalContent.innerHTML = '<div class="preview-error"><?php echo htmlspecialchars(__('preview_network_error')); ?></div>';
             activeRequest = null;
         };
 
@@ -715,71 +691,56 @@ include 'menu.php';
     }
 
     function renderPreview(data) {
-        const tooltip = document.getElementById('previewTooltip');
-        const contentClass = data.is_html ? 'preview-content html-mode' : 'preview-content';
-
         let formatIndicator = '';
         if (data.is_html) {
-            formatIndicator = `<span style="font-size: 10px; color: #007bff; margin-left: 5px;">
+            formatIndicator = `<span class="preview-format-indicator">
                 <i class="fas fa-code"></i> <?php echo htmlspecialchars(__('preview_mode_html')); ?>
             </span>`;
         } else if (data.has_html) {
-            formatIndicator = `<span style="font-size: 10px; color: #6c757d; margin-left: 5px;">
+            formatIndicator = `<span class="preview-format-indicator muted">
                 <i class="fas fa-align-left"></i> <?php echo htmlspecialchars(__('preview_mode_text')); ?>
             </span>`;
         }
 
-        tooltip.innerHTML = `
-            <div class="preview-header">
-                <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
-                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('from')); ?>:</strong> ${escapeHtml(data.sender)}</div>
-                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('subject')); ?>:</strong> ${escapeHtml(data.subject)}</div>
-                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong><?php echo htmlspecialchars(__('msg_score')); ?>:</strong> ${data.score}</div>
-            </div>
-            <div class="${contentClass}">${data.is_html ? data.preview : escapeHtml(data.preview)}</div>
+        const metaHtml = `
+            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('from')); ?>:</strong> ${escapeHtml(data.sender)}</div>
+            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('subject')); ?>:</strong> ${escapeHtml(data.subject)}</div>
+            <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong><?php echo htmlspecialchars(__('msg_score')); ?>:</strong> ${data.score}</div>
         `;
+
+        if (data.is_html) {
+            previewModalContent.innerHTML = `
+                <div class="preview-header">
+                    <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
+                    ${metaHtml}
+                </div>
+                <div class="preview-message-body">
+                    <iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe>
+                </div>
+            `;
+            const iframe = previewModalContent.querySelector('.preview-iframe');
+            iframe.srcdoc = data.preview;
+        } else {
+            previewModalContent.innerHTML = `
+                <div class="preview-header">
+                    <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
+                    ${metaHtml}
+                </div>
+                <div class="preview-message-body">
+                    <pre>${escapeHtml(data.preview)}</pre>
+                </div>
+            `;
+        }
     }
 
-    function hidePreview() {
-        const tooltip = document.getElementById('previewTooltip');
-        tooltip.classList.remove('active');
+    function closePreviewModal() {
+        previewModal.classList.remove('active');
+        previewModal.setAttribute('aria-hidden', 'true');
 
         if (activeRequest) {
             activeRequest.abort();
             activeRequest = null;
         }
-    }
-
-    function positionTooltip(x, y) {
-        const tooltip = document.getElementById('previewTooltip');
-        const offset = 15;
-        const padding = 10;
-
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        let left = x + offset;
-        let top = y + offset;
-
-        tooltip.style.opacity = '0';
-        tooltip.style.display = 'block';
-        const rect = tooltip.getBoundingClientRect();
-        tooltip.style.opacity = '';
-
-        if (left + rect.width > viewportWidth - padding) {
-            left = x - rect.width - offset;
-        }
-
-        if (top + rect.height > viewportHeight - padding) {
-            top = y - rect.height - offset;
-        }
-
-        left = Math.max(padding, Math.min(left, viewportWidth - rect.width - padding));
-        top = Math.max(padding, Math.min(top, viewportHeight - rect.height - padding));
-
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-        tooltip.style.display = '';
     }
 
     function escapeHtml(text) {

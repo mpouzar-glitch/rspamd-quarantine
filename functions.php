@@ -162,6 +162,7 @@ function getCurrentUser() {
     return [
         'id' => $_SESSION['user_id'] ?? null,
         'username' => $_SESSION['username'] ?? null,
+        'email' => $_SESSION['user_email'] ?? null,
         'role' => $_SESSION['user_role'] ?? 'viewer',
         'domains' => $_SESSION['user_domains'] ?? []
     ];
@@ -176,8 +177,9 @@ function checkPermission($required_role) {
 
     $roles_hierarchy = [
         'viewer' => 1,
-        'domain_admin' => 2,
-        'admin' => 3
+        'quarantine_user' => 2,
+        'domain_admin' => 3,
+        'admin' => 4
     ];
 
     $required_level = $roles_hierarchy[$required_role] ?? 0;
@@ -220,6 +222,15 @@ function checkDomainAccess($email) {
         }
 
         return false;
+    }
+
+    if ($user_role === 'quarantine_user') {
+        $user_email = $_SESSION['user_email'] ?? '';
+        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        return stripos((string)$email, $user_email) !== false;
     }
 
     // Viewer has no access
@@ -363,8 +374,58 @@ function getDomainFilterSQL(&$params) {
         return '(' . implode(' OR ', $conditions) . ')';
     }
 
+    if ($user_role === 'quarantine_user') {
+        $user_email = $_SESSION['user_email'] ?? '';
+
+        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+            return '1=0';
+        }
+
+        $conditions = [];
+        $conditions[] = "recipients LIKE ?";
+        $params[] = '%' . $user_email . '%';
+        $conditions[] = "headers_to LIKE ?";
+        $params[] = '%' . $user_email . '%';
+
+        return '(' . implode(' OR ', $conditions) . ')';
+    }
+
     // Viewer sees nothing by default
     return '1=0';
+}
+
+/**
+ * Check if current user can access a quarantine message row
+ *
+ * @param array $message Quarantine message row
+ * @return bool
+ */
+function canAccessQuarantineMessage(array $message): bool {
+    $user_role = $_SESSION['user_role'] ?? 'viewer';
+
+    if ($user_role === 'admin') {
+        return true;
+    }
+
+    if ($user_role === 'domain_admin') {
+        return checkDomainAccess($message['sender'] ?? '')
+            || checkDomainAccess($message['recipients'] ?? '');
+    }
+
+    if ($user_role === 'quarantine_user') {
+        $user_email = $_SESSION['user_email'] ?? '';
+        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $recipients = $message['recipients'] ?? '';
+        $headersTo = $message['headers_to'] ?? '';
+
+        return stripos($recipients, $user_email) !== false
+            || stripos($headersTo, $user_email) !== false;
+    }
+
+    return false;
 }
 
 // ============================================

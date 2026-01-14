@@ -14,8 +14,8 @@ requireAuth();
 // Determine return URL
 $returnUrl = $_POST['return_url'] ?? ($_SERVER['HTTP_REFERER'] ?? 'index.php');
 
-if (!checkPermission('domain_admin')) {
-    $_SESSION['error_msg'] = 'Nemáte oprávnění k hromadným operacím';
+if (!checkPermission('quarantine_user')) {
+    $_SESSION['error_msg'] = 'Nemáte oprávnění k operacím';
     header('Location: index.php');
     exit;
 }
@@ -137,6 +137,18 @@ if (empty($operation) || empty($message_ids_str)) {
     return;
 }
 
+if (!checkPermission('domain_admin')) {
+    $allowedOperations = ['learn_ham', 'learn_spam', 'release'];
+    if (!in_array($operation, $allowedOperations, true)) {
+        $_SESSION['error_msg'] = 'Nemáte oprávnění k této operaci';
+        if (!$is_bulk_mode) {
+            header('Location: ' . $returnUrl);
+            exit;
+        }
+        return;
+    }
+}
+
 // Parse message IDs
 $message_ids = array_map('intval', explode(',', $message_ids_str));
 $message_ids = array_filter($message_ids, function($id) { return $id > 0; });
@@ -187,7 +199,7 @@ $buildAuditDetails = function (string $base, ?array $msg): string {
 
 if ($_SESSION['user_role'] !== 'admin') {
     foreach ($messages as $msg) {
-        if (!checkDomainAccess($msg['sender']) && !checkDomainAccess($msg['recipients'])) {
+        if (!canAccessQuarantineMessage($msg)) {
             $_SESSION['error_msg'] = 'Nemáte oprávnění k některým zprávám';
             if (!$is_bulk_mode) {
                 header('Location: ' . $returnUrl);
