@@ -264,6 +264,9 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
+                            <th style="width: 180px;">
+                                <?php echo htmlspecialchars(__('status_explanation')); ?>
+                            </th>
                             <th style="width: 180px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                         </tr>
                     </thead>
@@ -279,55 +282,12 @@ include 'menu.php';
                             $score = round($msg['score'], 2);
                             $action = strtolower(trim($msg['action'] ?? ''));
 
-                            // Parse symbols from JSON
                             $symbols = $msg['symbols'] ?? '';
-                            $parsedSymbols = [];
-
-                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                            $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-                            $hasVirusSymbol = false;
-                            $hasBadAttachmentSymbol = false;
-                            if (!empty($symbols)) {
-                                $symbolsData = json_decode($symbols, true);
-
-                                if (is_array($symbolsData)) {
-                                    foreach ($symbolsData as $symbol) {
-                                        if (isset($symbol['name']) && isset($symbol['score'])) {
-                                            $parsedSymbols[] = [
-                                                'name' => $symbol['name'],
-                                                'score' => floatval($symbol['score'])
-                                            ];
-                                            if (in_array($symbol['name'], $virusSymbols, true)) {
-                                                $hasVirusSymbol = true;
-                                            }
-                                            if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
-                                                $hasBadAttachmentSymbol = true;
-                                            }
-                                        }
-                                    }
-
-                                    // Sort by score descending
-                                    usort($parsedSymbols, function($a, $b) {
-                                        return $b['score'] <=> $a['score'];
-                                    });
-                                }
-                            }
-                            if (!empty($symbols)) {
-                                foreach ($virusSymbols as $virusSymbol) {
-                                    if (stripos($symbols, $virusSymbol) !== false) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBadAttachmentSymbol && !empty($symbols)) {
-                                foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
-                                    if (stripos($symbols, $badAttachmentSymbol) !== false) {
-                                        $hasBadAttachmentSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
+                            $symbolData = buildMessageSymbolData($symbols);
+                            $parsedSymbols = $symbolData['parsed_symbols'];
+                            $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                            $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                            $statusSymbolMatches = $symbolData['status_symbol_matches'];
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
                             $scoreClass = getScoreBadgeClass($score, $action);
@@ -434,6 +394,30 @@ include 'menu.php';
                                         </div>
                                         <?php endif; ?>
                                     </span>
+                                </td>
+                                <td class="status-explanation-cell">
+                                    <?php
+                                    $hasStatusExplanation = false;
+                                    foreach ($statusSymbolMatches as $groupSymbols) {
+                                        if (!empty($groupSymbols)) {
+                                            $hasStatusExplanation = true;
+                                            break;
+                                        }
+                                    }
+                                    ?>
+                                    <?php if ($hasStatusExplanation): ?>
+                                        <div class="status-pills">
+                                            <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                                <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                    <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                        <?php echo htmlspecialchars($groupSymbol); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <div class="action-controls">

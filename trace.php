@@ -219,6 +219,9 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
+                            <th style="width: 180px;">
+                                <?php echo htmlspecialchars(__('status_explanation')); ?>
+                            </th>
                             <th class="col-ip">
                                 <a class="sort-link <?php echo $sort === 'ip_address' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('ip_address'); ?>">
                                     <?php echo htmlspecialchars(__('ip_address')); ?>
@@ -248,67 +251,11 @@ include 'menu.php';
                             $ipAddress = $msg['ip_address'] ?? '-';
                             $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
-                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                            $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-
-                            // Parse symbols like in view.php
-                            $parsed_symbols = [];
-                            if (!empty($symbols)) {
-                                // Try JSON format first (Rspamd format)
-                                if (preg_match_all('/"name":"([^"]+)".*?"score":([+-]?\d+(?:\.\d+)?)/s', $symbols, $matches, PREG_SET_ORDER)) {
-                                    foreach ($matches as $match) {
-                                        $name = trim($match[1]);
-                                        $sym_score = floatval($match[2]);
-                                        if ($name) {
-                                            $parsed_symbols[] = ['name' => $name, 'score' => $sym_score];
-                                        }
-                                    }
-                                } else {
-                                    // Fallback: try simple format "SYMBOL(score)"
-                                    $symbol_list = explode(',', $symbols);
-                                    foreach ($symbol_list as $symbol_item) {
-                                        if (preg_match('/^\s*([^(]+)\(([^)]+)\)\s*$/', $symbol_item, $match)) {
-                                            $parsed_symbols[] = [
-                                                'name' => trim($match[1]),
-                                                'score' => floatval($match[2])
-                                            ];
-                                        }
-                                    }
-                                }
-                                // Sort by score descending
-                                usort($parsed_symbols, function($a, $b) {
-                                    return $b['score'] <=> $a['score'];
-                                });
-                            }
-                            $hasVirusSymbol = false;
-                            $hasBadAttachmentSymbol = false;
-                            if (!empty($parsed_symbols)) {
-                                foreach ($parsed_symbols as $symbol) {
-                                    if (in_array($symbol['name'], $virusSymbols, true)) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                    if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
-                                        $hasBadAttachmentSymbol = true;
-                                    }
-                                }
-                            }
-                            if (!$hasVirusSymbol && !empty($symbols)) {
-                                foreach ($virusSymbols as $virusSymbol) {
-                                    if (stripos($symbols, $virusSymbol) !== false) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBadAttachmentSymbol && !empty($symbols)) {
-                                foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
-                                    if (stripos($symbols, $badAttachmentSymbol) !== false) {
-                                        $hasBadAttachmentSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
+                            $symbolData = buildMessageSymbolData($symbols);
+                            $parsed_symbols = $symbolData['parsed_symbols'];
+                            $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                            $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                            $statusSymbolMatches = $symbolData['status_symbol_matches'];
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
                             $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
 
@@ -437,6 +384,30 @@ include 'menu.php';
                                             </div>
                                         <?php endif; ?>
                                     </span>
+                                </td>
+                                <td class="status-explanation-cell">
+                                    <?php
+                                    $hasStatusExplanation = false;
+                                    foreach ($statusSymbolMatches as $groupSymbols) {
+                                        if (!empty($groupSymbols)) {
+                                            $hasStatusExplanation = true;
+                                            break;
+                                        }
+                                    }
+                                    ?>
+                                    <?php if ($hasStatusExplanation): ?>
+                                        <div class="status-pills">
+                                            <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                                <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                    <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                        <?php echo htmlspecialchars($groupSymbol); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="ip-field">
                                     <a href="?ip=<?php echo urlencode($ipAddress); ?>" 

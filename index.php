@@ -272,84 +272,12 @@ include 'menu.php';
                         $action = strtolower(trim($msg['action'] ?? ''));
                         $hostname = $msg['hostname'] ?? '-';
 
-                        // Parse symbols from JSON
                         $symbols = $msg['symbols'] ?? '';
-                        $parsedSymbols = [];
-
-                        $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                        $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-                        $statusSymbolGroups = [
-                            'virus' => ['CLAM_VIRUS', 'ESET_VIRUS'],
-                            'bad-extension' => ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE'],
-                            'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
-                            'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
-                        ];
-                        $statusSymbolMatches = [
-                            'virus' => [],
-                            'bad-extension' => [],
-                            'blacklist' => [],
-                            'whitelist' => [],
-                        ];
-                        $hasVirusSymbol = false;
-                        $hasBadAttachmentSymbol = false;
-                        if (!empty($symbols)) {
-                            $symbolsData = json_decode($symbols, true);
-
-                            if (is_array($symbolsData)) {
-                                foreach ($symbolsData as $symbol) {
-                                    if (isset($symbol['name']) && isset($symbol['score'])) {
-                                        $parsedSymbols[] = [
-                                            'name' => $symbol['name'],
-                                            'score' => floatval($symbol['score'])
-                                        ];
-                                        foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
-                                            if (in_array($symbol['name'], $groupSymbols, true)) {
-                                                $statusSymbolMatches[$groupKey][] = $symbol['name'];
-                                            }
-                                        }
-                                        if (in_array($symbol['name'], $virusSymbols, true)) {
-                                            $hasVirusSymbol = true;
-                                        }
-                                        if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
-                                            $hasBadAttachmentSymbol = true;
-                                        }
-                                    }
-                                }
-
-                                // Sort by score descending
-                                usort($parsedSymbols, function($a, $b) {
-                                    return $b['score'] <=> $a['score'];
-                                });
-                            }
-                        }
-                        if (!empty($symbols)) {
-                            foreach ($virusSymbols as $virusSymbol) {
-                                if (stripos($symbols, $virusSymbol) !== false) {
-                                    $hasVirusSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!empty($symbols)) {
-                            foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
-                                foreach ($groupSymbols as $groupSymbol) {
-                                    if (stripos($symbols, $groupSymbol) !== false) {
-                                        $statusSymbolMatches[$groupKey][] = $groupSymbol;
-                                    }
-                                }
-                            }
-                        }
-                        foreach ($statusSymbolMatches as $groupKey => $groupSymbols) {
-                            $statusSymbolMatches[$groupKey] = array_values(array_unique($groupSymbols));
-                        }
-                        if (!$hasBadAttachmentSymbol && !empty($symbols)) {
-                            foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
-                                if (stripos($symbols, $badAttachmentSymbol) !== false) {
-                                    $hasBadAttachmentSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
+                        $symbolData = buildMessageSymbolData($symbols);
+                        $parsedSymbols = $symbolData['parsed_symbols'];
+                        $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                        $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                        $statusSymbolMatches = $symbolData['status_symbol_matches'];
                         $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
                         $scoreClass = getScoreBadgeClass($score, $action);

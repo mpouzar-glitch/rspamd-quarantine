@@ -939,6 +939,44 @@ tr.selected {
     text-align: center;
 }
 
+.status-explanation-cell {
+    min-width: 170px;
+}
+
+.status-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.status-pill--virus {
+    background-color: #c1121f;
+}
+
+.status-pill--bad-extension {
+    background-color: #f07700;
+}
+
+.status-pill--blacklist {
+    background-color: #6a1b9a;
+}
+
+.status-pill--whitelist {
+    background-color: #5ad76a;
+    color: #0b3d18;
+}
+
 .data-table .col-operations {
     width: 200px;
     white-space: nowrap;
