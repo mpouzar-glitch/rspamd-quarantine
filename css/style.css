@@ -977,6 +977,40 @@ tr.selected {
     color: #721c24;
 }
 
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background-color: #95a5a6;
+    color: #ffffff;
+}
+
+.status-neutral {
+    background-color: #b0b0b0;
+}
+
+.status-virus {
+    background-color: #d32f2f;
+}
+
+.status-bad-extension {
+    background-color: #fb8c00;
+}
+
+.status-blacklist {
+    background-color: #8e24aa;
+}
+
+.status-whitelist {
+    background-color: #8bc34a;
+    color: #1b1b1b;
+}
+
 
 /* ========================================================================
    BUTTON GROUP - INLINE OPERATIONS
