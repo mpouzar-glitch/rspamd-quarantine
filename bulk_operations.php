@@ -264,9 +264,7 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
-                            <th style="width: 180px;">
-                                <?php echo htmlspecialchars(__('status_explanation')); ?>
-                            </th>
+                            <th style="width: 180px;">STATUS</th>
                             <th style="width: 180px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                         </tr>
                     </thead>
@@ -297,6 +295,7 @@ include 'menu.php';
 
                             // State class for row coloring
                             $stateClass = getMessageStateClass((int)$msg['state']);
+                            $statusRowClass = getStatusRowClass($statusSymbolMatches);
 
                             // Auto-learn spam detection by Rspamd
                             // Check if Rspamd already auto-learned this message
@@ -315,7 +314,7 @@ include 'menu.php';
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
                             $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
                             ?>
-                            <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass); ?>" id="row_<?php echo $msgId; ?>">
+                            <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusRowClass); ?>" id="row_<?php echo $msgId; ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                                 <td class="email-field">
                                     <i class="fas fa-paper-plane"></i> 

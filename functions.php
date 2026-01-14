@@ -2076,6 +2076,16 @@ function buildMessageSymbolData($symbols) {
     ];
 }
 
+function getStatusRowClass(array $statusSymbolMatches): string {
+    $priority = ['virus', 'bad-extension', 'blacklist', 'whitelist'];
+    foreach ($priority as $statusKey) {
+        if (!empty($statusSymbolMatches[$statusKey])) {
+            return 'status-row-' . $statusKey;
+        }
+    }
+    return '';
+}
+
 /**
  * Get top symbols with scores from trace
  */
