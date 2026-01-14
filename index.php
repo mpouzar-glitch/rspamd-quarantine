@@ -397,9 +397,9 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
+                                <a href="view.php?id=<?php echo $msgId; ?>" class="subject-preview-btn">
                                     <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
-                                </button>
+                                </a>
                                 <?php if ($canManageMaps && !empty(trim($subject))): ?>
                                     <span class="sender-actions subject-actions">
                                         <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
@@ -624,12 +624,6 @@ include 'menu.php';
     const previewModalContent = document.getElementById('previewModalContent');
 
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.subject-preview-btn').forEach((button) => {
-            button.addEventListener('click', () => {
-                openPreviewModal(button.dataset.messageId);
-            });
-        });
-
         previewModal.querySelectorAll('.modal-close').forEach((button) => {
             button.addEventListener('click', closePreviewModal);
         });
@@ -710,11 +704,11 @@ include 'menu.php';
 
         if (data.is_html) {
             previewModalContent.innerHTML = `
-                <div class="preview-header">
+                <div class="preview-header" style="flex: 1 1 0; overflow: auto;">
                     <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
                     ${metaHtml}
                 </div>
-                <div class="preview-message-body">
+                <div class="preview-message-body" style="flex: 1 1 0; overflow: auto; max-height: none;">
                     <iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe>
                 </div>
             `;
@@ -722,15 +716,19 @@ include 'menu.php';
             iframe.srcdoc = data.preview;
         } else {
             previewModalContent.innerHTML = `
-                <div class="preview-header">
+                <div class="preview-header" style="flex: 1 1 0; overflow: auto;">
                     <h4><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?> ${formatIndicator}</h4>
                     ${metaHtml}
                 </div>
-                <div class="preview-message-body">
+                <div class="preview-message-body" style="flex: 1 1 0; overflow: auto; max-height: none;">
                     <pre>${escapeHtml(data.preview)}</pre>
                 </div>
             `;
         }
+        previewModalContent.style.display = 'flex';
+        previewModalContent.style.flexDirection = 'column';
+        previewModalContent.style.gap = '12px';
+        previewModalContent.style.height = '60vh';
     }
 
     function closePreviewModal() {
