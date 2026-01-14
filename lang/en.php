@@ -30,6 +30,7 @@ return [
     'size' => 'Size',
     'subject' => 'Subject',
     'status' => 'Status',
+    'status_explanation' => 'Status explanation',
     'action' => 'Action',
     'actions' => 'Actions',
     'details' => 'Details',
