@@ -207,6 +207,9 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                                 </a>
                             </th>
+                            <th class="col-status">
+                                <?php echo htmlspecialchars(__('status')); ?>
+                            </th>
                             <th class="col-action">
                                 <a class="sort-link <?php echo $sort === 'action' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('action'); ?>">
                                     <?php echo htmlspecialchars(__('action')); ?>
@@ -249,7 +252,9 @@ include 'menu.php';
                             $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
                             $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                            $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
+                            $badExtensionSymbols = ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE', 'BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
+                            $blacklistSymbols = ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'];
+                            $whitelistSymbols = ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'];
 
                             // Parse symbols like in view.php
                             $parsed_symbols = [];
@@ -281,15 +286,23 @@ include 'menu.php';
                                 });
                             }
                             $hasVirusSymbol = false;
-                            $hasBadAttachmentSymbol = false;
+                            $hasBadExtensionSymbol = false;
+                            $hasBlacklistSymbol = false;
+                            $hasWhitelistSymbol = false;
                             if (!empty($parsed_symbols)) {
                                 foreach ($parsed_symbols as $symbol) {
                                     if (in_array($symbol['name'], $virusSymbols, true)) {
                                         $hasVirusSymbol = true;
                                         break;
                                     }
-                                    if (in_array($symbol['name'], $badAttachmentSymbols, true)) {
-                                        $hasBadAttachmentSymbol = true;
+                                    if (in_array($symbol['name'], $badExtensionSymbols, true)) {
+                                        $hasBadExtensionSymbol = true;
+                                    }
+                                    if (in_array($symbol['name'], $blacklistSymbols, true)) {
+                                        $hasBlacklistSymbol = true;
+                                    }
+                                    if (in_array($symbol['name'], $whitelistSymbols, true)) {
+                                        $hasWhitelistSymbol = true;
                                     }
                                 }
                             }
@@ -301,13 +314,44 @@ include 'menu.php';
                                     }
                                 }
                             }
-                            if (!$hasBadAttachmentSymbol && !empty($symbols)) {
-                                foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
-                                    if (stripos($symbols, $badAttachmentSymbol) !== false) {
-                                        $hasBadAttachmentSymbol = true;
+                            if (!$hasBadExtensionSymbol && !empty($symbols)) {
+                                foreach ($badExtensionSymbols as $badExtensionSymbol) {
+                                    if (stripos($symbols, $badExtensionSymbol) !== false) {
+                                        $hasBadExtensionSymbol = true;
                                         break;
                                     }
                                 }
+                            }
+                            if (!$hasBlacklistSymbol && !empty($symbols)) {
+                                foreach ($blacklistSymbols as $blacklistSymbol) {
+                                    if (stripos($symbols, $blacklistSymbol) !== false) {
+                                        $hasBlacklistSymbol = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$hasWhitelistSymbol && !empty($symbols)) {
+                                foreach ($whitelistSymbols as $whitelistSymbol) {
+                                    if (stripos($symbols, $whitelistSymbol) !== false) {
+                                        $hasWhitelistSymbol = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            $statusLabel = '';
+                            $statusClass = '';
+                            if ($hasVirusSymbol) {
+                                $statusLabel = 'virus';
+                                $statusClass = 'status-virus';
+                            } elseif ($hasBadExtensionSymbol) {
+                                $statusLabel = 'příloha';
+                                $statusClass = 'status-bad-extension';
+                            } elseif ($hasBlacklistSymbol) {
+                                $statusLabel = 'blacklist';
+                                $statusClass = 'status-blacklist';
+                            } elseif ($hasWhitelistSymbol) {
+                                $statusLabel = 'whitelist';
+                                $statusClass = 'status-whitelist';
                             }
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
                             $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
@@ -353,7 +397,7 @@ include 'menu.php';
                                 $scoreClass = 'score-low';
                             }
                             ?>
-                            <tr class="<?php echo $virusClass; ?>">
+                            <tr class="<?php echo trim($virusClass . ' ' . $statusClass); ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                                 <td class="email-field">
                                     <i class="fas fa-paper-plane"></i> 
@@ -404,6 +448,15 @@ include 'menu.php';
                                         </span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="status-field">
+                                    <?php if (!empty($statusLabel)): ?>
+                                        <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
+                                            <?php echo htmlspecialchars($statusLabel); ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="status-badge status-neutral">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="action-cell">
                                     <span class="action-badge <?php echo $actionClass; ?>">
                                         <i class="fas <?php echo $actionIcon; ?>"></i>
@@ -416,7 +469,7 @@ include 'menu.php';
                                         <?php if ($hasVirusSymbol): ?>
                                             <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
                                         <?php endif; ?>
-                                        <?php if ($hasBadAttachmentSymbol): ?>
+                                        <?php if ($hasBadExtensionSymbol): ?>
                                             <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
                                         <?php endif; ?>
 
