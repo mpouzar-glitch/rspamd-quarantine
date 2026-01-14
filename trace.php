@@ -109,7 +109,7 @@ include 'menu.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/bulk.css">
+    <link rel="stylesheet" href="css/trace.css">
 </head>
 <body>
     <div class="container">
@@ -344,7 +344,14 @@ include 'menu.php';
                                     $actionIcon = 'fa-question-circle';
                             }
 
-                            $scoreClass = getScoreBadgeClass($score, $action);
+                            // Score class
+                            if ($score >= 15) {
+                                $scoreClass = 'score-high';
+                            } elseif ($score >= 6) {
+                                $scoreClass = 'score-medium';
+                            } else {
+                                $scoreClass = 'score-low';
+                            }
                             ?>
                             <tr class="<?php echo $virusClass; ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
@@ -422,7 +429,8 @@ include 'menu.php';
                                                 <div class="symbols-grid">
                                                     <?php foreach ($parsed_symbols as $sym): 
                                                         $sym_score = $sym['score'];
-                                                        $bg_color = getSymbolBadgeColor($sym_score);
+                                                        // Same color logic as view.php
+                                                        $bg_color = $sym_score > 1 ? '#e74c3c' : ($sym_score > 0 ? '#f39c12' : ($sym_score < 0 ? '#27ae60' : '#95a5a6'));
                                                     ?>
                                                         <span class="symbol-badge" style="background: <?php echo $bg_color; ?>;">
                                                             <span class="symbol-name" title="<?php echo htmlspecialchars($sym['name']); ?>">
