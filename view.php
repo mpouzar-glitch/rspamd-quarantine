@@ -29,11 +29,6 @@ if (!$message) {
     die(__('msg_not_found'));
 }
 
-if (!canAccessQuarantineMessage($message)) {
-    http_response_code(403);
-    die(__('users_access_denied'));
-}
-
 // Parse message headers
 $headers_end = strpos($message['message_content'], "\r\n\r\n");
 if ($headers_end === false) {
@@ -335,66 +330,99 @@ switch (strtolower($action)) {
     <link rel="stylesheet" href="css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f5; }
-        .modal-overlay { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 28px; }
-        .modal-window { width: min(1300px, 96vw); max-height: 90vh; background: #fff; border-radius: 10px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2); border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; }
-        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-        .modal-header .title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: #1f2937; }
-        .modal-header .meta { font-size: 11px; color: #6b7280; margin-top: 4px; }
-        .modal-close { color: #6b7280; text-decoration: none; font-size: 18px; padding: 4px 8px; border-radius: 6px; }
-        .modal-close:hover { background: #e2e8f0; color: #111827; }
-        .modal-content { display: flex; min-height: 0; }
-        .info-panel { width: 38%; border-right: 1px solid #e2e8f0; padding: 16px; overflow: auto; }
-        .message-panel { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-        .panel-title { font-size: 14px; font-weight: 600; color: #1f2937; padding-bottom: 8px; border-bottom: 2px solid #3498db; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        table.info-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        table.info-table th { text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; color: #6b7280; padding: 8px 6px; text-align: left; width: 160px; vertical-align: top; }
-        table.info-table td { padding: 8px 6px; border-bottom: 1px solid #eef2f5; color: #1f2937; }
-        table.info-table strong { color: #111827; }
-        .symbol-inline { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 6px; }
-        .symbol-badge { background: #e11d48; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; }
-        .action-badge { display: inline-flex; align-items: center; gap: 6px; }
-        .badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.3; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.1); gap: 6px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: #2c3e50; color: white; padding: 20px; margin: -20px -20px 20px -20px; }
+        .header h1 { font-size: 24px; margin-bottom: 10px; }
+        .header .back { color: white; text-decoration: none; display: inline-block; margin-bottom: 10px; }
+        .header .back:hover { text-decoration: underline; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { color: #2c3e50; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .info-grid { display: flex; gap: 20px; align-items: stretch; }
+        .info-block { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        table.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.info-table th { background: #ecf0f1; padding: 12px; text-align: left; width: 200px; font-weight: 600; color: #2c3e50; }
+        table.info-table td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+        .headers-panel { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 12px; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; overflow: auto; flex: 1; }
+        .headers-panel h3 { font-size: 13px; margin-bottom: 8px; color: #2c3e50; }
+        .headers-panel pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+        @media (max-width: 1000px) { .info-grid { flex-direction: column; } }
+        .symbols { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .symbol-badge { background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-family: monospace; }
+        .symbol-badge.low { background: #95a5a6; }
+        .symbol-inline { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
+        .symbol-inline .symbol-badge { font-size: 10px; padding: 3px 6px; }
+        .body-viewer { background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; max-height: 600px; overflow-y: auto; }
+        .body-viewer pre { white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 12px; }
+        .body-viewer iframe { width: 100%; min-height: 500px; border: none; background: white; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #ecf0f1; }
+        .tab { padding: 10px 20px; background: #ecf0f1; border: none; cursor: pointer; border-radius: 4px 4px 0 0; font-size: 14px; }
+        .tab.active { background: #3498db; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.3; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.1); gap: 6px; }
         .badge-reject { background: #c82333; color: #ffffff; box-shadow: 0 4px 12px rgba(200,35,51,0.4); }
         .badge-soft-reject { background: #17a2b8; color: #ffffff; box-shadow: 0 4px 12px rgba(23,162,184,0.4); }
         .badge-pass { background: #009933; color: #ffffff; box-shadow: 0 4px 12px rgba(51, 204, 0, 1); }
         .badge-header { color: #000; background-color: rgba(255,193,7,1); box-shadow: 0 4px 12px rgba(255,193,7,0.5); }
-        .tabs { display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-        .tab { padding: 8px 14px; background: #f1f5f9; border: none; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 12px; color: #1f2937; }
-        .tab.active { background: #3498db; color: #fff; }
-        .tab-content { display: none; flex: 1; min-height: 0; }
-        .tab-content.active { display: block; }
-        .body-viewer { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; height: 100%; max-height: 100%; overflow: auto; }
-        .body-viewer pre { white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 12px; color: #1f2937; }
-        .body-viewer iframe { width: 100%; min-height: 420px; border: none; background: #fff; }
-        .raw-headers { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 11px; overflow-x: auto; }
-        @media (max-width: 1100px) {
-            .modal-content { flex-direction: column; }
-            .info-panel { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+        .badge-released { background: #27ae60; color: white; }
+        .badge-quarantine { background: #e67e22; color: white; }
+        .action-badge { display: inline-flex; align-items: center; gap: 6px; }
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn i { margin-right: 5px; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .raw-headers { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; overflow-x: auto; }
+        .timeline { position: relative; padding-left: 30px; }
+        .timeline-item { position: relative; padding-bottom: 20px; }
+        .timeline-item:before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #3498db; border: 2px solid white; }
+        .timeline-item:after { content: ''; position: absolute; left: -19px; top: 17px; width: 2px; height: calc(100% - 12px); background: #ddd; }
+        .timeline-item:last-child:after { display: none; }
+        .timeline-time { font-size: 11px; color: #7f8c8d; }
+        .timeline-action { font-weight: bold; color: #2c3e50; }
+        .timeline-user { color: #3498db; font-size: 12px; }
+        .symbols { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 120px; overflow-x: auto;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
         }
+        .symbol-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        .attachments-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .attachments-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #ecf0f1; border-radius: 6px; background: #f8f9fa; }
+        .attachment-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .attachment-name { font-weight: 600; color: #2c3e50; word-break: break-word; }
+        .attachment-meta { font-size: 12px; color: #7f8c8d; }
+        .btn-attachment { font-size: 12px; padding: 6px 12px; }
+
     </style>
 </head>
 <body>
-    <div class="modal-overlay">
-        <div class="modal-window" role="dialog" aria-modal="true" aria-label="<?= htmlspecialchars(__('view_title')) ?>">
-            <div class="modal-header">
-                <div>
-                    <div class="title">
-                        <i class="fas fa-envelope-open-text"></i>
-                        <?= htmlspecialchars(__('view_title')) ?>
-                    </div>
-                    <div class="meta">
-                        <?= htmlspecialchars(__('view_message_id_label')) ?>: <?= htmlspecialchars($message['message_id'] ?? __('view_message_id_na')) ?>
-                        · <?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?>
-                    </div>
-                </div>
-                <a class="modal-close" href="index.php" aria-label="<?= htmlspecialchars(__('close')) ?>">
-                    <i class="fas fa-times"></i>
-                </a>
+    <div class="container">
+        <div class="header">
+            <a href="index.php" class="back"><i class="fas fa-arrow-left"></i> <?= htmlspecialchars(__('view_back_to_list')) ?></a>
+            <h1><i class="fas fa-envelope-open-text"></i> <?= htmlspecialchars(__('view_title')) ?></h1>
+            <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">
+                <?= htmlspecialchars(__('view_message_id_label')) ?>: <?= htmlspecialchars($message['message_id'] ?? __('view_message_id_na')) ?>
             </div>
-            <div class="modal-content">
-                <section class="info-panel">
-                    <h2 class="panel-title"><i class="fas fa-info-circle"></i> <?= htmlspecialchars(__('view_basic_info')) ?></h2>
+        </div>
+        
+        <div class="card">
+            <h2><i class="fas fa-info-circle"></i> <?= htmlspecialchars(__('view_basic_info')) ?></h2>
+            <div class="info-grid">
+                <div class="info-block">
                     <table class="info-table">
                         <tr>
                             <th><?= htmlspecialchars(__('msg_subject')) ?>:</th>
@@ -423,8 +451,7 @@ switch (strtolower($action)) {
                         <tr>
                             <th><?= htmlspecialchars(__('view_dkim_dmarc')) ?>:</th>
                             <td>
-                                <?= htmlspecialchars(__('view_dkim_label')) ?>: <strong><?= htmlspecialchars($dkim_status) ?></strong>
-                                · <?= htmlspecialchars(__('view_dmarc_label')) ?>: <strong><?= htmlspecialchars($dmarc_status) ?></strong>
+                                <?= htmlspecialchars(__('view_dkim_label')) ?>: <strong><?= htmlspecialchars($dkim_status) ?></strong> · <?= htmlspecialchars(__('view_dmarc_label')) ?>: <strong><?= htmlspecialchars($dmarc_status) ?></strong>
                                 <?php if (!empty($dkim_dmarc_symbols)): ?>
                                     <span class="symbol-inline">
                                         <?php foreach ($dkim_dmarc_symbols as $sym): ?>
@@ -446,6 +473,10 @@ switch (strtolower($action)) {
                             <td><?= htmlspecialchars($user_agent_header) ?></td>
                         </tr>
                         <?php endif; ?>
+                        <tr>
+                            <th><?= htmlspecialchars(__('msg_date')) ?>:</th>
+                            <td><?= date('d.m.Y H:i:s', strtotime($message['timestamp'])) ?></td>
+                        </tr>
                         <tr>
                             <th><?= htmlspecialchars(__('ip_address')) ?>:</th>
                             <td><?= htmlspecialchars($message['ip_address']) ?></td>
@@ -482,75 +513,184 @@ switch (strtolower($action)) {
                             </td>
                         </tr>
                     </table>
-                </section>
-                <section class="message-panel">
-                    <h2 class="panel-title"><i class="fas fa-file-alt"></i> <?= htmlspecialchars(__('msg_body')) ?></h2>
-                    <div class="tabs">
-                        <?php if (!empty($body_html)): ?>
-                            <button class="tab active" onclick="showTab('html', event)"><?= htmlspecialchars(__('view_html_preview_safe')) ?></button>
+                </div>
+                <div class="info-block">
+                    <div class="headers-panel">
+                        <h3><?= htmlspecialchars(__('view_message_headers')) ?></h3>
+                        <pre><?= htmlspecialchars($headers_raw) ?></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <?php if (!empty($parsed_symbols)): ?>
+        <div class="card">
+            <h2><i class="fas fa-flag"></i> <?= htmlspecialchars(__('symbols_header', ['count' => count($parsed_symbols)])) ?></h2>
+            <div class="symbols">
+                <?php foreach ($parsed_symbols as $sym): 
+                    $score = $sym['score'];
+                    $bg_color = $score > 1 ? '#e74c3c' : ($score > 0 ? '#f39c12' : ($score < 0 ? '#27ae60' : '#95a5a6'));
+                ?>
+                    <span class="symbol-badge" style="background: <?= $bg_color ?>;">
+                        <?= htmlspecialchars($sym['name']) ?>: <?= number_format($score, 1) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="card">
+            <h2><i class="fas fa-paperclip"></i> <?= htmlspecialchars(__('msg_attachments')) ?></h2>
+            <?php if (!empty($attachments)): ?>
+                <ul class="attachments-list">
+                    <?php foreach ($attachments as $index => $attachment): ?>
+                        <li>
+                            <div class="attachment-info">
+                                <span class="attachment-name"><?= htmlspecialchars($attachment['filename']) ?></span>
+                                <span class="attachment-meta">
+                                    <?= htmlspecialchars(formatMessageSize($attachment['size'])) ?>
+                                    <?php if (!empty($attachment['content_type'])): ?>
+                                        · <?= htmlspecialchars($attachment['content_type']) ?>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <a class="btn btn-primary btn-attachment" href="view.php?id=<?= $message['id'] ?>&attachment=<?= $index ?>">
+                                <i class="fas fa-download"></i> <?= htmlspecialchars(__('download')) ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p><?= htmlspecialchars(__('msg_no_attachments')) ?></p>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-file-alt"></i> <?= htmlspecialchars(__('msg_body')) ?></h2>
+            
+            <div class="tabs">
+                <?php if (!empty($body_html)): ?>
+                    <button class="tab active" onclick="showTab('html')"><?= htmlspecialchars(__('view_html_preview_safe')) ?></button>
+                <?php endif; ?>
+                <?php if (!empty($body_text)): ?>
+                    <button class="tab <?= empty($body_html) ? 'active' : '' ?>" onclick="showTab('text')"><?= htmlspecialchars(__('view_text_tab')) ?></button>
+                <?php endif; ?>
+                <button class="tab" onclick="showTab('source')"><?= htmlspecialchars(__('view_source_tab')) ?></button>
+                <button class="tab" onclick="showTab('headers')"><?= htmlspecialchars(__('msg_headers')) ?></button>
+            </div>
+            
+            <?php if (!empty($body_html)): ?>
+            <div id="tab-html" class="tab-content active">
+                <div class="body-viewer">
+                    <iframe id="html-frame" sandbox=""></iframe>
+                </div>
+                <script>
+                    // Safe HTML rendering inside a sandboxed iframe
+                    const htmlContent = <?= json_encode($body_html) ?>;
+                    const iframe = document.getElementById('html-frame');
+                    iframe.srcdoc = htmlContent;
+                </script>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($body_text)): ?>
+            <div id="tab-text" class="tab-content <?= empty($body_html) ? 'active' : '' ?>">
+                <div class="body-viewer">
+                    <pre><?= htmlspecialchars($body_text) ?></pre>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div id="tab-source" class="tab-content">
+                <div class="body-viewer">
+                    <pre><?= htmlspecialchars($message['message_content']) ?></pre>
+                </div>
+            </div>
+            
+            <div id="tab-headers" class="tab-content">
+                <div class="raw-headers">
+                    <?= htmlspecialchars($headers_raw) ?>
+                </div>
+            </div>
+        </div>
+        
+        <?php if (!empty($trace_logs)): ?>
+        <div class="card">
+            <h2><i class="fas fa-history"></i> <?= htmlspecialchars(__('view_action_history')) ?></h2>
+            <div class="timeline">
+                <?php foreach ($trace_logs as $log): ?>
+                    <div class="timeline-item">
+                        <div class="timeline-time"><?= date('d.m.Y H:i:s', strtotime($log['timestamp'])) ?></div>
+                        <div class="timeline-action"><?= htmlspecialchars($log['action']) ?></div>
+                        <div class="timeline-user"><?= htmlspecialchars(__('user')) ?>: <?= htmlspecialchars($log['user']) ?></div>
+                        <?php if (!empty($log['details'])): ?>
+                            <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                                <?= htmlspecialchars($log['details']) ?>
+                            </div>
                         <?php endif; ?>
-                        <?php if (!empty($body_text)): ?>
-                            <button class="tab <?= empty($body_html) ? 'active' : '' ?>" onclick="showTab('text', event)"><?= htmlspecialchars(__('view_text_tab')) ?></button>
-                        <?php endif; ?>
-                        <button class="tab" onclick="showTab('source', event)"><?= htmlspecialchars(__('view_source_tab')) ?></button>
-                        <button class="tab" onclick="showTab('headers', event)"><?= htmlspecialchars(__('msg_headers')) ?></button>
                     </div>
-
-                    <?php if (!empty($body_html)): ?>
-                    <div id="tab-html" class="tab-content active">
-                        <div class="body-viewer">
-                            <iframe id="html-frame" sandbox=""></iframe>
-                        </div>
-                        <script>
-                            const htmlContent = <?= json_encode($body_html) ?>;
-                            const iframe = document.getElementById('html-frame');
-                            iframe.srcdoc = htmlContent;
-                        </script>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($body_text)): ?>
-                    <div id="tab-text" class="tab-content <?= empty($body_html) ? 'active' : '' ?>">
-                        <div class="body-viewer">
-                            <pre><?= htmlspecialchars($body_text) ?></pre>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <div id="tab-source" class="tab-content">
-                        <div class="body-viewer">
-                            <pre><?= htmlspecialchars($message['message_content']) ?></pre>
-                        </div>
-                    </div>
-
-                    <div id="tab-headers" class="tab-content">
-                        <div class="raw-headers">
-                            <?= htmlspecialchars($headers_raw) ?>
-                        </div>
-                    </div>
-                </section>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <div class="card">
+            <h2><i class="fas fa-tools"></i> <?= htmlspecialchars(__('actions')) ?></h2>
+            <div class="actions">
+                <?php if (!$released): ?>
+                    <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="id" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="action" value="release">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> <?= htmlspecialchars(__('msg_release')) ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
+                
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="action" value="learn_ham">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
+                    </button>
+                </form>
+                
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="action" value="learn_spam">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-thumbs-down"></i> <?= htmlspecialchars(__('msg_learn_spam')) ?>
+                    </button>
+                </form>
+                
+                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_delete_message'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> <?= htmlspecialchars(__('msg_delete')) ?>
+                    </button>
+                </form>
+                
+                <a href="index.php" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> <?= htmlspecialchars(__('view_back_to_list')) ?>
+                </a>
             </div>
         </div>
     </div>
+    
     <script>
-        function showTab(tabName, event) {
-            if (event) {
-                event.preventDefault();
-            }
+        function showTab(tabName) {
+            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-
-            const activeTab = document.getElementById('tab-' + tabName);
-            if (activeTab) {
-                activeTab.classList.add('active');
-            }
-            if (event && event.target) {
-                event.target.classList.add('active');
-            }
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
         }
     </script>
 </body>
