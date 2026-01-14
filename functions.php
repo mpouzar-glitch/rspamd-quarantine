@@ -493,6 +493,57 @@ function formatMessageSize($bytes) {
     return round($bytes, 2) . ' ' . $units[$pow];
 }
 
+function getScoreBadgeClass(float $score, string $action = ''): string {
+    $action = strtolower(trim($action));
+    $actionMap = [
+        'no action' => 'score-action-no-action',
+        'greylist' => 'score-action-greylist',
+        'add header' => 'score-action-add-header',
+        'rewrite subject' => 'score-action-rewrite-subject',
+        'reject' => 'score-action-reject',
+    ];
+
+    if ($action !== '' && isset($actionMap[$action])) {
+        return $actionMap[$action];
+    }
+
+    if ($score >= 15) {
+        return 'score-high';
+    }
+    if ($score >= 6) {
+        return 'score-medium';
+    }
+    return 'score-low';
+}
+
+function getMessageStateClass(int $state): string {
+    switch ($state) {
+        case 0:
+            return 'state-quarantined';
+        case 1:
+            return 'state-learned-ham';
+        case 2:
+            return 'state-learned-spam';
+        case 3:
+            return 'state-released';
+        default:
+            return '';
+    }
+}
+
+function getSymbolBadgeColor(float $score): string {
+    if ($score >= 1) {
+        return '#e74c3c';
+    }
+    if ($score > 0) {
+        return '#f39c12';
+    }
+    if ($score < 0) {
+        return '#27ae60';
+    }
+    return '#95a5a6';
+}
+
 // ============================================
 // Mailbox Storage Functions
 // ============================================
