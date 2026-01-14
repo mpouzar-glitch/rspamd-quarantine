@@ -30,6 +30,7 @@ return [
     'size' => 'Velikost',
     'subject' => 'Předmět',
     'status' => 'Stav',
+    'status_explanation' => 'Vysvětlení statusu',
     'action' => 'Akce',
     'actions' => 'Akce',
     'details' => 'Detaily',

@@ -252,6 +252,9 @@ include 'menu.php';
                                 <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                             </a>
                         </th>
+                        <th style="width: 180px;">
+                            <?php echo htmlspecialchars(__('status_explanation')); ?>
+                        </th>
                         <th style="width: 150px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                     </tr>
                 </thead>
@@ -275,6 +278,18 @@ include 'menu.php';
 
                         $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
                         $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
+                        $statusSymbolGroups = [
+                            'virus' => ['CLAM_VIRUS', 'ESET_VIRUS'],
+                            'bad-extension' => ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE'],
+                            'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
+                            'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
+                        ];
+                        $statusSymbolMatches = [
+                            'virus' => [],
+                            'bad-extension' => [],
+                            'blacklist' => [],
+                            'whitelist' => [],
+                        ];
                         $hasVirusSymbol = false;
                         $hasBadAttachmentSymbol = false;
                         if (!empty($symbols)) {
@@ -287,6 +302,11 @@ include 'menu.php';
                                             'name' => $symbol['name'],
                                             'score' => floatval($symbol['score'])
                                         ];
+                                        foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
+                                            if (in_array($symbol['name'], $groupSymbols, true)) {
+                                                $statusSymbolMatches[$groupKey][] = $symbol['name'];
+                                            }
+                                        }
                                         if (in_array($symbol['name'], $virusSymbols, true)) {
                                             $hasVirusSymbol = true;
                                         }
@@ -309,6 +329,18 @@ include 'menu.php';
                                     break;
                                 }
                             }
+                        }
+                        if (!empty($symbols)) {
+                            foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
+                                foreach ($groupSymbols as $groupSymbol) {
+                                    if (stripos($symbols, $groupSymbol) !== false) {
+                                        $statusSymbolMatches[$groupKey][] = $groupSymbol;
+                                    }
+                                }
+                            }
+                        }
+                        foreach ($statusSymbolMatches as $groupKey => $groupSymbols) {
+                            $statusSymbolMatches[$groupKey] = array_values(array_unique($groupSymbols));
                         }
                         if (!$hasBadAttachmentSymbol && !empty($symbols)) {
                             foreach ($badAttachmentSymbols as $badAttachmentSymbol) {
@@ -418,6 +450,30 @@ include 'menu.php';
                                     </div>
                                     <?php endif; ?>
                                 </span>
+                            </td>
+                            <td class="status-explanation-cell">
+                                <?php
+                                $hasStatusExplanation = false;
+                                foreach ($statusSymbolMatches as $groupSymbols) {
+                                    if (!empty($groupSymbols)) {
+                                        $hasStatusExplanation = true;
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <?php if ($hasStatusExplanation): ?>
+                                    <div class="status-pills">
+                                        <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                            <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                    <?php echo htmlspecialchars($groupSymbol); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
                             </td>
                             <td class="text-center">
                                 <div class="action-controls">
