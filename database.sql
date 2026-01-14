@@ -168,7 +168,7 @@ CREATE TABLE `users` (
   `username` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `role` enum('admin','domain_admin','viewer') DEFAULT 'viewer',
+  `role` enum('admin','domain_admin','quarantine_user','viewer') DEFAULT 'viewer',
   `active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `last_login` timestamp NULL DEFAULT NULL

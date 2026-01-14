@@ -17,7 +17,7 @@ if (!isAuthenticated()) {
 }
 
 $msg_id = $_GET['id'] ?? '';
-$format = $_GET['format'] ?? 'text'; // 'text' or 'html'
+$format = $_GET['format'] ?? 'auto'; // 'auto', 'text' or 'html'
 
 if (empty($msg_id)) {
     http_response_code(400);
@@ -155,22 +155,27 @@ try {
     $preview = '';
     $is_html_preview = false;
 
-    if ($format === 'html' && !empty($body_html)) {
+    $use_html = ($format === 'html' || ($format === 'auto' && !empty($body_html)));
+
+    if ($use_html && !empty($body_html)) {
         // HTML preview with sanitization
         $preview = $body_html;
 
         // Remove dangerous tags and attributes
         $preview = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $preview);
         $preview = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $preview);
+        $preview = preg_replace('/<meta\b[^>]*>/is', '', $preview);
+        $preview = preg_replace('/<base\b[^>]*>/is', '', $preview);
         $preview = preg_replace('/on\w+\s*=\s*["\x27][^"\x27]*["\x27]/i', '', $preview);
         $preview = preg_replace('/on\w+\s*=\s*\S+/i', '', $preview);
         $preview = preg_replace('/<iframe\b[^>]*>.*?<\/iframe>/is', '', $preview);
         $preview = preg_replace('/<object\b[^>]*>.*?<\/object>/is', '', $preview);
         $preview = preg_replace('/<embed\b[^>]*>/is', '', $preview);
         $preview = preg_replace('/<link\b[^>]*>/is', '', $preview);
+        $preview = preg_replace('/<form\b[^>]*>.*?<\/form>/is', '', $preview);
 
         // Convert absolute URLs to prevent tracking
-        $preview = preg_replace('/(src|href)\s*=\s*["\x27]https?:\/\/[^"\x27]*["\x27]/i', '$1="#blocked"', $preview);
+        $preview = preg_replace('/(src|href)\s*=\s*["\x27][^"\x27]*["\x27]/i', '$1="#blocked"', $preview);
 
         $is_html_preview = true;
     } else {
@@ -190,10 +195,10 @@ try {
     }
 
     // Truncate if too long
-    if (!$is_html_preview && mb_strlen($preview, 'UTF-8') > 300) {
-        $preview = mb_substr($preview, 0, 300, 'UTF-8') . '...';
-    } elseif ($is_html_preview && mb_strlen($preview, 'UTF-8') > 5000) {
-        $preview = mb_substr($preview, 0, 5000, 'UTF-8') . '<p>... (zkráceno)</p>';
+    if (!$is_html_preview && mb_strlen($preview, 'UTF-8') > 2000) {
+        $preview = mb_substr($preview, 0, 2000, 'UTF-8') . '...';
+    } elseif ($is_html_preview && mb_strlen($preview, 'UTF-8') > 8000) {
+        $preview = mb_substr($preview, 0, 8000, 'UTF-8') . '<p>... (zkráceno)</p>';
     }
 
     echo json_encode([

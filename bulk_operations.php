@@ -202,12 +202,6 @@ include 'menu.php';
             <div class="legend-item">
                 <span class="action-release">☑ R</span> = <?php echo htmlspecialchars(__('bulk_action_release')); ?>
             </div>
-            <div class="legend-item" style="margin-left: auto;">
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" id="htmlPreviewToggle" onchange="toggleHtmlPreview(this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
-                    <span><i class="fas fa-code"></i> <strong><?php echo htmlspecialchars(__('preview_html_toggle')); ?></strong></span>
-                </label>
-            </div>
         </div>
 
         <!-- Bulk Operations Info -->
@@ -432,7 +426,9 @@ include 'menu.php';
                                     </a>
                                 </td>
                                 <td class="subject-field">
-                                    <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
+                                    <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
+                                        <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
+                                    </button>
                                 </td>
                                 <td class="text-right no-wrap">
                                     <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
@@ -661,108 +657,68 @@ include 'menu.php';
     </script>
 
     <!-- Preview Tooltip -->
-    <div id="previewTooltip" class="preview-tooltip">
-        <div class="preview-loading">
-            <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
+    <div id="messagePreviewModal" class="modal preview-modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="previewModalContent" class="preview-modal-content">
+                    <div class="preview-loading">
+                        <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-    // Global preview format
-    let previewFormat = 'text';
-    let previewTimeout = null;
     let activeRequest = null;
+    const previewModal = document.getElementById('messagePreviewModal');
+    const previewModalContent = document.getElementById('previewModalContent');
 
-    // Load format from sessionStorage
-    function loadPreviewFormat() {
-        const saved = sessionStorage.getItem('previewFormat');
-        if (saved) {
-            previewFormat = saved;
-            const checkbox = document.getElementById('htmlPreviewToggle');
-            if (checkbox) {
-                checkbox.checked = (previewFormat === 'html');
-            }
-        }
-    }
-
-    // Toggle HTML preview
-    function toggleHtmlPreview(enabled) {
-        previewFormat = enabled ? 'html' : 'text';
-        sessionStorage.setItem('previewFormat', previewFormat);
-
-        hidePreview();
-        setTimeout(function() {
-            const hoveredRow = document.querySelector('.subject-field:hover');
-            if (hoveredRow) {
-                const row = hoveredRow.closest('.message-row');
-                if (row) {
-                    const msgId = row.id.replace('row_', '');
-                    const rect = hoveredRow.getBoundingClientRect();
-                    showPreview(msgId, rect.left + rect.width / 2, rect.top + rect.height / 2);
-                }
-            }
-        }, 100);
-    }
-
-    // Initialize on load
     document.addEventListener('DOMContentLoaded', function() {
-        loadPreviewFormat();
-
-        const rows = document.querySelectorAll('.message-row');
-        const tooltip = document.getElementById('previewTooltip');
-
-        rows.forEach(function(row) {
-            const subjectCell = row.querySelector('.subject-field');
-            if (!subjectCell) return;
-
-            const msgId = row.id.replace('row_', '');
-
-            subjectCell.addEventListener('mouseenter', function(e) {
-                previewTimeout = setTimeout(function() {
-                    showPreview(msgId, e.clientX, e.clientY);
-                }, 500);
-            });
-
-            subjectCell.addEventListener('mouseleave', function() {
-                clearTimeout(previewTimeout);
-                hidePreview();
-            });
-
-            subjectCell.addEventListener('mousemove', function(e) {
-                if (tooltip.classList.contains('active')) {
-                    positionTooltip(e.clientX, e.clientY);
-                }
+        document.querySelectorAll('.subject-preview-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openPreviewModal(button.dataset.messageId);
             });
         });
 
-        tooltip.addEventListener('mouseenter', function() {
-            clearTimeout(previewTimeout);
+        previewModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closePreviewModal);
         });
 
-        tooltip.addEventListener('mouseleave', function() {
-            hidePreview();
-        });
-
-        window.addEventListener('scroll', function() {
-            if (tooltip.classList.contains('active')) {
-                hidePreview();
+        previewModal.addEventListener('click', (event) => {
+            if (event.target === previewModal) {
+                closePreviewModal();
             }
-        }, { passive: true });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && previewModal.classList.contains('active')) {
+                closePreviewModal();
+            }
+        });
     });
 
-    function showPreview(msgId, x, y) {
-        const tooltip = document.getElementById('previewTooltip');
+    function openPreviewModal(msgId) {
+        if (!msgId) {
+            return;
+        }
 
         if (activeRequest) {
             activeRequest.abort();
         }
 
-        tooltip.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> ' + bulkStrings.previewLoading + '</div>';
-        tooltip.classList.add('active');
-        positionTooltip(x, y);
+        previewModalContent.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> ' + bulkStrings.previewLoading + '</div>';
+        previewModal.classList.add('active');
+        previewModal.setAttribute('aria-hidden', 'false');
 
         activeRequest = new XMLHttpRequest();
-        activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=' + previewFormat, true);
+        activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
 
         activeRequest.onload = function() {
             if (activeRequest.status === 200) {
@@ -772,19 +728,19 @@ include 'menu.php';
                     if (data.success) {
                         renderPreview(data);
                     } else {
-                        tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewErrorLabel + ': ' + escapeHtml(data.error) + '</div>';
+                        previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewErrorLabel + ': ' + escapeHtml(data.error) + '</div>';
                     }
                 } catch (e) {
-                    tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewParseError + '</div>';
+                    previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewParseError + '</div>';
                 }
             } else {
-                tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewLoadFailed + '</div>';
+                previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewLoadFailed + '</div>';
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            tooltip.innerHTML = '<div class="preview-error">' + bulkStrings.previewNetworkError + '</div>';
+            previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewNetworkError + '</div>';
             activeRequest = null;
         };
 
@@ -792,71 +748,56 @@ include 'menu.php';
     }
 
     function renderPreview(data) {
-        const tooltip = document.getElementById('previewTooltip');
-        const contentClass = data.is_html ? 'preview-content html-mode' : 'preview-content';
-
         let formatIndicator = '';
         if (data.is_html) {
-            formatIndicator = `<span style="font-size: 10px; color: #007bff; margin-left: 5px;">
+            formatIndicator = `<span class="preview-format-indicator">
                 <i class="fas fa-code"></i> ${bulkStrings.previewModeHtml}
             </span>`;
         } else if (data.has_html) {
-            formatIndicator = `<span style="font-size: 10px; color: #6c757d; margin-left: 5px;">
+            formatIndicator = `<span class="preview-format-indicator muted">
                 <i class="fas fa-align-left"></i> ${bulkStrings.previewModeText}
             </span>`;
         }
 
-        tooltip.innerHTML = `
-            <div class="preview-header">
-                <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
-                <div class="preview-meta"><strong>${bulkStrings.previewSender}:</strong> ${escapeHtml(data.sender)}</div>
-                <div class="preview-meta"><strong>${bulkStrings.previewSubject}:</strong> ${escapeHtml(data.subject)}</div>
-                <div class="preview-meta"><strong>${bulkStrings.previewTime}:</strong> ${escapeHtml(data.timestamp)} | <strong>${bulkStrings.previewScore}:</strong> ${data.score}</div>
-            </div>
-            <div class="${contentClass}">${data.is_html ? data.preview : escapeHtml(data.preview)}</div>
+        const metaHtml = `
+            <div class="preview-meta"><strong>${bulkStrings.previewSender}:</strong> ${escapeHtml(data.sender)}</div>
+            <div class="preview-meta"><strong>${bulkStrings.previewSubject}:</strong> ${escapeHtml(data.subject)}</div>
+            <div class="preview-meta"><strong>${bulkStrings.previewTime}:</strong> ${escapeHtml(data.timestamp)} | <strong>${bulkStrings.previewScore}:</strong> ${data.score}</div>
         `;
+
+        if (data.is_html) {
+            previewModalContent.innerHTML = `
+                <div class="preview-header">
+                    <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
+                    ${metaHtml}
+                </div>
+                <div class="preview-message-body">
+                    <iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe>
+                </div>
+            `;
+            const iframe = previewModalContent.querySelector('.preview-iframe');
+            iframe.srcdoc = data.preview;
+        } else {
+            previewModalContent.innerHTML = `
+                <div class="preview-header">
+                    <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
+                    ${metaHtml}
+                </div>
+                <div class="preview-message-body">
+                    <pre>${escapeHtml(data.preview)}</pre>
+                </div>
+            `;
+        }
     }
 
-    function hidePreview() {
-        const tooltip = document.getElementById('previewTooltip');
-        tooltip.classList.remove('active');
+    function closePreviewModal() {
+        previewModal.classList.remove('active');
+        previewModal.setAttribute('aria-hidden', 'true');
 
         if (activeRequest) {
             activeRequest.abort();
             activeRequest = null;
         }
-    }
-
-    function positionTooltip(x, y) {
-        const tooltip = document.getElementById('previewTooltip');
-        const offset = 15;
-        const padding = 10;
-
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        let left = x + offset;
-        let top = y + offset;
-
-        tooltip.style.opacity = '0';
-        tooltip.style.display = 'block';
-        const rect = tooltip.getBoundingClientRect();
-        tooltip.style.opacity = '';
-
-        if (left + rect.width > viewportWidth - padding) {
-            left = x - rect.width - offset;
-        }
-
-        if (top + rect.height > viewportHeight - padding) {
-            top = y - rect.height - offset;
-        }
-
-        left = Math.max(padding, Math.min(left, viewportWidth - rect.width - padding));
-        top = Math.max(padding, Math.min(top, viewportHeight - rect.height - padding));
-
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-        tooltip.style.display = '';
     }
 
     function escapeHtml(text) {

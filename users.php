@@ -523,12 +523,14 @@ if ($isAdmin) {
     $active_users = count(array_filter($users, function($u) { return $u['active']; }));
     $admin_count = count(array_filter($users, function($u) { return $u['role'] === 'admin'; }));
     $domain_admin_count = count(array_filter($users, function($u) { return $u['role'] === 'domain_admin'; }));
+    $quarantine_user_count = count(array_filter($users, function($u) { return $u['role'] === 'quarantine_user'; }));
 } else {
     $users = [];
     $total_users = 0;
     $active_users = 0;
     $admin_count = 0;
     $domain_admin_count = 0;
+    $quarantine_user_count = 0;
 }
 
 $domainOptions = [];
@@ -598,6 +600,7 @@ foreach ($mailboxes as $mailbox) {
 $role_labels = [
     'admin' => __('role_admin'),
     'domain_admin' => __('role_domain_admin'),
+    'quarantine_user' => __('role_quarantine_user'),
     'viewer' => __('role_viewer'),
 ];
 
@@ -668,6 +671,10 @@ include 'menu.php';
 
         .stat-inline-item.domain-admin {
             border-left-color: #f39c12;
+        }
+
+        .stat-inline-item.quarantine-user {
+            border-left-color: #16a085;
         }
 
         .stat-inline-item.active {
@@ -802,6 +809,11 @@ include 'menu.php';
         .role-domain-admin {
             background: #fff3e0;
             color: #e65100;
+        }
+
+        .role-quarantine-user {
+            background: #e0f7f4;
+            color: #00695c;
         }
 
         .role-viewer {
@@ -1198,6 +1210,10 @@ include 'menu.php';
                     <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_domain_admin_label')); ?></span>
                     <span class="stat-inline-value"><?php echo $domain_admin_count; ?></span>
                 </div>
+                <div class="stat-inline-item quarantine-user">
+                    <span class="stat-inline-label"><?php echo htmlspecialchars(__('users_quarantine_user_label')); ?></span>
+                    <span class="stat-inline-value"><?php echo $quarantine_user_count; ?></span>
+                </div>
             </div>
         </div>
     <?php else: ?>
@@ -1260,6 +1276,9 @@ include 'menu.php';
                                 } elseif ($user['role'] === 'domain_admin') {
                                     $roleClass = 'role-domain-admin';
                                     $roleName = $role_labels['domain_admin'];
+                                } elseif ($user['role'] === 'quarantine_user') {
+                                    $roleClass = 'role-quarantine-user';
+                                    $roleName = $role_labels['quarantine_user'];
                                 }
                                 ?>
                                 <span class="role-badge <?php echo $roleClass; ?>"><?php echo $roleName; ?></span>
@@ -1477,6 +1496,7 @@ include 'menu.php';
                     <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
                     <select name="role" id="addRole" onchange="toggleDomains('addRole', 'addDomains')" required>
                         <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
+                        <option value="quarantine_user"><?php echo htmlspecialchars($role_labels['quarantine_user']); ?></option>
                         <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
                         <option value="admin"><?php echo htmlspecialchars($role_labels['admin']); ?></option>
                     </select>
@@ -1527,6 +1547,7 @@ include 'menu.php';
                     <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
                     <select name="role" id="editRole" onchange="toggleDomains('editRole', 'editDomains')" required>
                         <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
+                        <option value="quarantine_user"><?php echo htmlspecialchars($role_labels['quarantine_user']); ?></option>
                         <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
                         <option value="admin"><?php echo htmlspecialchars($role_labels['admin']); ?></option>
                     </select>

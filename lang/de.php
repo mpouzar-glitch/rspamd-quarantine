@@ -70,6 +70,7 @@ return [
     // User roles
     'role_admin' => 'Administrator',
     'role_domain_admin' => 'Domain-Administrator',
+    'role_quarantine_user' => 'Quarantäne-Benutzer',
     'role_viewer' => 'Betrachter',
 
     // Quarantine
@@ -347,6 +348,7 @@ return [
     'users_active_label' => 'Aktiv',
     'users_admin_label' => 'Administratoren',
     'users_domain_admin_label' => 'Domain-Administratoren',
+    'users_quarantine_user_label' => 'Quarantäne-Benutzer',
     'users_no_users_title' => 'Keine Benutzer',
     'users_no_users_desc' => 'Fügen Sie den ersten Benutzer über die Schaltfläche oben hinzu',
     'users_label_you' => 'SIE',
