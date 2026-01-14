@@ -30,6 +30,7 @@ return [
     'size' => 'Veľkosť',
     'subject' => 'Predmet',
     'status' => 'Stav',
+    'status_explanation' => 'Vysvetlenie stavu',
     'action' => 'Akcia',
     'actions' => 'Akcie',
     'details' => 'Detaily',
