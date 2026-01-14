@@ -397,7 +397,7 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <a href="view.php?id=<?php echo $msgId; ?>" class="subject-preview-btn">
+                                <a href="view.php?id=<?php echo $msgId; ?>" class="subject-preview-btn email-link">
                                     <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
                                 </a>
                                 <?php if ($canManageMaps && !empty(trim($subject))): ?>
