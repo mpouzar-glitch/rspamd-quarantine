@@ -111,6 +111,10 @@ try {
         $body_decoded = @iconv($charset, 'UTF-8//IGNORE', $body_decoded) ?: $body_decoded;
     }
 
+    $looksLikeHtml = function (string $value): bool {
+        return preg_match('/<\/?(html|body|head|table|div|span|p|br|img|a)\b/i', $value) === 1;
+    };
+
     // Handle multipart
     $body_text = '';
     $body_html = '';
@@ -134,6 +138,10 @@ try {
 
                 if (preg_match('/Content-Type:\s*([^\r\n;]+)/i', $part_headers, $ct_match)) {
                     $part_type = trim($ct_match[1]);
+                    $part_charset = 'UTF-8';
+                    if (preg_match('/charset\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $part_headers, $charset_match)) {
+                        $part_charset = strtoupper($charset_match[1]);
+                    }
 
                     if (preg_match('/Content-Transfer-Encoding:\s*(\S+)/i', $part_headers, $enc_match)) {
                         $part_encoding = strtolower(trim($enc_match[1]));
@@ -142,6 +150,10 @@ try {
                         } elseif ($part_encoding === 'quoted-printable') {
                             $part_body = quoted_printable_decode($part_body);
                         }
+                    }
+
+                    if (!in_array($part_charset, ['UTF-8', 'US-ASCII'], true)) {
+                        $part_body = @iconv($part_charset, 'UTF-8//IGNORE', $part_body) ?: $part_body;
                     }
 
                     if (stripos($part_type, 'text/plain') !== false) {
@@ -158,6 +170,11 @@ try {
         } else {
             $body_text = $body_decoded;
         }
+    }
+
+    if (empty($body_html) && !empty($body_text) && $looksLikeHtml($body_text)) {
+        $body_html = $body_text;
+        $body_text = strip_tags($body_text);
     }
 
     // Prepare preview based on format
@@ -184,7 +201,8 @@ try {
         $preview = preg_replace('/<form\b[^>]*>.*?<\/form>/is', '', $preview);
 
         // Convert absolute URLs to prevent tracking
-        $preview = preg_replace('/(src|href)\s*=\s*["\x27][^"\x27]*["\x27]/i', '$1="#blocked"', $preview);
+        $preview = preg_replace('/\bsrc\s*=\s*["\x27][^"\x27]*["\x27]/i', 'src="#blocked"', $preview);
+        $preview = preg_replace('/<a\b([^>]*?)\bhref\s*=\s*["\x27][^"\x27]*["\x27]/i', '<a$1href="#"', $preview);
 
         $is_html_preview = true;
     } else {
