@@ -1530,7 +1530,7 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
-                    <input type="email" name="email" id="addEmail" required>
+                    <input type="text" name="email" id="addEmail" inputmode="email" autocomplete="email" required>
                     <textarea name="email" id="addEmailList" style="display:none;" disabled></textarea>
                     <small id="addEmailHint" style="display:none;"><?php echo htmlspecialchars(__('users_quarantine_email_hint')); ?></small>
                 </div>
@@ -1583,7 +1583,7 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
-                    <input type="email" name="email" id="editEmail" required>
+                    <input type="text" name="email" id="editEmail" inputmode="email" autocomplete="email" required>
                     <textarea name="email" id="editEmailList" style="display:none;" disabled></textarea>
                     <small id="editEmailHint" style="display:none;"><?php echo htmlspecialchars(__('users_quarantine_email_hint')); ?></small>
                 </div>
