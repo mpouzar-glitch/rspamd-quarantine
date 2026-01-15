@@ -2224,7 +2224,7 @@ function getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, 
 
     $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
     $virusStats = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $entries = parseSymbolsWithOptions($row['symbols']);
         foreach ($entries as $entry) {
             $name = $entry['name'] ?? '';
