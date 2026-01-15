@@ -473,3 +473,47 @@
 .messages-table tr {
     height: auto;
 }
+
+/* Dynamické přizpůsobení šířky sloupců pro antivirus tabulku */
+.antivirus-table {
+    table-layout: auto;
+    width: 100%;
+}
+
+.antivirus-table .col-number {
+    width: 5%;
+    min-width: 40px;
+    white-space: nowrap;
+}
+
+.antivirus-table .col-virus-type {
+    width: 35%;
+    min-width: 100px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.antivirus-table .col-virus-source {
+    width: 15%;
+    min-width: 80px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.antivirus-table .col-count {
+    width: 15%;
+    min-width: 40px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Responsivní úpravy */
+@media screen and (max-width: 600px) {
+    .antivirus-table .col-virus-type {
+        width: 40%;
+    }
+    
+    .antivirus-table .col-virus-source {
+        width: 40%;
+    }
+}

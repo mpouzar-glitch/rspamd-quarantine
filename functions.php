@@ -2166,10 +2166,10 @@ function buildMessageSymbolData($symbols) {
     });
 
     $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-    $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
+    $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'ARCHIVE_WITH_EXECUTABLE'];
     $statusSymbolGroups = [
-        'virus' => ['CLAM_VIRUS', 'ESET_VIRUS'],
-        'bad-extension' => ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE'],
+        'virus' => $virusSymbols,
+        'bad-extension' => $badAttachmentSymbols,
         'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
         'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
     ];

@@ -336,12 +336,6 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-}
-
 th {
     background: #34495e;
     color: white;

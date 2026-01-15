@@ -219,7 +219,7 @@ include 'menu.php';
     <!-- Top Recipients Table -->
     <div class="table-container">
         <h2><i class="fas fa-users"></i> <?php echo htmlspecialchars(__('stats_top_recipients')); ?></h2>
-        <table class="messages-table stats-table">
+        <table class="messages-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -318,7 +318,7 @@ include 'menu.php';
     <!-- Top Symbols Table -->
     <div class="table-container">
         <h2><i class="fas fa-flag"></i> <?php echo htmlspecialchars(__('stats_top_symbols')); ?></h2>
-        <table class="messages-table stats-table">
+        <table class="messages-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -358,13 +358,13 @@ include 'menu.php';
     <!-- Antivirus Types Table -->
     <div class="table-container">
         <h2><i class="fas fa-virus"></i> <?php echo htmlspecialchars(__('stats_antivirus_types')); ?></h2>
-        <table class="messages-table stats-table">
+        <table class="messages-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th><?php echo substr(htmlspecialchars(__('stats_antivirus_type_label')),0,25); ?></th>
-                    <th><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
-                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th class="col-number">#</th>
+                    <th class="col-virus-type"><?php echo htmlspecialchars(__('stats_antivirus_type_label')); ?></th>
+                    <th class="col-virus-source"><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
+                    <th class="col-count"><?php echo htmlspecialchars(__('stats_count')); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -378,16 +378,16 @@ include 'menu.php';
                 $virusSourcesLabel = !empty($virusSources) ? implode(', ', $virusSources) : __('stats_antivirus_unknown');
                 ?>
                 <tr>
-                    <td><?php echo $i + 1; ?></td>
-                    <td><strong><?php echo truncateWithTooltip($virusType, 50); ?></strong></td>
-                    <td><?php echo htmlspecialchars($virusSourcesLabel); ?></td>
-                    <td><?php echo number_format($virusStat['count']); ?></td>
+                    <td class="col-number"><?php echo $i + 1; ?></td>
+                    <td class="col-virus-type"><strong><?php echo truncateWithTooltip($virusType, 40); ?></strong></td>
+                    <td class="col-virus-source"><?php echo htmlspecialchars($virusSourcesLabel); ?></td>
+                    <td class="col-count"><?php echo number_format($virusStat['count']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
-
+    
     <!-- Top Sender Domains Table -->
     <div class="table-container">
         <h2 class="table-header-with-filter">
@@ -405,7 +405,7 @@ include 'menu.php';
                 </button>
             </form>
         </h2>
-        <table class="messages-table stats-table">
+        <table class="messages-table">
             <thead>
                 <tr>
                     <th>#</th>
