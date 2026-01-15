@@ -50,6 +50,7 @@ $sortableColumns = [
     'score' => 'score',
     'ip_address' => 'ip_address',
     'hostname' => 'hostname',
+    'size_bytes' => 'size_bytes',
 ];
 $sort = $_GET['sort'] ?? 'timestamp';
 $sortDir = strtolower($_GET['dir'] ?? 'desc');
@@ -233,6 +234,12 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
+                            <th class="col-size">
+                                <a class="sort-link <?php echo $sort === 'size_bytes' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('size_bytes'); ?>">
+                                    <?php echo htmlspecialchars(__('msg_size')); ?>
+                                    <i class="fas <?php echo $getSortIcon('size_bytes'); ?>"></i>
+                                </a>
+                            </th>
                             <th style="width: 180px;">STATUS</th>
                             <th class="col-ip">
                                 <a class="sort-link <?php echo $sort === 'ip_address' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('ip_address'); ?>">
@@ -398,6 +405,9 @@ include 'menu.php';
                                             </div>
                                         <?php endif; ?>
                                     </span>
+                                </td>
+                                <td class="size-field">
+                                    <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
                                 </td>
                                 <td class="status-explanation-cell">
                                     <?php
