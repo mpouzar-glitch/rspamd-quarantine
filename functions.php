@@ -2126,7 +2126,7 @@ function buildMessageSymbolData($symbols) {
         }
         foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
             if (in_array($name, $groupSymbols, true)) {
-                $statusSymbolMatches[$groupKey][] = $name;
+                $statusSymbolMatches[$groupKey][] = substr($name,0,10);
             }
         }
     }
