@@ -222,10 +222,10 @@ include 'menu.php';
         <table class="messages-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th>#</th>
+                    <th><?php echo htmlspecialchars(__('msg_recipient')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
@@ -262,10 +262,10 @@ include 'menu.php';
         <table class="messages-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_sender')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th>#</th>
+                    <th><?php echo htmlspecialchars(__('msg_sender')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
@@ -321,10 +321,10 @@ include 'menu.php';
         <table class="messages-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 300px;"><?php echo htmlspecialchars(__('msg_symbols')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th>#</th>
+                    <th><?php echo htmlspecialchars(__('msg_symbols')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
@@ -408,10 +408,10 @@ include 'menu.php';
         <table class="messages-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 300px;"><?php echo htmlspecialchars(__('stats_sender_domain')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
+                    <th>#</th>
+                    <th><?php echo htmlspecialchars(__('stats_sender_domain')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_avg_score_column')); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_max_score_column')); ?></th>
                 </tr>
             </thead>
