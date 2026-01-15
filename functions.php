@@ -517,18 +517,34 @@ function decodeMimeHeader($header) {
         return '';
     }
 
+    $original = $header;
     // Remove quotes
     $header = trim($header, '"\'');
 
-    // Try mb_decode_mimeheader first
     $decoded = mb_decode_mimeheader($header);
 
-    // If still contains encoded parts, try iconv_mime_decode
-    if (preg_match('/=\?[^?]+\?[BQ]\?[^?]+\?=/i', $decoded)) {
-        $decoded = iconv_mime_decode($decoded, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+    $hasEncodedWords = preg_match('/=\?[^?]+\?[BQ]\?[^?]+\?=/i', $header);
+    $needsRecode = $hasEncodedWords || !mb_check_encoding($decoded, 'UTF-8');
+
+    if ($needsRecode) {
+        $iconvDecoded = iconv_mime_decode(
+            $header,
+            ICONV_MIME_DECODE_CONTINUE_ON_ERROR | ICONV_MIME_DECODE_LAX,
+            'UTF-8'
+        );
+        if (!empty($iconvDecoded)) {
+            $decoded = $iconvDecoded;
+        }
     }
 
-    return $decoded ?: $header;
+    if (!mb_check_encoding($decoded, 'UTF-8')) {
+        $converted = mb_convert_encoding($decoded, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1250, Windows-1252');
+        if (!empty($converted)) {
+            $decoded = $converted;
+        }
+    }
+
+    return $decoded ?: $original;
 }
 
 // ============================================
