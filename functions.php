@@ -2216,7 +2216,7 @@ function getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, 
     $sql = "SELECT symbols
             FROM message_trace
             WHERE timestamp BETWEEN ? AND ?
-            $domainFilter
+            AND ($domainFilter)
             AND symbols IS NOT NULL
             AND symbols != ''";
 
