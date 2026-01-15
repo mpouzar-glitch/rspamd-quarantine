@@ -213,6 +213,10 @@ return [
     'stats_top_senders' => 'Top senders',
     'stats_top_recipients' => 'Top recipients',
     'stats_top_symbols' => 'Top symbols',
+    'stats_antivirus_types' => 'Antivirus detections by type',
+    'stats_antivirus_type_label' => 'Virus type',
+    'stats_antivirus_source_label' => 'Source',
+    'stats_antivirus_unknown' => 'Unknown',
 
     // Pagination
     'pagination_first' => 'First',

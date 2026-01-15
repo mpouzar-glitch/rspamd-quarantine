@@ -213,6 +213,10 @@ return [
     'stats_top_senders' => 'Top odosielatelia',
     'stats_top_recipients' => 'Top príjemcovia',
     'stats_top_symbols' => 'Top symboly',
+    'stats_antivirus_types' => 'Antivírusové detekcie podľa typu',
+    'stats_antivirus_type_label' => 'Typ vírusu',
+    'stats_antivirus_source_label' => 'Zdroj',
+    'stats_antivirus_unknown' => 'Neznáme',
 
     // Pagination
     'pagination_first' => 'Prvá',
