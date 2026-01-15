@@ -2126,7 +2126,7 @@ function buildMessageSymbolData($symbols) {
         }
         foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
             if (in_array($name, $groupSymbols, true)) {
-                $statusSymbolMatches[$groupKey][] = $name;
+                $statusSymbolMatches[$groupKey][] = substr($name,0,10);
             }
         }
     }
@@ -2216,7 +2216,7 @@ function getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, 
     $sql = "SELECT symbols
             FROM message_trace
             WHERE timestamp BETWEEN ? AND ?
-            $domainFilter
+            AND ($domainFilter)
             AND symbols IS NOT NULL
             AND symbols != ''";
 
