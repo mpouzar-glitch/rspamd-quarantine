@@ -73,6 +73,15 @@ define('AUTH_ENABLED', true);
 define('USE_DATABASE_AUTH', true); // Nové: použít DB auth místo statického
 
 // ============================================
+// IMAP Authentication (fallback for email usernames)
+// ============================================
+define('IMAP_AUTH_ENABLED', false);
+define('IMAP_SERVER', 'mail.example.com');
+define('IMAP_PORT', 993);
+define('IMAP_SECURITY', 'ssl'); // ssl, tls, or none
+define('IMAP_VALIDATE_CERT', true);
+
+// ============================================
 // Application Settings
 // ============================================
 if (!defined('APP_NAME')) {

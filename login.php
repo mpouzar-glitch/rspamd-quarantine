@@ -11,6 +11,50 @@ require_once __DIR__ . '/lang_helper.php';
 $error_message = '';
 $success_message = '';
 
+function isEmailUsername(string $username): bool {
+    return filter_var($username, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+function isImapAuthEnabled(): bool {
+    return defined('IMAP_AUTH_ENABLED') && IMAP_AUTH_ENABLED === true;
+}
+
+function attemptImapLogin(string $email, string $password): bool {
+    if (!function_exists('imap_open')) {
+        error_log('IMAP login failed: PHP IMAP extension is not available.');
+        return false;
+    }
+
+    if (!defined('IMAP_SERVER') || IMAP_SERVER === '') {
+        error_log('IMAP login failed: IMAP_SERVER is not configured.');
+        return false;
+    }
+
+    $port = defined('IMAP_PORT') ? (int) IMAP_PORT : 993;
+    $security = defined('IMAP_SECURITY') ? strtolower((string) IMAP_SECURITY) : 'ssl';
+    $flags = '/imap';
+    if (in_array($security, ['ssl', 'tls'], true)) {
+        $flags .= '/' . $security;
+    }
+    if (defined('IMAP_VALIDATE_CERT') && IMAP_VALIDATE_CERT === false) {
+        $flags .= '/novalidate-cert';
+    }
+
+    $mailbox = sprintf('{%s:%d%s}INBOX', IMAP_SERVER, $port, $flags);
+
+    $imapStream = @imap_open($mailbox, $email, $password, 0, 1);
+    if ($imapStream === false) {
+        $lastError = imap_last_error();
+        if ($lastError) {
+            error_log('IMAP login failed: ' . $lastError);
+        }
+        return false;
+    }
+
+    imap_close($imapStream);
+    return true;
+}
+
 // Handle logout
 if (isset($_GET['logout'])) {
     if (isAuthenticated()) {
@@ -109,6 +153,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 header('Location: index.php');
                 exit;
 
+            } elseif (!$user && isEmailUsername($username) && isImapAuthEnabled()) {
+                if (attemptImapLogin($username, $password)) {
+                    $_SESSION['authenticated'] = true;
+                    $_SESSION['user_id'] = null;
+                    $_SESSION['username'] = $username;
+                    $_SESSION['user_email'] = $username;
+                    $_SESSION['user_role'] = 'quarantine_user';
+                    $_SESSION['user_domains'] = [];
+                    $_SESSION['last_activity'] = time();
+
+                    logAudit(
+                        null,
+                        $username,
+                        'login_success',
+                        'session',
+                        null,
+                        'User logged in successfully via IMAP'
+                    );
+
+                    header('Location: index.php');
+                    exit;
+                }
+
+                $error_message = __('login_failed');
+
+                logAudit(
+                    null,
+                    $username,
+                    'login_failed',
+                    'session',
+                    null,
+                    'Failed IMAP login attempt for username: ' . $username
+                );
             } else {
                 // Failed login
                 $error_message = __('login_failed');
