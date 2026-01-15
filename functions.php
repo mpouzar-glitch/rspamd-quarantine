@@ -1674,7 +1674,8 @@ function buildTraceQuery($filters = [], &$params = [], $options = []) {
             action,
             score,
             symbols,
-            hostname
+            hostname,
+            size_bytes
         FROM message_trace
         WHERE " . implode(' AND ', $where) . "
     ";
