@@ -14,12 +14,6 @@ requireAuth();
 // Determine return URL
 $returnUrl = $_POST['return_url'] ?? ($_SERVER['HTTP_REFERER'] ?? 'index.php');
 
-if (!checkPermission('quarantine_user')) {
-    $_SESSION['error_msg'] = 'Nemáte oprávnění k operacím';
-    header('Location: index.php');
-    exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ' . $returnUrl);
     exit;
@@ -84,7 +78,7 @@ if (!function_exists('learnMessage')) {
  */
 if (!function_exists('safeSendmailRelease')) {
     function safeSendmailRelease($db, $id, $user) {
-        $stmt = $db->prepare("SELECT message_content, sender, recipients FROM quarantine_messages WHERE id = ? AND state = 0");
+        $stmt = $db->prepare("SELECT message_content, sender, recipients FROM quarantine_messages WHERE id = ?");
         $stmt->execute([$id]);
         $msg = $stmt->fetch();
 
@@ -109,7 +103,7 @@ if (!function_exists('safeSendmailRelease')) {
         $result_code = 0;
         exec($command . " < $tmp_file 2>&1", $output, $result_code);
         unlink($tmp_file);
-
+       
         if ($result_code !== 0) {
             error_log("Sendmail failed ID $id: " . implode("\n", $output));
             return false;
@@ -138,7 +132,7 @@ if (empty($operation) || empty($message_ids_str)) {
 }
 
 if (!checkPermission('domain_admin')) {
-    $allowedOperations = ['learn_ham', 'learn_spam', 'release'];
+    $allowedOperations = ['learn_ham', 'learn_spam', 'release', 'delete'];
     if (!in_array($operation, $allowedOperations, true)) {
         $_SESSION['error_msg'] = 'Nemáte oprávnění k této operaci';
         if (!$is_bulk_mode) {

@@ -2017,7 +2017,6 @@ function parseSymbolsWithOptions($symbols) {
     if (empty($symbols)) {
         return $entries;
     }
-
     $decoded = json_decode($symbols, true);
     if (is_array($decoded)) {
         foreach ($decoded as $key => $value) {
@@ -2214,7 +2213,7 @@ function getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, $limit =
  */
 function getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, $limit = 20) {
     $sql = "SELECT symbols
-            FROM message_trace
+            FROM quarantine_messages
             WHERE timestamp BETWEEN ? AND ?
             AND ($domainFilter)
             AND symbols IS NOT NULL

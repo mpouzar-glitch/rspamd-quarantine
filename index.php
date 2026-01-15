@@ -25,7 +25,6 @@ $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 $returnUrl = $_SERVER['REQUEST_URI'] ?? 'index.php';
 $canManageMaps = checkPermission('domain_admin');
-$canDeleteMessages = checkPermission('domain_admin');
 
 // Get filters from request
 $pageSessionKey = 'index_page';
@@ -431,16 +430,14 @@ include 'menu.php';
                                             <i class="fas fa-paper-plane"></i>
                                         </button>
                                     </form>
-                                    <?php if ($canDeleteMessages): ?>
-                                        <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
-                                            <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
-                                            <input type="hidden" name="operation" value="delete">
-                                            <input type="hidden" name="return_url" value="index.php">
-                                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
+                                    <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
+                                        <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
+                                        <input type="hidden" name="operation" value="delete">
+                                        <input type="hidden" name="return_url" value="index.php">
+                                        <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

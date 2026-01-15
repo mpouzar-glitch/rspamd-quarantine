@@ -350,19 +350,17 @@ try {
                 <?php endif; ?>
             </a>
 
-            <?php if (checkPermission('domain_admin')): ?>
+            <?php if (checkPermission('domain_admin')): ?>            
                 <a href="bulk_operations.php?reset_page=1" class="nav-item <?= $current_page === 'bulk_operations.php' ? 'active' : '' ?>">
                     <i class="fas fa-tasks"></i>
                     <span><?php echo htmlspecialchars(__('nav_bulk_operations')); ?></span>
                 </a>
             <?php endif; ?>
 
-            <?php if (checkPermission('domain_admin')): ?>            
-                <a href="trace.php?reset_page=1" class="nav-item <?= $current_page === 'trace.php' ? 'active' : '' ?>">
-                    <i class="fas fa-search"></i>
-                    <span><?php echo htmlspecialchars(__('nav_trace')); ?></span>
-                </a>
-            <?php endif; ?>
+            <a href="trace.php?reset_page=1" class="nav-item <?= $current_page === 'trace.php' ? 'active' : '' ?>">
+                <i class="fas fa-search"></i>
+                <span><?php echo htmlspecialchars(__('nav_trace')); ?></span>
+            </a>
 
             <?php if (checkPermission('domain_admin')): ?>
                 <a href="audit.php" class="nav-item <?= $current_page === 'audit.php' ? 'active' : '' ?>">

@@ -358,13 +358,13 @@ include 'menu.php';
     <!-- Antivirus Types Table -->
     <div class="table-container">
         <h2><i class="fas fa-virus"></i> <?php echo htmlspecialchars(__('stats_antivirus_types')); ?></h2>
-        <table class="messages-table">
+        <table class="messages-table table {width: 100%; table-layout: auto;}">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 360px;"><?php echo htmlspecialchars(__('stats_antivirus_type_label')); ?></th>
-                    <th style="width: 160px;"><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
-                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                    <th>#</th>
+                    <th><?php echo htmlspecialchars(__('stats_antivirus_type_label')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
+                    <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
                 </tr>
             </thead>
             <tbody>
