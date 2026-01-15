@@ -34,15 +34,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $username = trim($_POST['username']);
             $password = $_POST['password'];
-            $email = trim($_POST['email']);
+            $emailInput = trim($_POST['email']);
             $role = $_POST['role'];
             $domains_text = $_POST['domains'] ?? '';
             $active = isset($_POST['active']) ? 1 : 0;
 
             // Validate
-            if (empty($username) || empty($password) || empty($email) || empty($role)) {
+            if (empty($username) || empty($password) || empty($emailInput) || empty($role)) {
                 $_SESSION['error_msg'] = __('users_required_fields');
                 break;
+            }
+
+            $invalidEmails = [];
+            if ($role === 'quarantine_user') {
+                $emails = parseEmailList($emailInput, $invalidEmails);
+                if (empty($emails) || !empty($invalidEmails)) {
+                    $_SESSION['error_msg'] = __('users_invalid_emails');
+                    break;
+                }
+                $email = implode("\n", $emails);
+            } else {
+                if (!filter_var($emailInput, FILTER_VALIDATE_EMAIL)) {
+                    $_SESSION['error_msg'] = __('users_invalid_email');
+                    break;
+                }
+                $email = $emailInput;
             }
 
             // Check if username exists
@@ -95,16 +111,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $user_id = intval($_POST['user_id']);
             $username = trim($_POST['username']);
-            $email = trim($_POST['email']);
+            $emailInput = trim($_POST['email']);
             $role = $_POST['role'];
             $domains_text = $_POST['domains'] ?? '';
             $active = isset($_POST['active']) ? 1 : 0;
             $password = $_POST['password'] ?? '';
 
             // Validate
-            if (empty($username) || empty($email) || empty($role)) {
+            if (empty($username) || empty($emailInput) || empty($role)) {
                 $_SESSION['error_msg'] = __('users_required_fields');
                 break;
+            }
+
+            $invalidEmails = [];
+            if ($role === 'quarantine_user') {
+                $emails = parseEmailList($emailInput, $invalidEmails);
+                if (empty($emails) || !empty($invalidEmails)) {
+                    $_SESSION['error_msg'] = __('users_invalid_emails');
+                    break;
+                }
+                $email = implode("\n", $emails);
+            } else {
+                if (!filter_var($emailInput, FILTER_VALIDATE_EMAIL)) {
+                    $_SESSION['error_msg'] = __('users_invalid_email');
+                    break;
+                }
+                $email = $emailInput;
             }
 
             // Check if username exists (except current user)
@@ -1265,7 +1297,19 @@ include 'menu.php';
                                     <span style="color: #3498db; font-size: 10px;"> (<?php echo htmlspecialchars(__('users_label_you')); ?>)</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                            <td>
+                                <?php
+                                $emailDisplay = $user['email'];
+                                if ($user['role'] === 'quarantine_user') {
+                                    $invalidEmails = [];
+                                    $parsedEmails = parseEmailList($user['email'], $invalidEmails);
+                                    if (!empty($parsedEmails)) {
+                                        $emailDisplay = implode(', ', $parsedEmails);
+                                    }
+                                }
+                                ?>
+                                <?php echo htmlspecialchars($emailDisplay); ?>
+                            </td>
                             <td>
                                 <?php
                                 $roleClass = 'role-viewer';
@@ -1486,7 +1530,9 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
-                    <input type="email" name="email" required>
+                    <input type="text" name="email" id="addEmail" inputmode="email" autocomplete="email" required>
+                    <textarea name="email" id="addEmailList" style="display:none;" disabled></textarea>
+                    <small id="addEmailHint" style="display:none;"><?php echo htmlspecialchars(__('users_quarantine_email_hint')); ?></small>
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_password')); ?> *</label>
@@ -1494,7 +1540,7 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
-                    <select name="role" id="addRole" onchange="toggleDomains('addRole', 'addDomains')" required>
+                    <select name="role" id="addRole" onchange="toggleRoleFields('addRole', 'addDomains', 'addEmail', 'addEmailList', 'addEmailHint')" required>
                         <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
                         <option value="quarantine_user"><?php echo htmlspecialchars($role_labels['quarantine_user']); ?></option>
                         <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
@@ -1537,7 +1583,9 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_email')); ?> *</label>
-                    <input type="email" name="email" id="editEmail" required>
+                    <input type="text" name="email" id="editEmail" inputmode="email" autocomplete="email" required>
+                    <textarea name="email" id="editEmailList" style="display:none;" disabled></textarea>
+                    <small id="editEmailHint" style="display:none;"><?php echo htmlspecialchars(__('users_quarantine_email_hint')); ?></small>
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_new_password_hint')); ?></label>
@@ -1545,7 +1593,7 @@ include 'menu.php';
                 </div>
                 <div class="form-group">
                     <label><?php echo htmlspecialchars(__('users_role')); ?> *</label>
-                    <select name="role" id="editRole" onchange="toggleDomains('editRole', 'editDomains')" required>
+                    <select name="role" id="editRole" onchange="toggleRoleFields('editRole', 'editDomains', 'editEmail', 'editEmailList', 'editEmailHint')" required>
                         <option value="viewer"><?php echo htmlspecialchars($role_labels['viewer']); ?></option>
                         <option value="quarantine_user"><?php echo htmlspecialchars($role_labels['quarantine_user']); ?></option>
                         <option value="domain_admin"><?php echo htmlspecialchars($role_labels['domain_admin']); ?></option>
@@ -1740,6 +1788,7 @@ const usersStrings = {
 
 function openAddModal() {
     document.getElementById('addModal').style.display = 'block';
+    toggleRoleFields('addRole', 'addDomains', 'addEmail', 'addEmailList', 'addEmailHint');
 }
 
 function closeAddModal() {
@@ -1750,11 +1799,12 @@ function openEditModal(user) {
     document.getElementById('editUserId').value = user.id;
     document.getElementById('editUsername').value = user.username;
     document.getElementById('editEmail').value = user.email;
+    document.getElementById('editEmailList').value = user.email;
     document.getElementById('editRole').value = user.role;
     document.getElementById('editDomainsText').value = user.domains || '';
     document.getElementById('editActive').checked = user.active == 1;
 
-    toggleDomains('editRole', 'editDomains');
+    toggleRoleFields('editRole', 'editDomains', 'editEmail', 'editEmailList', 'editEmailHint');
     document.getElementById('editModal').style.display = 'block';
 }
 
@@ -1809,14 +1859,42 @@ function closeAliasModal() {
     document.getElementById('aliasModal').style.display = 'none';
 }
 
-function toggleDomains(roleId, domainsId) {
+function toggleRoleFields(roleId, domainsId, emailInputId, emailListId, emailHintId) {
     const role = document.getElementById(roleId).value;
     const domainsDiv = document.getElementById(domainsId);
+    const emailInput = document.getElementById(emailInputId);
+    const emailList = document.getElementById(emailListId);
+    const emailHint = document.getElementById(emailHintId);
 
     if (role === 'domain_admin') {
         domainsDiv.style.display = 'block';
     } else {
         domainsDiv.style.display = 'none';
+    }
+
+    if (role === 'quarantine_user') {
+        if (emailList.value.trim() === '' && emailInput.value.trim() !== '') {
+            emailList.value = emailInput.value;
+        }
+        emailInput.style.display = 'none';
+        emailInput.disabled = true;
+        emailInput.required = false;
+        emailList.style.display = 'block';
+        emailList.disabled = false;
+        emailList.required = true;
+        emailHint.style.display = 'block';
+    } else {
+        if (emailInput.value.trim() === '' && emailList.value.trim() !== '') {
+            const firstEmail = emailList.value.split(/[\s,;]+/).filter(Boolean)[0] || '';
+            emailInput.value = firstEmail;
+        }
+        emailInput.style.display = 'block';
+        emailInput.disabled = false;
+        emailInput.required = true;
+        emailList.style.display = 'none';
+        emailList.disabled = true;
+        emailList.required = false;
+        emailHint.style.display = 'none';
     }
 }
 

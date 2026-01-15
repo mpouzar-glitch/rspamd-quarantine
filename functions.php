@@ -163,6 +163,7 @@ function getCurrentUser() {
         'id' => $_SESSION['user_id'] ?? null,
         'username' => $_SESSION['username'] ?? null,
         'email' => $_SESSION['user_email'] ?? null,
+        'emails' => $_SESSION['user_emails'] ?? [],
         'role' => $_SESSION['user_role'] ?? 'viewer',
         'domains' => $_SESSION['user_domains'] ?? []
     ];
@@ -191,6 +192,44 @@ function checkPermission($required_role) {
 // ============================================
 // Domain Access Functions
 // ============================================
+
+function parseEmailList(string $input, array &$invalid = []): array {
+    $invalid = [];
+    $emails = [];
+    $seen = [];
+    $parts = preg_split('/[\s,;]+/', $input);
+
+    foreach ($parts as $part) {
+        $email = trim($part);
+        if ($email === '') {
+            continue;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $invalid[] = $email;
+            continue;
+        }
+
+        $key = strtolower($email);
+        if (!isset($seen[$key])) {
+            $seen[$key] = true;
+            $emails[] = $email;
+        }
+    }
+
+    return $emails;
+}
+
+function getQuarantineUserEmails(): array {
+    $emails = $_SESSION['user_emails'] ?? [];
+    if (!is_array($emails) || empty($emails)) {
+        $fallback = $_SESSION['user_email'] ?? '';
+        $invalid = [];
+        $emails = parseEmailList((string) $fallback, $invalid);
+    }
+
+    return $emails;
+}
 
 function checkDomainAccess($email) {
     $user_role = $_SESSION['user_role'] ?? 'viewer';
@@ -225,12 +264,18 @@ function checkDomainAccess($email) {
     }
 
     if ($user_role === 'quarantine_user') {
-        $user_email = $_SESSION['user_email'] ?? '';
-        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+        $user_emails = getQuarantineUserEmails();
+        if (empty($user_emails)) {
             return false;
         }
 
-        return stripos((string)$email, $user_email) !== false;
+        foreach ($user_emails as $user_email) {
+            if (stripos((string) $email, $user_email) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Viewer has no access
@@ -375,17 +420,18 @@ function getDomainFilterSQL(&$params) {
     }
 
     if ($user_role === 'quarantine_user') {
-        $user_email = $_SESSION['user_email'] ?? '';
-
-        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+        $user_emails = getQuarantineUserEmails();
+        if (empty($user_emails)) {
             return '1=0';
         }
 
         $conditions = [];
-        $conditions[] = "recipients LIKE ?";
-        $params[] = '%' . $user_email . '%';
-        $conditions[] = "headers_to LIKE ?";
-        $params[] = '%' . $user_email . '%';
+        foreach ($user_emails as $user_email) {
+            $conditions[] = "recipients LIKE ?";
+            $params[] = '%' . $user_email . '%';
+            $conditions[] = "headers_to LIKE ?";
+            $params[] = '%' . $user_email . '%';
+        }
 
         return '(' . implode(' OR ', $conditions) . ')';
     }
@@ -413,16 +459,22 @@ function canAccessQuarantineMessage(array $message): bool {
     }
 
     if ($user_role === 'quarantine_user') {
-        $user_email = $_SESSION['user_email'] ?? '';
-        if ($user_email === '' || !filter_var($user_email, FILTER_VALIDATE_EMAIL)) {
+        $user_emails = getQuarantineUserEmails();
+        if (empty($user_emails)) {
             return false;
         }
 
         $recipients = $message['recipients'] ?? '';
         $headersTo = $message['headers_to'] ?? '';
 
-        return stripos($recipients, $user_email) !== false
-            || stripos($headersTo, $user_email) !== false;
+        foreach ($user_emails as $user_email) {
+            if (stripos($recipients, $user_email) !== false
+                || stripos($headersTo, $user_email) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     return false;

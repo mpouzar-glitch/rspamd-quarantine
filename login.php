@@ -115,6 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['last_activity'] = time();
 
+                $invalidEmails = [];
+                $parsedEmails = parseEmailList((string) $user['email'], $invalidEmails);
+                if (empty($parsedEmails) && $user['email'] !== '') {
+                    $parsedEmails = [$user['email']];
+                }
+
+                if ($user['role'] === 'quarantine_user') {
+                    $_SESSION['user_emails'] = $parsedEmails;
+                } else {
+                    $_SESSION['user_emails'] = $parsedEmails ? [$parsedEmails[0]] : [];
+                }
+
                 // Load user domains if domain_admin
                 if ($user['role'] === 'domain_admin') {
                     $stmt = $db->prepare("
@@ -160,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     $_SESSION['username'] = $username;
                     $_SESSION['user_email'] = $username;
                     $_SESSION['user_role'] = 'quarantine_user';
+                    $_SESSION['user_emails'] = [$username];
                     $_SESSION['user_domains'] = [];
                     $_SESSION['last_activity'] = time();
 
