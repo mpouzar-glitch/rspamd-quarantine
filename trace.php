@@ -14,20 +14,6 @@ if (!isAuthenticated()) {
     exit;
 }
 
-function normalizeUtf8Text(string $text): string {
-    if ($text === '') {
-        return $text;
-    }
-    $encoding = mb_detect_encoding($text, ['UTF-8', 'ISO-8859-2', 'WINDOWS-1250', 'ISO-8859-1'], true);
-    if ($encoding && strtoupper($encoding) !== 'UTF-8') {
-        $converted = @mb_convert_encoding($text, 'UTF-8', $encoding);
-        if ($converted !== false) {
-            return $converted;
-        }
-    }
-    return $text;
-}
-
 $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
@@ -263,7 +249,7 @@ include 'menu.php';
                             $senderEmail = extractEmailAddress($sender);
                             $senderEmailKey = $senderEmail ? strtolower($senderEmail) : '';
                             $recipients = decodeMimeHeader($msg['recipients']);
-                            $subject = normalizeUtf8Text(decodeMimeHeader($msg['subject']));
+                            $subject = decodeMimeHeader($msg['subject']);
                             $subject = $subject ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
