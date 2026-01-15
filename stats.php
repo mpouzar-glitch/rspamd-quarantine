@@ -55,6 +55,7 @@ $stateDist = getStateDistribution($db, $dateFrom, $dateTo, $domainFilter, $param
 $dailyTrace = getDailyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $weeklyTrace = getWeeklyTrace($db, $dateFrom, $dateTo, $domainFilter, $params);
 $topSymbols = getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
+$virusTypeStats = getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, 40);
 $listedEmails = ['whitelist' => [], 'blacklist' => []];
 if ($canManageMaps && !empty($topSenders)) {
     $senderEmails = [];
@@ -348,6 +349,39 @@ include 'menu.php';
                         ?>
                         <span class="badge <?php echo $scoreClass; ?>"><?php echo number_format($score, 2); ?></span>
                     </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Antivirus Types Table -->
+    <div class="table-container">
+        <h2><i class="fas fa-virus"></i> <?php echo htmlspecialchars(__('stats_antivirus_types')); ?></h2>
+        <table class="messages-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 360px;"><?php echo htmlspecialchars(__('stats_antivirus_type_label')); ?></th>
+                    <th style="width: 160px;"><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
+                    <th style="width: 100px;"><?php echo htmlspecialchars(__('stats_count')); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($virusTypeStats as $i => $virusStat): ?>
+                <?php if ($i > 40) break; ?>
+                <?php
+                $virusType = $virusStat['virus_type'] === '__unknown__'
+                    ? __('stats_antivirus_unknown')
+                    : $virusStat['virus_type'];
+                $virusSources = $virusStat['symbols'] ?? [];
+                $virusSourcesLabel = !empty($virusSources) ? implode(', ', $virusSources) : __('stats_antivirus_unknown');
+                ?>
+                <tr>
+                    <td><?php echo $i + 1; ?></td>
+                    <td><strong><?php echo truncateWithTooltip($virusType, 50); ?></strong></td>
+                    <td><?php echo htmlspecialchars($virusSourcesLabel); ?></td>
+                    <td><?php echo number_format($virusStat['count']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -255,6 +255,10 @@ return [
     'stats_top_senders' => 'Top odesílatelé',
     'stats_top_recipients' => 'Top příjemci',
     'stats_top_symbols' => 'Top symboly',
+    'stats_antivirus_types' => 'Detekce antiviru podle typu',
+    'stats_antivirus_type_label' => 'Typ viru',
+    'stats_antivirus_source_label' => 'Zdroj',
+    'stats_antivirus_unknown' => 'Neznámé',
 
     // Pagination
     'pagination_first' => 'První',

@@ -2009,6 +2009,73 @@ function parseSymbolsForStats($symbols) {
 }
 
 /**
+ * Parse symbols string into entries with options for antivirus stats.
+ */
+function parseSymbolsWithOptions($symbols) {
+    $entries = [];
+
+    if (empty($symbols)) {
+        return $entries;
+    }
+
+    $decoded = json_decode($symbols, true);
+    if (is_array($decoded)) {
+        foreach ($decoded as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $name = $value['name'] ?? (is_string($key) ? $key : null);
+            if ($name === null || $name === '') {
+                continue;
+            }
+            $options = [];
+            if (array_key_exists('options', $value)) {
+                if (is_array($value['options'])) {
+                    foreach ($value['options'] as $option) {
+                        if (is_string($option) && $option !== '') {
+                            $options[] = $option;
+                        }
+                    }
+                } elseif (is_string($value['options']) && $value['options'] !== '') {
+                    $options[] = $value['options'];
+                }
+            }
+            $entries[] = [
+                'name' => $name,
+                'score' => isset($value['score']) ? (float)$value['score'] : 0.0,
+                'options' => $options
+            ];
+        }
+        if (!empty($entries)) {
+            return $entries;
+        }
+    }
+
+    if (preg_match_all('/"name":"([^"]+)".*?"options":\s*\[([^\]]*)\]/s', $symbols, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $match) {
+            $options = json_decode('[' . $match[2] . ']', true);
+            if (!is_array($options)) {
+                $options = [];
+                if (preg_match_all('/"([^"]+)"/', $match[2], $optionMatches)) {
+                    foreach ($optionMatches[1] as $option) {
+                        if ($option !== '') {
+                            $options[] = $option;
+                        }
+                    }
+                }
+            }
+            $entries[] = [
+                'name' => $match[1],
+                'score' => 0.0,
+                'options' => $options
+            ];
+        }
+    }
+
+    return $entries;
+}
+
+/**
  * Build parsed symbol data and status symbol matches for message lists.
  */
 function buildMessageSymbolData($symbols) {
@@ -2140,6 +2207,70 @@ function getTopSymbols($db, $dateFrom, $dateTo, $domainFilter, $params, $limit =
     });
 
     return array_slice($symbols, 0, $limit);
+}
+
+/**
+ * Get antivirus type stats from symbol options.
+ */
+function getAntivirusTypeStats($db, $dateFrom, $dateTo, $domainFilter, $params, $limit = 20) {
+    $sql = "SELECT symbols
+            FROM message_trace
+            WHERE timestamp BETWEEN ? AND ?
+            $domainFilter
+            AND symbols IS NOT NULL
+            AND symbols != ''";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_merge([$dateFrom, $dateTo], $params));
+
+    $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
+    $virusStats = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $entries = parseSymbolsWithOptions($row['symbols']);
+        foreach ($entries as $entry) {
+            $name = $entry['name'] ?? '';
+            if (!in_array($name, $virusSymbols, true)) {
+                continue;
+            }
+            $options = $entry['options'] ?? [];
+            if (empty($options)) {
+                $options = ['__unknown__'];
+            }
+            foreach ($options as $option) {
+                $optionKey = trim((string)$option);
+                if ($optionKey === '') {
+                    $optionKey = '__unknown__';
+                }
+                if (!isset($virusStats[$optionKey])) {
+                    $virusStats[$optionKey] = [
+                        'virus_type' => $optionKey,
+                        'count' => 0,
+                        'symbols' => []
+                    ];
+                }
+                $virusStats[$optionKey]['count']++;
+                $virusStats[$optionKey]['symbols'][$name] = true;
+            }
+        }
+    }
+
+    $results = [];
+    foreach ($virusStats as $data) {
+        $results[] = [
+            'virus_type' => $data['virus_type'],
+            'count' => $data['count'],
+            'symbols' => array_keys($data['symbols'])
+        ];
+    }
+
+    usort($results, function ($a, $b) {
+        if ($a['count'] === $b['count']) {
+            return strcmp((string)$a['virus_type'], (string)$b['virus_type']);
+        }
+        return $b['count'] <=> $a['count'];
+    });
+
+    return array_slice($results, 0, $limit);
 }
 
 
