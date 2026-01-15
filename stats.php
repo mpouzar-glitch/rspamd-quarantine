@@ -219,7 +219,7 @@ include 'menu.php';
     <!-- Top Recipients Table -->
     <div class="table-container">
         <h2><i class="fas fa-users"></i> <?php echo htmlspecialchars(__('stats_top_recipients')); ?></h2>
-        <table class="messages-table">
+        <table class="messages-table stats-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -318,7 +318,7 @@ include 'menu.php';
     <!-- Top Symbols Table -->
     <div class="table-container">
         <h2><i class="fas fa-flag"></i> <?php echo htmlspecialchars(__('stats_top_symbols')); ?></h2>
-        <table class="messages-table">
+        <table class="messages-table stats-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -358,11 +358,11 @@ include 'menu.php';
     <!-- Antivirus Types Table -->
     <div class="table-container">
         <h2><i class="fas fa-virus"></i> <?php echo htmlspecialchars(__('stats_antivirus_types')); ?></h2>
-        <table class="messages-table table {width: 100%; table-layout: auto;}">
+        <table class="messages-table stats-table">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th><?php echo htmlspecialchars(__('stats_antivirus_type_label')); ?></th>
+                    <th><?php echo substr(htmlspecialchars(__('stats_antivirus_type_label')),0,25); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_antivirus_source_label')); ?></th>
                     <th><?php echo htmlspecialchars(__('stats_count')); ?></th>
                 </tr>
@@ -405,7 +405,7 @@ include 'menu.php';
                 </button>
             </form>
         </h2>
-        <table class="messages-table">
+        <table class="messages-table stats-table">
             <thead>
                 <tr>
                     <th>#</th>

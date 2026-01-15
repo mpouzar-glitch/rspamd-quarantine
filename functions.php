@@ -529,7 +529,7 @@ function decodeMimeHeader($header) {
     if ($needsRecode) {
         $iconvDecoded = iconv_mime_decode(
             $header,
-            ICONV_MIME_DECODE_CONTINUE_ON_ERROR | ICONV_MIME_DECODE_LAX,
+            ICONV_MIME_DECODE_CONTINUE_ON_ERROR,
             'UTF-8'
         );
         if (!empty($iconvDecoded)) {
