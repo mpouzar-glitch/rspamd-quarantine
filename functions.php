@@ -493,6 +493,57 @@ function formatMessageSize($bytes) {
     return round($bytes, 2) . ' ' . $units[$pow];
 }
 
+function getScoreBadgeClass(float $score, string $action = ''): string {
+    $action = strtolower(trim($action));
+    $actionMap = [
+        'no action' => 'score-action-no-action',
+        'greylist' => 'score-action-greylist',
+        'add header' => 'score-action-add-header',
+        'rewrite subject' => 'score-action-rewrite-subject',
+        'reject' => 'score-action-reject',
+    ];
+
+    if ($action !== '' && isset($actionMap[$action])) {
+        return $actionMap[$action];
+    }
+
+    if ($score >= 15) {
+        return 'score-high';
+    }
+    if ($score >= 6) {
+        return 'score-medium';
+    }
+    return 'score-low';
+}
+
+function getMessageStateClass(int $state): string {
+    switch ($state) {
+        case 0:
+            return 'state-quarantined';
+        case 1:
+            return 'state-learned-ham';
+        case 2:
+            return 'state-learned-spam';
+        case 3:
+            return 'state-released';
+        default:
+            return '';
+    }
+}
+
+function getSymbolBadgeColor(float $score): string {
+    if ($score >= 1) {
+        return '#e74c3c';
+    }
+    if ($score > 0) {
+        return '#f39c12';
+    }
+    if ($score < 0) {
+        return '#27ae60';
+    }
+    return '#95a5a6';
+}
+
 // ============================================
 // Mailbox Storage Functions
 // ============================================
@@ -1955,6 +2006,84 @@ function parseSymbolsForStats($symbols) {
     }
 
     return $parsedSymbols;
+}
+
+/**
+ * Build parsed symbol data and status symbol matches for message lists.
+ */
+function buildMessageSymbolData($symbols) {
+    $parsedSymbols = parseSymbolsForStats($symbols);
+    $normalizedSymbols = [];
+
+    foreach ($parsedSymbols as $symbol) {
+        $name = $symbol['name'] ?? null;
+        if ($name === null || $name === '') {
+            continue;
+        }
+        $normalizedSymbols[] = [
+            'name' => $name,
+            'score' => isset($symbol['score']) ? (float)$symbol['score'] : 0.0
+        ];
+    }
+
+    usort($normalizedSymbols, function ($a, $b) {
+        return $b['score'] <=> $a['score'];
+    });
+
+    $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
+    $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
+    $statusSymbolGroups = [
+        'virus' => ['CLAM_VIRUS', 'ESET_VIRUS'],
+        'bad-extension' => ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE'],
+        'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
+        'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
+    ];
+
+    $statusSymbolMatches = [
+        'virus' => [],
+        'bad-extension' => [],
+        'blacklist' => [],
+        'whitelist' => [],
+    ];
+
+    $hasVirusSymbol = false;
+    $hasBadAttachmentSymbol = false;
+
+    foreach ($normalizedSymbols as $symbol) {
+        $name = $symbol['name'];
+        if (in_array($name, $virusSymbols, true)) {
+            $hasVirusSymbol = true;
+        }
+        if (in_array($name, $badAttachmentSymbols, true)) {
+            $hasBadAttachmentSymbol = true;
+        }
+        foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
+            if (in_array($name, $groupSymbols, true)) {
+                $statusSymbolMatches[$groupKey][] = $name;
+            }
+        }
+    }
+
+    foreach ($statusSymbolMatches as $groupKey => $groupSymbols) {
+        $statusSymbolMatches[$groupKey] = array_values(array_unique($groupSymbols));
+    }
+
+    return [
+        'parsed_symbols' => $normalizedSymbols,
+        'has_virus_symbol' => $hasVirusSymbol,
+        'has_bad_attachment_symbol' => $hasBadAttachmentSymbol,
+        'status_symbol_matches' => $statusSymbolMatches,
+    ];
+}
+
+function getStatusRowClass(array $statusSymbolMatches): string {
+    $priority = ['virus', 'bad-extension', 'blacklist', 'whitelist'];
+    foreach ($priority as $statusKey) {
+        if (!empty($statusSymbolMatches[$statusKey])) {
+            return 'status-row-' . $statusKey;
+        }
+    }
+    return '';
 }
 
 /**

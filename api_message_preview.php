@@ -77,6 +77,15 @@ try {
         }
     }
 
+    $headers_lower = array_change_key_case($headers_array, CASE_LOWER);
+    $dkim_header = $headers_lower['dkim-signature'] ?? '';
+    $authentication_results = $headers_lower['authentication-results'] ?? '';
+    $dmarc_header = $headers_lower['dmarc-filter'] ?? ($authentication_results ?: '');
+    $spam_header = $headers_lower['x-spam-status'] ?? $headers_lower['x-spam-flag'] ?? $headers_lower['x-spam-level'] ?? $headers_lower['x-spam-score'] ?? '';
+    $user_agent_header = $headers_lower['user-agent'] ?? $headers_lower['x-mailer'] ?? '';
+    $from_header = $headers_lower['from'] ?? '';
+    $to_header = $headers_lower['to'] ?? '';
+
     $content_type = $headers_array['Content-Type'] ?? 'text/plain';
     $is_html = stripos($content_type, 'text/html') !== false;
     $is_multipart = stripos($content_type, 'multipart') !== false;
@@ -201,6 +210,20 @@ try {
         $preview = mb_substr($preview, 0, 8000, 'UTF-8') . '<p>... (zkráceno)</p>';
     }
 
+    $subject_decoded = decodeMimeHeader($message['subject'] ?? $headers_array['Subject'] ?? '(bez předmětu)');
+    $sender_decoded = decodeMimeHeader($message['sender'] ?? '');
+    $recipients_decoded = decodeMimeHeader($message['recipients'] ?? '');
+    $from_header_decoded = decodeMimeHeader($from_header);
+    $to_header_decoded = decodeMimeHeader($to_header);
+
+    $parsed_symbols = parseSymbolsForStats($message['symbols'] ?? '');
+    $dkim_dmarc_symbols = array_values(array_filter($parsed_symbols, function ($sym) {
+        $name = $sym['name'] ?? '';
+        return stripos($name, 'dkim') !== false || stripos($name, 'dmarc') !== false;
+    }));
+    $dkim_present = !empty($dkim_header);
+    $dmarc_present = !empty($dmarc_header) || array_filter($dkim_dmarc_symbols, fn($sym) => stripos($sym['name'], 'dmarc') !== false);
+
     echo json_encode([
         'success' => true,
         'preview' => $preview,
@@ -208,9 +231,27 @@ try {
         'has_html' => !empty($body_html),
         'has_text' => !empty($body_text),
         'sender' => decodeMimeHeader($message['sender']),
-        'subject' => decodeMimeHeader($message['subject']) ?: '(bez předmětu)',
+        'subject' => $subject_decoded ?: '(bez předmětu)',
         'timestamp' => date('d.m.Y H:i:s', strtotime($message['timestamp'])),
-        'score' => round($message['score'], 2)
+        'score' => round($message['score'], 2),
+        'message_id' => $message['message_id'] ?? '',
+        'recipients' => $recipients_decoded,
+        'from_header' => $from_header_decoded,
+        'to_header' => $to_header_decoded,
+        'dkim_present' => $dkim_present,
+        'dmarc_present' => $dmarc_present,
+        'dkim_dmarc_symbols' => $dkim_dmarc_symbols,
+        'spam_header' => $spam_header,
+        'user_agent' => $user_agent_header,
+        'ip_address' => $message['ip_address'] ?? '',
+        'authenticated_user' => $message['authenticated_user'] ?? '',
+        'action' => $message['action'] ?? '',
+        'state' => isset($message['state']) ? (int)$message['state'] : 0,
+        'state_at' => $message['state_at'] ?? '',
+        'state_by' => $message['state_by'] ?? '',
+        'subject_decoded' => $subject_decoded,
+        'sender_decoded' => $sender_decoded,
+        'recipients_decoded' => $recipients_decoded
     ]);
 
 } catch (Exception $e) {

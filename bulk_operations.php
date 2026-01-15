@@ -257,9 +257,6 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                                 </a>
                             </th>
-                            <th style="width: 120px;">
-                                <?php echo htmlspecialchars(__('status')); ?>
-                            </th>
                             <th style="width: 90px;"><?php echo htmlspecialchars(__('size')); ?></th>
                             <th style="width: 60px;">
                                 <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
@@ -267,6 +264,7 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
+                            <th style="width: 180px;">STATUS</th>
                             <th style="width: 180px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                         </tr>
                     </thead>
@@ -282,122 +280,22 @@ include 'menu.php';
                             $score = round($msg['score'], 2);
                             $action = strtolower(trim($msg['action'] ?? ''));
 
-                            // Parse symbols from JSON
                             $symbols = $msg['symbols'] ?? '';
-                            $parsedSymbols = [];
-
-                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                            $badExtensionSymbols = ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE', 'BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-                            $blacklistSymbols = ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'];
-                            $whitelistSymbols = ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'];
-                            $hasVirusSymbol = false;
-                            $hasBadExtensionSymbol = false;
-                            $hasBlacklistSymbol = false;
-                            $hasWhitelistSymbol = false;
-                            if (!empty($symbols)) {
-                                $symbolsData = json_decode($symbols, true);
-
-                                if (is_array($symbolsData)) {
-                                    foreach ($symbolsData as $symbol) {
-                                        if (isset($symbol['name']) && isset($symbol['score'])) {
-                                            $parsedSymbols[] = [
-                                                'name' => $symbol['name'],
-                                                'score' => floatval($symbol['score'])
-                                            ];
-                                            if (in_array($symbol['name'], $virusSymbols, true)) {
-                                                $hasVirusSymbol = true;
-                                            }
-                                            if (in_array($symbol['name'], $badExtensionSymbols, true)) {
-                                                $hasBadExtensionSymbol = true;
-                                            }
-                                            if (in_array($symbol['name'], $blacklistSymbols, true)) {
-                                                $hasBlacklistSymbol = true;
-                                            }
-                                            if (in_array($symbol['name'], $whitelistSymbols, true)) {
-                                                $hasWhitelistSymbol = true;
-                                            }
-                                        }
-                                    }
-
-                                    // Sort by score descending
-                                    usort($parsedSymbols, function($a, $b) {
-                                        return $b['score'] <=> $a['score'];
-                                    });
-                                }
-                            }
-                            if (!empty($symbols)) {
-                                foreach ($virusSymbols as $virusSymbol) {
-                                    if (stripos($symbols, $virusSymbol) !== false) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBadExtensionSymbol && !empty($symbols)) {
-                                foreach ($badExtensionSymbols as $badExtensionSymbol) {
-                                    if (stripos($symbols, $badExtensionSymbol) !== false) {
-                                        $hasBadExtensionSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBlacklistSymbol && !empty($symbols)) {
-                                foreach ($blacklistSymbols as $blacklistSymbol) {
-                                    if (stripos($symbols, $blacklistSymbol) !== false) {
-                                        $hasBlacklistSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasWhitelistSymbol && !empty($symbols)) {
-                                foreach ($whitelistSymbols as $whitelistSymbol) {
-                                    if (stripos($symbols, $whitelistSymbol) !== false) {
-                                        $hasWhitelistSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
+                            $symbolData = buildMessageSymbolData($symbols);
+                            $parsedSymbols = $symbolData['parsed_symbols'];
+                            $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                            $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                            $statusSymbolMatches = $symbolData['status_symbol_matches'];
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
-                            // Score class based on action (fallback to score)
-                            $actionScoreClass = '';
-                            switch ($action) {
-                                case 'no action':
-                                    $actionScoreClass = 'score-action-no-action';
-                                    break;
-                                case 'greylist':
-                                    $actionScoreClass = 'score-action-greylist';
-                                    break;
-                                case 'add header':
-                                    $actionScoreClass = 'score-action-add-header';
-                                    break;
-                                case 'rewrite subject':
-                                    $actionScoreClass = 'score-action-rewrite-subject';
-                                    break;
-                                case 'reject':
-                                    $actionScoreClass = 'score-action-reject';
-                                    break;
-                            }
-                            if ($score >= 15) {
-                                $scoreClass = 'score-high';
-                            } elseif ($score >= 6) {
-                                $scoreClass = 'score-medium';
-                            } else {
-                                $scoreClass = 'score-low';
-                            }
-                            $scoreClass = $actionScoreClass ?: $scoreClass;
+                            $scoreClass = getScoreBadgeClass($score, $action);
 
                             // Unique name for radio group
                             $radioName = 'action_' . $msgId;
 
                             // State class for row coloring
-                            $stateClass = '';
-                            switch ((int)$msg['state']) {
-                                case 0: $stateClass = 'state-quarantined'; break;
-                                case 1: $stateClass = 'state-learned-ham'; break;
-                                case 2: $stateClass = 'state-learned-spam'; break;
-                                case 3: $stateClass = 'state-released'; break;
-                            }
+                            $stateClass = getMessageStateClass((int)$msg['state']);
+                            $statusRowClass = getStatusRowClass($statusSymbolMatches);
 
                             // Auto-learn spam detection by Rspamd
                             // Check if Rspamd already auto-learned this message
@@ -413,26 +311,10 @@ include 'menu.php';
                                     $isAutoLearnSpam = true;
                                 }
                             }
-                            $statusLabel = '';
-                            $statusClass = '';
-                            if ($hasVirusSymbol) {
-                                $statusLabel = 'virus';
-                                $statusClass = 'status-virus';
-                            } elseif ($hasBadExtensionSymbol) {
-                                $statusLabel = 'příloha';
-                                $statusClass = 'status-bad-extension';
-                            } elseif ($hasBlacklistSymbol) {
-                                $statusLabel = 'blacklist';
-                                $statusClass = 'status-blacklist';
-                            } elseif ($hasWhitelistSymbol) {
-                                $statusLabel = 'whitelist';
-                                $statusClass = 'status-whitelist';
-                            }
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
-                            $formattedSize = formatMessageSize((int)($msg['size_bytes'] ?? 0));
                             $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
                             ?>
-                            <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusClass); ?>" id="row_<?php echo $msgId; ?>">
+                            <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusRowClass); ?>" id="row_<?php echo $msgId; ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                                 <td class="email-field">
                                     <i class="fas fa-paper-plane"></i> 
@@ -470,30 +352,21 @@ include 'menu.php';
                                         <?php echo htmlspecialchars(truncateText($recipients, 40)); ?>
                                     </a>
                                 </td>
-                            <td class="subject-field">
-                                <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
-                                    <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
-                                </button>
-                            </td>
-                            <td class="status-field">
-                                <?php if (!empty($statusLabel)): ?>
-                                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
-                                        <?php echo htmlspecialchars($statusLabel); ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="status-badge status-neutral">-</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-right no-wrap">
-                                <?php echo htmlspecialchars($formattedSize); ?>
-                            </td>
+                                <td class="subject-field">
+                                    <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
+                                        <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
+                                    </button>
+                                </td>
+                                <td class="text-right no-wrap">
+                                    <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
+                                </td>
                                 <td class="text-center score-cell">
                                     <span class="score-badge <?php echo $scoreClass; ?>">
                                         <?php echo $score; ?>
                                         <?php if ($hasVirusSymbol): ?>
                                             <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
                                         <?php endif; ?>
-                                        <?php if ($hasBadExtensionSymbol): ?>
+                                        <?php if ($hasBadAttachmentSymbol): ?>
                                             <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
                                         <?php endif; ?>
 
@@ -505,7 +378,7 @@ include 'menu.php';
                                             <div class="symbols-grid">
                                                 <?php foreach ($parsedSymbols as $sym): 
                                                     $symScore = $sym['score'];
-                                                    $bgcolor = ($symScore >= 1) ? '#e74c3c' : (($symScore > 0) ? '#f39c12' : (($symScore < 0) ? '#27ae60' : '#95a5a6'));
+                                                    $bgcolor = getSymbolBadgeColor($symScore);
                                                 ?>
                                                 <span class="symbol-badge" style="background: <?php echo $bgcolor; ?>">
                                                     <span class="symbol-name" title="<?php echo htmlspecialchars($sym['name']); ?>">
@@ -520,6 +393,30 @@ include 'menu.php';
                                         </div>
                                         <?php endif; ?>
                                     </span>
+                                </td>
+                                <td class="status-explanation-cell">
+                                    <?php
+                                    $hasStatusExplanation = false;
+                                    foreach ($statusSymbolMatches as $groupSymbols) {
+                                        if (!empty($groupSymbols)) {
+                                            $hasStatusExplanation = true;
+                                            break;
+                                        }
+                                    }
+                                    ?>
+                                    <?php if ($hasStatusExplanation): ?>
+                                        <div class="status-pills">
+                                            <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                                <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                    <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                        <?php echo htmlspecialchars($groupSymbol); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <div class="action-controls">

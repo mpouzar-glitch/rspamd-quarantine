@@ -139,7 +139,7 @@ include 'menu.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/bulk.css">
 </head>
 <body>
     <div class="container">
@@ -234,9 +234,6 @@ include 'menu.php';
                                 <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                             </a>
                         </th>            
-                        <th style="width: 120px;">
-                            <?php echo htmlspecialchars(__('status')); ?>
-                        </th>
                         <th style="width: 100px;" class="col-hostname">
                             <a class="sort-link <?php echo $sort === 'hostname' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('hostname'); ?>">
                                 <?php echo htmlspecialchars(__('hostname')); ?>
@@ -255,6 +252,7 @@ include 'menu.php';
                                 <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                             </a>
                         </th>
+                        <th style="width: 180px;">STATUS</th>
                         <th style="width: 150px;"><?php echo htmlspecialchars(__('actions')); ?></th>
                     </tr>
                 </thead>
@@ -270,150 +268,24 @@ include 'menu.php';
                         $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                         $score = round($msg['score'], 2);
                         $action = strtolower(trim($msg['action'] ?? ''));
-                        $actionLabel = $msg['action'] ?? '-';
                         $hostname = $msg['hostname'] ?? '-';
 
-                        // Parse symbols from JSON
                         $symbols = $msg['symbols'] ?? '';
-                        $parsedSymbols = [];
-
-                        $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                        $badExtensionSymbols = ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE', 'BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-                        $blacklistSymbols = ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'];
-                        $whitelistSymbols = ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'];
-                        $hasVirusSymbol = false;
-                        $hasBadExtensionSymbol = false;
-                        $hasBlacklistSymbol = false;
-                        $hasWhitelistSymbol = false;
-                        if (!empty($symbols)) {
-                            $symbolsData = json_decode($symbols, true);
-
-                            if (is_array($symbolsData)) {
-                                foreach ($symbolsData as $symbol) {
-                                    if (isset($symbol['name']) && isset($symbol['score'])) {
-                                        $parsedSymbols[] = [
-                                            'name' => $symbol['name'],
-                                            'score' => floatval($symbol['score'])
-                                        ];
-                                        if (in_array($symbol['name'], $virusSymbols, true)) {
-                                            $hasVirusSymbol = true;
-                                        }
-                                        if (in_array($symbol['name'], $badExtensionSymbols, true)) {
-                                            $hasBadExtensionSymbol = true;
-                                        }
-                                        if (in_array($symbol['name'], $blacklistSymbols, true)) {
-                                            $hasBlacklistSymbol = true;
-                                        }
-                                        if (in_array($symbol['name'], $whitelistSymbols, true)) {
-                                            $hasWhitelistSymbol = true;
-                                        }
-                                    }
-                                }
-
-                                // Sort by score descending
-                                usort($parsedSymbols, function($a, $b) {
-                                    return $b['score'] <=> $a['score'];
-                                });
-                            }
-                        }
-                        if (!empty($symbols)) {
-                            foreach ($virusSymbols as $virusSymbol) {
-                                if (stripos($symbols, $virusSymbol) !== false) {
-                                    $hasVirusSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!$hasBadExtensionSymbol && !empty($symbols)) {
-                            foreach ($badExtensionSymbols as $badExtensionSymbol) {
-                                if (stripos($symbols, $badExtensionSymbol) !== false) {
-                                    $hasBadExtensionSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!$hasBlacklistSymbol && !empty($symbols)) {
-                            foreach ($blacklistSymbols as $blacklistSymbol) {
-                                if (stripos($symbols, $blacklistSymbol) !== false) {
-                                    $hasBlacklistSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!$hasWhitelistSymbol && !empty($symbols)) {
-                            foreach ($whitelistSymbols as $whitelistSymbol) {
-                                if (stripos($symbols, $whitelistSymbol) !== false) {
-                                    $hasWhitelistSymbol = true;
-                                    break;
-                                }
-                            }
-                        }
+                        $symbolData = buildMessageSymbolData($symbols);
+                        $parsedSymbols = $symbolData['parsed_symbols'];
+                        $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                        $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                        $statusSymbolMatches = $symbolData['status_symbol_matches'];
                         $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
-                        // Score class based on action (fallback to score)
-                        $actionScoreClass = '';
-                        switch ($action) {
-                            case 'no action':
-                                $actionScoreClass = 'score-action-no-action';
-                                break;
-                            case 'greylist':
-                                $actionScoreClass = 'score-action-greylist';
-                                break;
-                            case 'add header':
-                                $actionScoreClass = 'score-action-add-header';
-                                break;
-                            case 'rewrite subject':
-                                $actionScoreClass = 'score-action-rewrite-subject';
-                                break;
-                            case 'reject':
-                                $actionScoreClass = 'score-action-reject';
-                                break;
-                        }
-                        if ($score >= 15) {
-                            $scoreClass = 'score-high';
-                        } elseif ($score >= 6) {
-                            $scoreClass = 'score-medium';
-                        } else {
-                            $scoreClass = 'score-low';
-                        }
-                        $scoreClass = $actionScoreClass ?: $scoreClass;
+                        $scoreClass = getScoreBadgeClass($score, $action);
 
                         // State class for row coloring
-                        $stateClass = '';
-                        switch ((int)$msg['state']) {
-                            case 0: $stateClass = 'state-quarantined'; break;
-                            case 1: $stateClass = 'state-learned-ham'; break;
-                            case 2: $stateClass = 'state-learned-spam'; break;
-                            case 3: $stateClass = 'state-released'; break;
-                        }
-                        $statusLabel = '';
-                        $statusClass = '';
-                        if ($hasVirusSymbol) {
-                            $statusLabel = 'virus';
-                            $statusClass = 'status-virus';
-                        } elseif ($hasBadExtensionSymbol) {
-                            $statusLabel = 'příloha';
-                            $statusClass = 'status-bad-extension';
-                        } elseif ($hasBlacklistSymbol) {
-                            $statusLabel = 'blacklist';
-                            $statusClass = 'status-blacklist';
-                        } elseif ($hasWhitelistSymbol) {
-                            $statusLabel = 'whitelist';
-                            $statusClass = 'status-whitelist';
-                        }
+                        $stateClass = getMessageStateClass((int)$msg['state']);
+                        $statusRowClass = getStatusRowClass($statusSymbolMatches);
                         $virusClass = $hasVirusSymbol ? 'has-virus' : '';
-                        $formattedSize = formatMessageSize((int)($msg['size_bytes'] ?? 0));
                         ?>
-                        <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusClass); ?>" id="row_<?php echo $msgId; ?>"
-                            data-sender="<?php echo htmlspecialchars($sender, ENT_QUOTES); ?>"
-                            data-recipients="<?php echo htmlspecialchars($recipients, ENT_QUOTES); ?>"
-                            data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>"
-                            data-timestamp="<?php echo htmlspecialchars($timestamp, ENT_QUOTES); ?>"
-                            data-score="<?php echo htmlspecialchars((string)$score, ENT_QUOTES); ?>"
-                            data-hostname="<?php echo htmlspecialchars($hostname, ENT_QUOTES); ?>"
-                            data-size="<?php echo htmlspecialchars($formattedSize, ENT_QUOTES); ?>"
-                            data-action="<?php echo htmlspecialchars($actionLabel, ENT_QUOTES); ?>"
-                        >
+                        <tr class="message-row <?php echo trim($stateClass . ' ' . $virusClass . ' ' . $statusRowClass); ?>" id="row_<?php echo $msgId; ?>">
                             <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                             <td class="email-field">
                                 <i class="fas fa-paper-plane"></i> 
@@ -452,7 +324,7 @@ include 'menu.php';
                                 </a>
                             </td>
                             <td class="subject-field">
-                                <button type="button" class="subject-preview-btn email-link message-popup-trigger" data-message-id="<?php echo $msgId; ?>">
+                                <button type="button" class="subject-preview-btn email-link" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
                                     <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
                                 </button>
                                 <?php if ($canManageMaps && !empty(trim($subject))): ?>
@@ -466,20 +338,11 @@ include 'menu.php';
                                     </span>
                                 <?php endif; ?>
                             </td>
-                            <td class="status-field">
-                                <?php if (!empty($statusLabel)): ?>
-                                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
-                                        <?php echo htmlspecialchars($statusLabel); ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="status-badge status-neutral">-</span>
-                                <?php endif; ?>
-                            </td>
                             <td class="hostname-field">
                                 <?php echo htmlspecialchars($hostname); ?>
                             </td>
                             <td class="text-right no-wrap">
-                                <?php echo htmlspecialchars($formattedSize); ?>
+                                <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
                             </td>
                             <td class="text-center score-cell">
                                 <span class="score-badge <?php echo $scoreClass; ?>">
@@ -487,7 +350,7 @@ include 'menu.php';
                                     <?php if ($hasVirusSymbol): ?>
                                         <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
                                     <?php endif; ?>
-                                    <?php if ($hasBadExtensionSymbol): ?>
+                                    <?php if ($hasBadAttachmentSymbol): ?>
                                         <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
                                     <?php endif; ?>
 
@@ -499,7 +362,7 @@ include 'menu.php';
                                         <div class="symbols-grid">
                                             <?php foreach ($parsedSymbols as $sym): 
                                                 $symScore = $sym['score'];
-                                                $bgcolor = ($symScore >= 1) ? '#e74c3c' : (($symScore > 0) ? '#f39c12' : (($symScore < 0) ? '#27ae60' : '#95a5a6'));
+                                                $bgcolor = getSymbolBadgeColor($symScore);
                                             ?>
                                             <span class="symbol-badge" style="background: <?php echo $bgcolor; ?>">
                                                 <span class="symbol-name" title="<?php echo htmlspecialchars($sym['name']); ?>">
@@ -515,11 +378,35 @@ include 'menu.php';
                                     <?php endif; ?>
                                 </span>
                             </td>
+                            <td class="status-explanation-cell">
+                                <?php
+                                $hasStatusExplanation = false;
+                                foreach ($statusSymbolMatches as $groupSymbols) {
+                                    if (!empty($groupSymbols)) {
+                                        $hasStatusExplanation = true;
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <?php if ($hasStatusExplanation): ?>
+                                    <div class="status-pills">
+                                        <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                            <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                    <?php echo htmlspecialchars($groupSymbol); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-center">
                                 <div class="action-controls">
-                                    <button type="button" class="action-btn view-btn message-popup-trigger" data-message-id="<?php echo $msgId; ?>" title="<?php echo htmlspecialchars(__('msg_view_details')); ?>">
+                                    <a href="view.php?id=<?php echo $msgId; ?>" class="action-btn view-btn" title="<?php echo htmlspecialchars(__('msg_view_details')); ?>">
                                         <i class="fas fa-eye"></i>
-                                    </button>
+                                    </a>
                                     <form method="POST" action="operations.php" style="display: inline;">
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="learn_spam">
@@ -619,6 +506,63 @@ include 'menu.php';
         </div>
     </div>
 
+    <div id="messageDetailModal" class="modal preview-modal message-detail-modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <h3 id="detailModalTitle"><i class="fas fa-envelope-open-text"></i> <?php echo htmlspecialchars(__('view_title')); ?></h3>
+                    <div class="modal-subtitle" id="detailModalSubtitle"></div>
+                </div>
+                <div class="modal-header-actions">
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionSpamId" value="">
+                        <input type="hidden" name="operation" value="learn_spam">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn learn-spam-btn" title="<?php echo htmlspecialchars(__('msg_learn_spam')); ?>">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionHamId" value="">
+                        <input type="hidden" name="operation" value="learn_ham">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="operations.php" class="modal-action-form">
+                        <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
+                        <input type="hidden" name="operation" value="release">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                    <?php if ($canDeleteMessages): ?>
+                        <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
+                            <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
+                            <input type="hidden" name="operation" value="delete">
+                            <input type="hidden" name="return_url" value="index.php">
+                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="detailModalContent" class="detail-modal-content">
+                    <div class="detail-loading">
+                        <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
     const subjectModal = document.getElementById('subjectMapModal');
     const subjectModalTitle = document.getElementById('subjectMapModalTitle');
@@ -664,322 +608,223 @@ include 'menu.php';
         }
     });
 
-    const popupStrings = {
-        title: <?php echo json_encode(__('preview_message_title')); ?>,
-        sender: <?php echo json_encode(__('msg_sender')); ?>,
-        recipient: <?php echo json_encode(__('msg_recipient')); ?>,
-        subject: <?php echo json_encode(__('msg_subject')); ?>,
-        time: <?php echo json_encode(__('time')); ?>,
-        score: <?php echo json_encode(__('msg_score')); ?>,
-        hostname: <?php echo json_encode(__('hostname')); ?>,
-        size: <?php echo json_encode(__('size')); ?>,
-        action: <?php echo json_encode(__('action')); ?>,
-        loading: <?php echo json_encode(__('preview_loading')); ?>,
-        errorLabel: <?php echo json_encode(__('preview_error')); ?>,
-        parseError: <?php echo json_encode(__('preview_parse_error')); ?>,
-        loadFailed: <?php echo json_encode(__('preview_load_failed')); ?>,
-        networkError: <?php echo json_encode(__('preview_network_error')); ?>,
-        previewModeHtml: <?php echo json_encode(__('preview_mode_html')); ?>,
-        previewModeText: <?php echo json_encode(__('preview_mode_text')); ?>
+    // Detail modal functionality
+    let activeRequest = null;
+    const detailModal = document.getElementById('messageDetailModal');
+    const detailModalContent = document.getElementById('detailModalContent');
+    const detailModalSubtitle = document.getElementById('detailModalSubtitle');
+    const actionIdFields = [
+        document.getElementById('detailActionSpamId'),
+        document.getElementById('detailActionHamId'),
+        document.getElementById('detailActionReleaseId'),
+        document.getElementById('detailActionDeleteId')
+    ].filter(Boolean);
+
+    const detailStrings = {
+        loading: "<?php echo htmlspecialchars(__('preview_loading')); ?>",
+        previewTitle: "<?php echo htmlspecialchars(__('preview_message_title')); ?>",
+        previewModeHtml: "<?php echo htmlspecialchars(__('preview_mode_html')); ?>",
+        previewModeText: "<?php echo htmlspecialchars(__('preview_mode_text')); ?>",
+        previewError: "<?php echo htmlspecialchars(__('preview_error')); ?>",
+        previewParseError: "<?php echo htmlspecialchars(__('preview_parse_error')); ?>",
+        previewLoadFailed: "<?php echo htmlspecialchars(__('preview_load_failed')); ?>",
+        previewNetworkError: "<?php echo htmlspecialchars(__('preview_network_error')); ?>",
+        infoTitle: "<?php echo htmlspecialchars(__('view_basic_info')); ?>",
+        subject: "<?php echo htmlspecialchars(__('msg_subject')); ?>",
+        sender: "<?php echo htmlspecialchars(__('msg_sender')); ?>",
+        recipient: "<?php echo htmlspecialchars(__('msg_recipient')); ?>",
+        fromHeader: "<?php echo htmlspecialchars(__('view_from_header')); ?>",
+        toHeader: "<?php echo htmlspecialchars(__('view_to_header')); ?>",
+        dkimDmarc: "<?php echo htmlspecialchars(__('view_dkim_dmarc')); ?>",
+        dkimLabel: "<?php echo htmlspecialchars(__('view_dkim_label')); ?>",
+        dmarcLabel: "<?php echo htmlspecialchars(__('view_dmarc_label')); ?>",
+        spamHeader: "<?php echo htmlspecialchars(__('view_spam_header')); ?>",
+        userAgent: "<?php echo htmlspecialchars(__('view_user_agent')); ?>",
+        ipAddress: "<?php echo htmlspecialchars(__('ip_address')); ?>",
+        authUser: "<?php echo htmlspecialchars(__('view_authenticated_user')); ?>",
+        action: "<?php echo htmlspecialchars(__('msg_action')); ?>",
+        score: "<?php echo htmlspecialchars(__('msg_score')); ?>",
+        status: "<?php echo htmlspecialchars(__('status')); ?>",
+        yes: "<?php echo htmlspecialchars(__('yes')); ?>",
+        no: "<?php echo htmlspecialchars(__('no')); ?>",
+        stateQuarantined: "<?php echo htmlspecialchars(__('state_quarantined')); ?>",
+        stateLearnedHam: "<?php echo htmlspecialchars(__('state_learned_ham')); ?>",
+        stateLearnedSpam: "<?php echo htmlspecialchars(__('state_learned_spam')); ?>",
+        stateReleased: "<?php echo htmlspecialchars(__('state_released')); ?>",
+        messageIdLabel: "<?php echo htmlspecialchars(__('view_message_id_label')); ?>",
+        messageIdNa: "<?php echo htmlspecialchars(__('view_message_id_na')); ?>",
+        actionReject: "<?php echo htmlspecialchars(__('action_reject')); ?>",
+        actionNoAction: "<?php echo htmlspecialchars(__('action_no_action')); ?>",
+        actionAddHeader: "<?php echo htmlspecialchars(__('action_add_header')); ?>",
+        actionGreylist: "<?php echo htmlspecialchars(__('action_greylist')); ?>",
+        actionSoftReject: "<?php echo htmlspecialchars(__('action_soft_reject')); ?>"
     };
 
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.message-popup-trigger').forEach((button) => {
+        document.querySelectorAll('.subject-preview-btn').forEach((button) => {
             button.addEventListener('click', () => {
-                openMessagePopup(button.dataset.messageId);
+                openDetailModal(button.dataset.messageId);
             });
+        });
+
+        detailModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closeDetailModal);
+        });
+
+        detailModal.addEventListener('click', (event) => {
+            if (event.target === detailModal) {
+                closeDetailModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && detailModal.classList.contains('active')) {
+                closeDetailModal();
+            }
         });
     });
 
-    function openMessagePopup(msgId) {
+    function openDetailModal(msgId) {
         if (!msgId) {
             return;
         }
 
-        const row = document.getElementById('row_' + msgId);
-        if (!row) {
-            return;
-        }
-
-        const meta = {
-            sender: row.dataset.sender || '',
-            recipients: row.dataset.recipients || '',
-            subject: row.dataset.subject || '',
-            timestamp: row.dataset.timestamp || '',
-            score: row.dataset.score || '',
-            hostname: row.dataset.hostname || '',
-            size: row.dataset.size || '',
-            action: row.dataset.action || ''
-        };
-
-        const popup = window.open('', 'message_' + msgId, 'width=1100,height=750,resizable=yes,scrollbars=yes');
-        if (!popup) {
-            return;
-        }
-
-        popup.document.open();
-        popup.document.write(buildPopupHtml(meta));
-        popup.document.close();
-
-        const request = new XMLHttpRequest();
-        request.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
-
-        request.onload = function() {
-            if (request.status === 200) {
-                try {
-                    const data = JSON.parse(request.responseText);
-                    if (data.success) {
-                        renderPopupPreview(popup, data);
-                    } else {
-                        setPopupError(popup, popupStrings.errorLabel + ': ' + (data.error || ''));
-                    }
-                } catch (e) {
-                    setPopupError(popup, popupStrings.parseError);
-                }
-            } else {
-                setPopupError(popup, popupStrings.loadFailed);
-            }
-        };
-
-        request.onerror = function() {
-            setPopupError(popup, popupStrings.networkError);
-        };
-
-        request.send();
-    }
-
-    function buildPopupHtml(meta) {
-        const safeMeta = {
-            sender: escapeHtml(meta.sender),
-            recipients: escapeHtml(meta.recipients),
-            subject: escapeHtml(meta.subject),
-            timestamp: escapeHtml(meta.timestamp),
-            score: escapeHtml(meta.score),
-            hostname: escapeHtml(meta.hostname),
-            size: escapeHtml(meta.size),
-            action: escapeHtml(meta.action)
-        };
-
-        return `
-<!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${popupStrings.title}</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #2c3e50;
-        }
-        .popup-container {
-            display: flex;
-            height: 100vh;
-        }
-        .popup-sidebar {
-            width: 36%;
-            min-width: 280px;
-            background: #ffffff;
-            border-right: 1px solid #e1e4ea;
-            padding: 24px;
-            overflow-y: auto;
-        }
-        .popup-title {
-            margin: 0 0 16px 0;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .meta-item {
-            margin-bottom: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .meta-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: #7f8c8d;
-        }
-        .meta-value {
-            font-size: 14px;
-            font-weight: 600;
-            word-break: break-word;
-        }
-        .popup-preview {
-            flex: 1;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .preview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .preview-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .preview-format {
-            font-size: 12px;
-            color: #7f8c8d;
-            background: #ecf0f1;
-            padding: 4px 8px;
-            border-radius: 999px;
-        }
-        .preview-body {
-            flex: 1;
-            background: #ffffff;
-            border: 1px solid #e1e4ea;
-            border-radius: 10px;
-            padding: 16px;
-            overflow: auto;
-        }
-        .preview-loading {
-            font-size: 14px;
-            color: #7f8c8d;
-        }
-        .preview-error {
-            color: #c0392b;
-            font-weight: 600;
-        }
-        .preview-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        pre {
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-family: "Courier New", monospace;
-        }
-    </style>
-</head>
-<body>
-    <div class="popup-container">
-        <aside class="popup-sidebar">
-            <div class="popup-title"><?php echo htmlspecialchars(__('preview_message_title')); ?></div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.sender}</span>
-                <span class="meta-value" id="metaSender">${safeMeta.sender}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.recipient}</span>
-                <span class="meta-value" id="metaRecipients">${safeMeta.recipients}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.subject}</span>
-                <span class="meta-value" id="metaSubject">${safeMeta.subject}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.time}</span>
-                <span class="meta-value" id="metaTimestamp">${safeMeta.timestamp}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.score}</span>
-                <span class="meta-value" id="metaScore">${safeMeta.score}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.hostname}</span>
-                <span class="meta-value" id="metaHostname">${safeMeta.hostname}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.size}</span>
-                <span class="meta-value" id="metaSize">${safeMeta.size}</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">${popupStrings.action}</span>
-                <span class="meta-value" id="metaAction">${safeMeta.action}</span>
-            </div>
-        </aside>
-        <section class="popup-preview">
-            <div class="preview-header">
-                <div class="preview-title"><?php echo htmlspecialchars(__('preview_message_title')); ?></div>
-                <div class="preview-format" id="previewFormat"></div>
-            </div>
-            <div class="preview-body" id="previewBody">
-                <div class="preview-loading">${popupStrings.loading}</div>
-            </div>
-        </section>
-    </div>
-</body>
-</html>`;
-    }
-
-    function renderPopupPreview(popup, data) {
-        if (!popup || popup.closed) {
-            return;
-        }
-
-        const doc = popup.document;
-        const formatEl = doc.getElementById('previewFormat');
-        if (formatEl) {
-            if (data.is_html) {
-                formatEl.textContent = popupStrings.previewModeHtml;
-            } else if (data.has_html) {
-                formatEl.textContent = popupStrings.previewModeText;
-            } else {
-                formatEl.textContent = '';
-            }
-        }
-
-        const metaUpdates = {
-            metaSender: data.sender,
-            metaSubject: data.subject,
-            metaTimestamp: data.timestamp,
-            metaScore: data.score
-        };
-        Object.keys(metaUpdates).forEach((key) => {
-            const el = doc.getElementById(key);
-            if (el && metaUpdates[key] !== undefined) {
-                el.textContent = metaUpdates[key];
-            }
+        actionIdFields.forEach((field) => {
+            field.value = msgId;
         });
 
-        const previewBody = doc.getElementById('previewBody');
-        if (!previewBody) {
-            return;
+        if (activeRequest) {
+            activeRequest.abort();
         }
 
-        previewBody.innerHTML = '';
+        detailModalContent.innerHTML = `<div class="detail-loading"><i class="fas fa-spinner fa-spin"></i> ${detailStrings.loading}</div>`;
+        detailModalSubtitle.textContent = '';
+        detailModal.classList.add('active');
+        detailModal.setAttribute('aria-hidden', 'false');
+
+        activeRequest = new XMLHttpRequest();
+        activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
+
+        activeRequest.onload = function() {
+            if (activeRequest.status === 200) {
+                try {
+                    const data = JSON.parse(activeRequest.responseText);
+
+                    if (data.success) {
+                        renderDetailModal(data);
+                    } else {
+                        detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewError}: ${escapeHtml(data.error)}</div>`;
+                    }
+                } catch (e) {
+                    detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewParseError}</div>`;
+                }
+            } else {
+                detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewLoadFailed}</div>`;
+            }
+            activeRequest = null;
+        };
+
+        activeRequest.onerror = function() {
+            detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewNetworkError}</div>`;
+            activeRequest = null;
+        };
+
+        activeRequest.send();
+    }
+
+    function renderDetailModal(data) {
+        const messageIdText = data.message_id ? data.message_id : detailStrings.messageIdNa;
+        detailModalSubtitle.textContent = `${detailStrings.messageIdLabel}: ${messageIdText} · ${data.timestamp}`;
+
+        const senderValue = data.sender_decoded || data.sender || '';
+        const subjectValue = data.subject_decoded || data.subject || '';
+
+        const formatIndicator = data.is_html
+            ? `<span class="preview-format-indicator"><i class="fas fa-code"></i> ${detailStrings.previewModeHtml}</span>`
+            : (data.has_html ? `<span class="preview-format-indicator muted"><i class="fas fa-align-left"></i> ${detailStrings.previewModeText}</span>` : '');
+
+        const previewHeader = `
+            <div class="detail-preview-header">
+                <h4><i class="fas fa-envelope"></i> ${detailStrings.previewTitle} ${formatIndicator}</h4>
+                <div class="preview-meta"><strong>${detailStrings.sender}:</strong> ${escapeHtml(senderValue)}</div>
+                <div class="preview-meta"><strong>${detailStrings.subject}:</strong> ${escapeHtml(subjectValue)}</div>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong>${detailStrings.score}:</strong> ${escapeHtml(String(data.score))}</div>
+            </div>
+        `;
+
+        const previewBody = data.is_html
+            ? `<div class="detail-preview-body"><iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe></div>`
+            : `<div class="detail-preview-body"><pre>${escapeHtml(data.preview)}</pre></div>`;
+
+        detailModalContent.innerHTML = `
+            <div class="detail-modal-grid">
+                <div class="detail-preview-panel">
+                    ${previewHeader}
+                    ${previewBody}
+                </div>
+            </div>
+        `;
 
         if (data.is_html) {
-            const iframe = doc.createElement('iframe');
-            iframe.className = 'preview-iframe';
-            iframe.setAttribute('sandbox', '');
-            iframe.setAttribute('referrerpolicy', 'no-referrer');
+            const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
-            previewBody.appendChild(iframe);
-        } else {
-            const pre = doc.createElement('pre');
-            pre.textContent = data.preview;
-            previewBody.appendChild(pre);
         }
     }
 
-    function setPopupError(popup, message) {
-        if (!popup || popup.closed) {
-            return;
+    function buildActionBadge(action) {
+        const actionKey = (action || '').toLowerCase();
+        const actionMap = {
+            'reject': { label: detailStrings.actionReject, className: 'badge badge-reject', icon: 'fa-ban' },
+            'no action': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'pass': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'add header': { label: detailStrings.actionAddHeader, className: 'badge badge-header', icon: 'fa-tag' },
+            'greylist': { label: detailStrings.actionGreylist, className: 'badge badge-pass', icon: 'fa-clock' },
+            'soft reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' },
+            'soft_reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' }
+        };
+
+        const actionData = actionMap[actionKey] || { label: action || '-', className: 'badge badge-pass', icon: 'fa-question-circle' };
+        return `<span class="${actionData.className}"><i class="fas ${actionData.icon}"></i> ${escapeHtml(actionData.label)}</span>`;
+    }
+
+    function getStateLabel(state, stateBy, stateAt) {
+        let label = detailStrings.stateQuarantined;
+        switch (parseInt(state, 10)) {
+            case 1:
+                label = detailStrings.stateLearnedHam;
+                break;
+            case 2:
+                label = detailStrings.stateLearnedSpam;
+                break;
+            case 3:
+                label = detailStrings.stateReleased;
+                break;
+            default:
+                label = detailStrings.stateQuarantined;
         }
-        const previewBody = popup.document.getElementById('previewBody');
-        if (!previewBody) {
-            return;
+        const parts = [label];
+        if (stateBy) {
+            parts.push(escapeHtml(stateBy));
         }
-        previewBody.innerHTML = '<div class="preview-error">' + escapeHtml(message) + '</div>';
+        if (stateAt) {
+            parts.push(escapeHtml(stateAt));
+        }
+        return parts.join(' · ');
+    }
+
+    function closeDetailModal() {
+        detailModal.classList.remove('active');
+        detailModal.setAttribute('aria-hidden', 'true');
+
+        if (activeRequest) {
+            activeRequest.abort();
+            activeRequest = null;
+        }
     }
 
     function escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text ?? '';
         return div.innerHTML;
     }
     </script>

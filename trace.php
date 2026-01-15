@@ -14,6 +14,20 @@ if (!isAuthenticated()) {
     exit;
 }
 
+function normalizeUtf8Text(string $text): string {
+    if ($text === '') {
+        return $text;
+    }
+    $encoding = mb_detect_encoding($text, ['UTF-8', 'ISO-8859-2', 'WINDOWS-1250', 'ISO-8859-1'], true);
+    if ($encoding && strtoupper($encoding) !== 'UTF-8') {
+        $converted = @mb_convert_encoding($text, 'UTF-8', $encoding);
+        if ($converted !== false) {
+            return $converted;
+        }
+    }
+    return $text;
+}
+
 $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
@@ -109,7 +123,7 @@ include 'menu.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/trace.css">
+    <link rel="stylesheet" href="css/bulk.css">
 </head>
 <body>
     <div class="container">
@@ -207,9 +221,6 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
                                 </a>
                             </th>
-                            <th class="col-status">
-                                <?php echo htmlspecialchars(__('status')); ?>
-                            </th>
                             <th class="col-action">
                                 <a class="sort-link <?php echo $sort === 'action' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('action'); ?>">
                                     <?php echo htmlspecialchars(__('action')); ?>
@@ -222,6 +233,7 @@ include 'menu.php';
                                     <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
                                 </a>
                             </th>
+                            <th style="width: 180px;">STATUS</th>
                             <th class="col-ip">
                                 <a class="sort-link <?php echo $sort === 'ip_address' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('ip_address'); ?>">
                                     <?php echo htmlspecialchars(__('ip_address')); ?>
@@ -244,116 +256,21 @@ include 'menu.php';
                             $senderEmail = extractEmailAddress($sender);
                             $senderEmailKey = $senderEmail ? strtolower($senderEmail) : '';
                             $recipients = decodeMimeHeader($msg['recipients']);
-                            $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
+                            $subject = normalizeUtf8Text(decodeMimeHeader($msg['subject']));
+                            $subject = $subject ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
                             $action = $msg['action'] ?? 'unknown';
                             $ipAddress = $msg['ip_address'] ?? '-';
                             $hostname = $msg['hostname'] ?? '-';
                             $symbols = $msg['symbols'] ?? '';
-                            $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-                            $badExtensionSymbols = ['BAD_FILE_EXT', 'ARCHIVE_WITH_EXECUTABLE', 'BAD_ATTACHMENT_EXT', 'BAD_ATTACHEMENT_EXT'];
-                            $blacklistSymbols = ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'];
-                            $whitelistSymbols = ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'];
-
-                            // Parse symbols like in view.php
-                            $parsed_symbols = [];
-                            if (!empty($symbols)) {
-                                // Try JSON format first (Rspamd format)
-                                if (preg_match_all('/"name":"([^"]+)".*?"score":([+-]?\d+(?:\.\d+)?)/s', $symbols, $matches, PREG_SET_ORDER)) {
-                                    foreach ($matches as $match) {
-                                        $name = trim($match[1]);
-                                        $sym_score = floatval($match[2]);
-                                        if ($name) {
-                                            $parsed_symbols[] = ['name' => $name, 'score' => $sym_score];
-                                        }
-                                    }
-                                } else {
-                                    // Fallback: try simple format "SYMBOL(score)"
-                                    $symbol_list = explode(',', $symbols);
-                                    foreach ($symbol_list as $symbol_item) {
-                                        if (preg_match('/^\s*([^(]+)\(([^)]+)\)\s*$/', $symbol_item, $match)) {
-                                            $parsed_symbols[] = [
-                                                'name' => trim($match[1]),
-                                                'score' => floatval($match[2])
-                                            ];
-                                        }
-                                    }
-                                }
-                                // Sort by score descending
-                                usort($parsed_symbols, function($a, $b) {
-                                    return $b['score'] <=> $a['score'];
-                                });
-                            }
-                            $hasVirusSymbol = false;
-                            $hasBadExtensionSymbol = false;
-                            $hasBlacklistSymbol = false;
-                            $hasWhitelistSymbol = false;
-                            if (!empty($parsed_symbols)) {
-                                foreach ($parsed_symbols as $symbol) {
-                                    if (in_array($symbol['name'], $virusSymbols, true)) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                    if (in_array($symbol['name'], $badExtensionSymbols, true)) {
-                                        $hasBadExtensionSymbol = true;
-                                    }
-                                    if (in_array($symbol['name'], $blacklistSymbols, true)) {
-                                        $hasBlacklistSymbol = true;
-                                    }
-                                    if (in_array($symbol['name'], $whitelistSymbols, true)) {
-                                        $hasWhitelistSymbol = true;
-                                    }
-                                }
-                            }
-                            if (!$hasVirusSymbol && !empty($symbols)) {
-                                foreach ($virusSymbols as $virusSymbol) {
-                                    if (stripos($symbols, $virusSymbol) !== false) {
-                                        $hasVirusSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBadExtensionSymbol && !empty($symbols)) {
-                                foreach ($badExtensionSymbols as $badExtensionSymbol) {
-                                    if (stripos($symbols, $badExtensionSymbol) !== false) {
-                                        $hasBadExtensionSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasBlacklistSymbol && !empty($symbols)) {
-                                foreach ($blacklistSymbols as $blacklistSymbol) {
-                                    if (stripos($symbols, $blacklistSymbol) !== false) {
-                                        $hasBlacklistSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!$hasWhitelistSymbol && !empty($symbols)) {
-                                foreach ($whitelistSymbols as $whitelistSymbol) {
-                                    if (stripos($symbols, $whitelistSymbol) !== false) {
-                                        $hasWhitelistSymbol = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            $statusLabel = '';
-                            $statusClass = '';
-                            if ($hasVirusSymbol) {
-                                $statusLabel = 'virus';
-                                $statusClass = 'status-virus';
-                            } elseif ($hasBadExtensionSymbol) {
-                                $statusLabel = 'příloha';
-                                $statusClass = 'status-bad-extension';
-                            } elseif ($hasBlacklistSymbol) {
-                                $statusLabel = 'blacklist';
-                                $statusClass = 'status-blacklist';
-                            } elseif ($hasWhitelistSymbol) {
-                                $statusLabel = 'whitelist';
-                                $statusClass = 'status-whitelist';
-                            }
+                            $symbolData = buildMessageSymbolData($symbols);
+                            $parsed_symbols = $symbolData['parsed_symbols'];
+                            $hasVirusSymbol = $symbolData['has_virus_symbol'];
+                            $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'];
+                            $statusSymbolMatches = $symbolData['status_symbol_matches'];
                             $virusClass = $hasVirusSymbol ? 'has-virus' : '';
+                            $statusRowClass = getStatusRowClass($statusSymbolMatches);
                             $isRandomSender = $senderEmail ? isLikelyRandomEmail($senderEmail) : false;
 
                             // Action class - using existing badge CSS
@@ -388,16 +305,9 @@ include 'menu.php';
                                     $actionIcon = 'fa-question-circle';
                             }
 
-                            // Score class
-                            if ($score >= 15) {
-                                $scoreClass = 'score-high';
-                            } elseif ($score >= 6) {
-                                $scoreClass = 'score-medium';
-                            } else {
-                                $scoreClass = 'score-low';
-                            }
+                            $scoreClass = getScoreBadgeClass($score, $action);
                             ?>
-                            <tr class="<?php echo trim($virusClass . ' ' . $statusClass); ?>">
+                            <tr class="<?php echo trim($virusClass . ' ' . $statusRowClass); ?>">
                                 <td class="timestamp"><?php echo htmlspecialchars($timestamp); ?></td>
                                 <td class="email-field">
                                     <i class="fas fa-paper-plane"></i> 
@@ -448,15 +358,6 @@ include 'menu.php';
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="status-field">
-                                    <?php if (!empty($statusLabel)): ?>
-                                        <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
-                                            <?php echo htmlspecialchars($statusLabel); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="status-badge status-neutral">-</span>
-                                    <?php endif; ?>
-                                </td>
                                 <td class="action-cell">
                                     <span class="action-badge <?php echo $actionClass; ?>">
                                         <i class="fas <?php echo $actionIcon; ?>"></i>
@@ -469,7 +370,7 @@ include 'menu.php';
                                         <?php if ($hasVirusSymbol): ?>
                                             <i class="fas fa-biohazard virus-icon" title="<?php echo htmlspecialchars(__('filter_virus')); ?>"></i>
                                         <?php endif; ?>
-                                        <?php if ($hasBadExtensionSymbol): ?>
+                                        <?php if ($hasBadAttachmentSymbol): ?>
                                             <i class="fas fa-paperclip bad-attachment-icon" title="<?php echo htmlspecialchars(__('filter_dangerous_attachment')); ?>"></i>
                                         <?php endif; ?>
 
@@ -482,8 +383,7 @@ include 'menu.php';
                                                 <div class="symbols-grid">
                                                     <?php foreach ($parsed_symbols as $sym): 
                                                         $sym_score = $sym['score'];
-                                                        // Same color logic as view.php
-                                                        $bg_color = $sym_score > 1 ? '#e74c3c' : ($sym_score > 0 ? '#f39c12' : ($sym_score < 0 ? '#27ae60' : '#95a5a6'));
+                                                        $bg_color = getSymbolBadgeColor($sym_score);
                                                     ?>
                                                         <span class="symbol-badge" style="background: <?php echo $bg_color; ?>;">
                                                             <span class="symbol-name" title="<?php echo htmlspecialchars($sym['name']); ?>">
@@ -498,6 +398,30 @@ include 'menu.php';
                                             </div>
                                         <?php endif; ?>
                                     </span>
+                                </td>
+                                <td class="status-explanation-cell">
+                                    <?php
+                                    $hasStatusExplanation = false;
+                                    foreach ($statusSymbolMatches as $groupSymbols) {
+                                        if (!empty($groupSymbols)) {
+                                            $hasStatusExplanation = true;
+                                            break;
+                                        }
+                                    }
+                                    ?>
+                                    <?php if ($hasStatusExplanation): ?>
+                                        <div class="status-pills">
+                                            <?php foreach ($statusSymbolMatches as $groupKey => $groupSymbols): ?>
+                                                <?php foreach ($groupSymbols as $groupSymbol): ?>
+                                                    <span class="status-pill status-pill--<?php echo htmlspecialchars($groupKey); ?>">
+                                                        <?php echo htmlspecialchars($groupSymbol); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="ip-field">
                                     <a href="?ip=<?php echo urlencode($ipAddress); ?>" 

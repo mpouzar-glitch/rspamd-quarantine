@@ -326,6 +326,43 @@
     background-color: #d1ecf1;
 }
 
+/* Status-based row highlights */
+.messages-table tbody tr.status-row-virus {
+    background-color: #fdecea;
+    border-left: 3px solid #c1121f;
+}
+
+.messages-table tbody tr.status-row-virus:hover {
+    background-color: #fbd7d4;
+}
+
+.messages-table tbody tr.status-row-bad-extension {
+    background-color: #fff4e5;
+    border-left: 3px solid #f07700;
+}
+
+.messages-table tbody tr.status-row-bad-extension:hover {
+    background-color: #ffe4bf;
+}
+
+.messages-table tbody tr.status-row-blacklist {
+    background-color: #f3e8f6;
+    border-left: 3px solid #6a1b9a;
+}
+
+.messages-table tbody tr.status-row-blacklist:hover {
+    background-color: #e7d4ee;
+}
+
+.messages-table tbody tr.status-row-whitelist {
+    background-color: #e9f8ef;
+    border-left: 3px solid #5ad76a;
+}
+
+.messages-table tbody tr.status-row-whitelist:hover {
+    background-color: #d4f0df;
+}
+
 /* Auto-learned spam highlight (Rspamd already learned) */
 .auto-learn-spam {
     background-color: #fff3cd;
@@ -362,43 +399,6 @@ tr.has-action:hover {
 
 .messages-table tbody tr.has-virus:hover {
     background-color: #e1bee7;
-}
-
-/* Status-based row colors */
-.messages-table tbody tr.status-virus {
-    background-color: #d32f2f;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-virus:hover {
-    background-color: #b71c1c;
-}
-
-.messages-table tbody tr.status-bad-extension {
-    background-color: #fb8c00;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-bad-extension:hover {
-    background-color: #ef6c00;
-}
-
-.messages-table tbody tr.status-blacklist {
-    background-color: #8e24aa;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-blacklist:hover {
-    background-color: #6a1b9a;
-}
-
-.messages-table tbody tr.status-whitelist {
-    background-color: #8bc34a;
-    color: #1b1b1b;
-}
-
-.messages-table tbody tr.status-whitelist:hover {
-    background-color: #7cb342;
 }
         /* Email address links */
 .email-link {

@@ -108,43 +108,6 @@
     background-color: #e1bee7;
 }
 
-/* Status-based row colors */
-.messages-table tbody tr.status-virus {
-    background-color: #d32f2f;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-virus:hover {
-    background-color: #b71c1c;
-}
-
-.messages-table tbody tr.status-bad-extension {
-    background-color: #fb8c00;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-bad-extension:hover {
-    background-color: #ef6c00;
-}
-
-.messages-table tbody tr.status-blacklist {
-    background-color: #8e24aa;
-    color: #fff;
-}
-
-.messages-table tbody tr.status-blacklist:hover {
-    background-color: #6a1b9a;
-}
-
-.messages-table tbody tr.status-whitelist {
-    background-color: #8bc34a;
-    color: #1b1b1b;
-}
-
-.messages-table tbody tr.status-whitelist:hover {
-    background-color: #7cb342;
-}
-
 /* Auto-learned spam highlight */
 .auto-learn-spam {
     background-color: #fff3cd;
@@ -320,6 +283,44 @@
     cursor: help;
     position: relative;
     display: inline-block;
+}
+
+.status-explanation-cell {
+    min-width: 170px;
+}
+
+.status-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.status-pill--virus {
+    background-color: #c1121f;
+}
+
+.status-pill--bad-extension {
+    background-color: #f07700;
+}
+
+.status-pill--blacklist {
+    background-color: #6a1b9a;
+}
+
+.status-pill--whitelist {
+    background-color: #5ad76a;
+    color: #0b3d18;
 }
 
 .symbols-popup {
