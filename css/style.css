@@ -336,6 +336,10 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.messages-table {
+    width: 100%;
+}
+
 th {
     background: #34495e;
     color: white;
