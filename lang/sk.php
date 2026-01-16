@@ -116,6 +116,7 @@ return [
     'msg_sender' => 'Odosielateľ',
     'msg_recipient' => 'Príjemca',
     'msg_recipients' => 'Príjemcovia',
+    'msg_country' => 'Krajina',
     'msg_subject' => 'Predmet',
     'msg_date' => 'Dátum',
     'msg_size' => 'Veľkosť',

@@ -561,6 +561,26 @@ function formatMessageSize($bytes) {
     return round($bytes, 2) . ' ' . $units[$pow];
 }
 
+function getCountryCodeForIp(?string $ip): string {
+    $ip = trim((string)$ip);
+    if ($ip === '' || !filter_var($ip, FILTER_VALIDATE_IP)) {
+        return '';
+    }
+
+    $code = '';
+    if (function_exists('geoip_country_code_by_name')) {
+        $code = geoip_country_code_by_name($ip) ?: '';
+    }
+
+    $code = strtolower((string)$code);
+    $code = preg_replace('/[^a-z]/', '', $code);
+    if (strlen($code) !== 2) {
+        return '';
+    }
+
+    return $code;
+}
+
 function getScoreBadgeClass(float $score, string $action = ''): string {
     $action = strtolower(trim($action));
     $actionMap = [
@@ -1071,7 +1091,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1701,6 +1721,11 @@ function renderMessagesTableHeader(array $options = []): string {
             'label' => __('hostname'),
             'class' => 'col-hostname',
             'sort' => 'hostname',
+        ],
+        'country' => [
+            'label' => __('msg_country'),
+            'class' => 'col-country',
+            'sortable' => false,
         ],
         'actions' => [
             'label' => __('actions'),

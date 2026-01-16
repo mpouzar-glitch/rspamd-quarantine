@@ -158,6 +158,7 @@ return [
     'msg_sender' => 'Odesílatel',
     'msg_recipient' => 'Příjemce',
     'msg_recipients' => 'Příjemci',
+    'msg_country' => 'Země',
     'msg_subject' => 'Předmět',
     'msg_date' => 'Datum',
     'msg_size' => 'Velikost',
