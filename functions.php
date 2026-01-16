@@ -568,8 +568,20 @@ function getCountryCodeForIp(?string $ip): string {
     }
 
     $code = '';
-    if (function_exists('geoip_country_code_by_name')) {
-        $code = geoip_country_code_by_name($ip) ?: '';
+    $geoDbPath = '/usr/local/share/GeoIP/GeoLite2-City.mmdb';
+    $geoAutoload = __DIR__ . '/vendor/autoload.php';
+    if (!class_exists('GeoIp2\\Database\\Reader') && is_readable($geoAutoload)) {
+        require_once $geoAutoload;
+    }
+
+    if (class_exists('GeoIp2\\Database\\Reader') && is_readable($geoDbPath)) {
+        try {
+            $reader = new GeoIp2\Database\Reader($geoDbPath);
+            $record = $reader->city($ip);
+            $code = $record->country->isoCode ?? '';
+        } catch (Throwable $exception) {
+            $code = '';
+        }
     }
 
     $code = strtolower((string)$code);
