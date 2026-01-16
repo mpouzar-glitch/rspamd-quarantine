@@ -384,48 +384,25 @@ include 'menu.php';
             </div>
 
             <!-- Pagination -->
-            <?php if ($totalPages > 1): ?>
-                <div class="pagination">
-                    <?php
-                    $currentQuery = $filters;
-                    $currentQuery['sort'] = $sort;
-                    $currentQuery['dir'] = $sortDir;
-                    $maxButtons = 7;
-                    $startPage = max(1, $page - floor($maxButtons / 2));
-                    $endPage = min($totalPages, $startPage + $maxButtons - 1);
-                    $startPage = max(1, $endPage - $maxButtons + 1);
-                    ?>
-
-                    <?php if ($page > 1): ?>
-                        <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => 1])); ?>" 
-                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_first_page')); ?>">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                        <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $page - 1])); ?>" 
-                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_previous')); ?>">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    <?php endif; ?>
-
-                    <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                        <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $i])); ?>" 
-                           class="page-btn <?php echo $i === $page ? 'active' : ''; ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $totalPages): ?>
-                        <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $page + 1])); ?>" 
-                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_next')); ?>">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                        <a href="?<?php echo buildQueryString(array_merge($currentQuery, ['page' => $totalPages])); ?>" 
-                           class="page-btn" title="<?php echo htmlspecialchars(__('pagination_last_page')); ?>">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+            <?php
+            $currentQuery = array_merge($filters, [
+                'sort' => $sort,
+                'dir' => $sortDir,
+            ]);
+            echo renderPagination($page, $totalPages, $currentQuery, [
+                'max_buttons' => 7,
+                'show_first_last' => true,
+                'link_class' => 'page-btn',
+                'first_label' => '<i class="fas fa-angle-double-left"></i>',
+                'prev_label' => '<i class="fas fa-angle-left"></i>',
+                'next_label' => '<i class="fas fa-angle-right"></i>',
+                'last_label' => '<i class="fas fa-angle-double-right"></i>',
+                'title_first' => __('pagination_first_page'),
+                'title_prev' => __('pagination_previous'),
+                'title_next' => __('pagination_next'),
+                'title_last' => __('pagination_last_page'),
+            ]);
+            ?>
         <?php endif; ?>
     </div>
 
