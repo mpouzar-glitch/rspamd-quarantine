@@ -1630,6 +1630,134 @@ function renderStatsInline($stats, $config = []) {
     return ob_get_clean();
 }
 
+function renderMessagesTableHeader(array $options = []): string {
+    $sort = $options['sort'] ?? '';
+    $buildSortLink = $options['buildSortLink'] ?? null;
+    $getSortIcon = $options['getSortIcon'] ?? null;
+    $columns = $options['columns'] ?? [
+        'timestamp',
+        'sender',
+        'recipients',
+        'subject',
+        'action',
+        'score',
+        'size_bytes',
+        'status',
+        'ip_address',
+        'hostname',
+    ];
+
+    $columnDefinitions = [
+        'timestamp' => [
+            'label' => __('time'),
+            'class' => 'col-timestamp',
+            'sort' => 'timestamp',
+        ],
+        'sender' => [
+            'label' => __('msg_sender'),
+            'class' => 'col-email',
+            'sort' => 'sender',
+        ],
+        'recipients' => [
+            'label' => __('msg_recipient'),
+            'class' => 'col-email',
+            'sort' => 'recipients',
+        ],
+        'subject' => [
+            'label' => __('msg_subject'),
+            'class' => 'col-subject',
+            'sort' => 'subject',
+        ],
+        'action' => [
+            'label' => __('action'),
+            'class' => 'col-action',
+            'sort' => 'action',
+        ],
+        'score' => [
+            'label' => __('msg_score'),
+            'class' => 'col-score',
+            'sort' => 'score',
+        ],
+        'size_bytes' => [
+            'label' => __('msg_size'),
+            'class' => 'col-size',
+            'sort' => 'size_bytes',
+        ],
+        'size' => [
+            'label' => __('size'),
+            'class' => 'col-size',
+            'sort' => 'size',
+        ],
+        'status' => [
+            'label' => 'STATUS',
+            'style' => 'width: 180px;',
+        ],
+        'ip_address' => [
+            'label' => __('ip_address'),
+            'class' => 'col-ip',
+            'sort' => 'ip_address',
+        ],
+        'hostname' => [
+            'label' => __('hostname'),
+            'class' => 'col-hostname',
+            'sort' => 'hostname',
+        ],
+        'actions' => [
+            'label' => __('actions'),
+            'style' => 'width: 150px;',
+        ],
+    ];
+
+    $header = "<thead>\n    <tr>\n";
+
+    foreach ($columns as $column) {
+        $columnConfig = [];
+        if (is_string($column)) {
+            $columnConfig = $columnDefinitions[$column] ?? [];
+            $columnConfig['key'] = $column;
+        } elseif (is_array($column)) {
+            $columnKey = $column['key'] ?? null;
+            $columnConfig = array_merge($columnDefinitions[$columnKey] ?? [], $column);
+            $columnConfig['key'] = $columnKey;
+        }
+
+        if (empty($columnConfig['key'])) {
+            continue;
+        }
+
+        $label = $columnConfig['label'] ?? $columnConfig['key'];
+        $class = $columnConfig['class'] ?? '';
+        $style = $columnConfig['style'] ?? '';
+        $sortKey = $columnConfig['sort'] ?? null;
+        $sortable = $columnConfig['sortable'] ?? true;
+
+        $attributes = '';
+        if (!empty($class)) {
+            $attributes .= ' class="' . htmlspecialchars($class) . '"';
+        }
+        if (!empty($style)) {
+            $attributes .= ' style="' . htmlspecialchars($style) . '"';
+        }
+
+        if ($sortable && $sortKey && is_callable($buildSortLink) && is_callable($getSortIcon)) {
+            $isActive = ($sort === $sortKey);
+            $header .= "        <th{$attributes}>\n";
+            $header .= "            <a class=\"sort-link " . ($isActive ? 'active' : '') . "\" href=\""
+                . htmlspecialchars($buildSortLink($sortKey)) . "\">\n";
+            $header .= "                " . htmlspecialchars($label) . "\n";
+            $header .= "                <i class=\"fas " . htmlspecialchars($getSortIcon($sortKey)) . "\"></i>\n";
+            $header .= "            </a>\n";
+            $header .= "        </th>\n";
+        } else {
+            $header .= "        <th{$attributes}>" . htmlspecialchars($label) . "</th>\n";
+        }
+    }
+
+    $header .= "    </tr>\n</thead>\n";
+
+    return $header;
+}
+
 
 // ============================================
 // TRACE MESSAGE FUNCTIONS
