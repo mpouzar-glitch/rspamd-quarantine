@@ -65,6 +65,7 @@ function getFiltersFromRequest(string $sessionKey = 'search_filters'): array {
         'sender',
         'recipient',
         'ip',
+        'country',
         'auth_user',
         'virus',
         'bad_extension',
@@ -97,6 +98,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         'show_recipient' => true,
         'show_state' => true,
         'show_ip' => true,
+        'show_country' => false,
         'show_auth_user' => true,
         'show_virus' => false,
         'show_bad_extension' => false,
@@ -225,6 +227,18 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-network-wired',
             'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
+            'class' => 'filter-group',
+        ];
+    }
+
+    if ($opts['show_country']) {
+        $filters['country'] = [
+            'key' => 'country',
+            'type' => 'text',
+            'label' => __('filter_country'),
+            'icon' => 'fas fa-flag',
+            'placeholder' => __('filter_country_placeholder'),
+            'value' => getFilterValue('country', $sessionKey),
             'class' => 'filter-group',
         ];
     }
@@ -1082,6 +1096,7 @@ function getTraceFiltersFromRequest(string $sessionKey = 'search_filters') {
         'sender',
         'recipient',
         'ip',
+        'country',
         'auth_user'
     ];
 

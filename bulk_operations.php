@@ -179,6 +179,7 @@ include 'menu.php';
             'show_recipient' => true,
             'show_state' => true,
             'show_ip' => false,
+            'show_country' => true,
             'show_auth_user' => false,
             'form_id' => 'filterForm',
             'reset_url' => 'bulk_operations.php?reset_filters=1',
@@ -241,6 +242,7 @@ include 'menu.php';
                             'sender',
                             'recipients',
                             'subject',
+                            ['key' => 'country', 'style' => 'width: 50px;', 'sortable' => false],
                             ['key' => 'size', 'style' => 'width: 90px;', 'sortable' => false],
                             ['key' => 'score', 'style' => 'width: 60px;'],
                             'status',
@@ -259,6 +261,14 @@ include 'menu.php';
                             $subject = decodeMimeHeader($msg['subject']) ?: __('msg_no_subject');
                             $score = round($msg['score'], 2);
                             $action = strtolower(trim($msg['action'] ?? ''));
+                            $ipAddress = $msg['ip_address'] ?? '';
+                            $countryCode = $msg['country'] ?? '';
+                            if ($countryCode === '' && $ipAddress !== '') {
+                                $countryCode = getCountryCodeForIp($ipAddress);
+                            }
+                            $flag = $countryCode !== ''
+                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                                : '-';
 
                             $symbols = $msg['symbols'] ?? '';
                             $symbolData = buildMessageSymbolData($symbols);
@@ -336,6 +346,9 @@ include 'menu.php';
                                     <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
                                         <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
                                     </button>
+                                </td>
+                                <td class="text-center">
+                                    <?php echo $flag; ?>
                                 </td>
                                 <td class="text-right no-wrap">
                                     <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>

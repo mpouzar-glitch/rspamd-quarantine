@@ -1073,6 +1073,15 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
         $params[] = '%' . $filters['recipient'] . '%';
     }
 
+    if (!empty($filters['country'])) {
+        $country = strtolower(trim($filters['country']));
+        $country = preg_replace('/[^a-z]/', '', $country);
+        if ($country !== '') {
+            $where[] = "country = ?";
+            $params[] = $country;
+        }
+    }
+
     // Symbol filters
     $symbolFilters = [];
     if (!empty($filters['virus'])) {
@@ -1103,7 +1112,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, country, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1676,6 +1685,7 @@ function renderMessagesTableHeader(array $options = []): string {
         'size_bytes',
         'status',
         'ip_address',
+        'country',
         'hostname',
     ];
 
@@ -1851,6 +1861,7 @@ function buildTraceQuery($filters = [], &$params = [], $options = []) {
             recipients,
             subject,
             ip_address,
+            country,
             authenticated_user,
             action,
             score,
@@ -1912,6 +1923,15 @@ function applyTraceFilters($filters, &$where, &$params) {
     if (!empty($filters['ip'])) {
         $where[] = "ip_address = ?";
         $params[] = $filters['ip'];
+    }
+
+    if (!empty($filters['country'])) {
+        $country = strtolower(trim($filters['country']));
+        $country = preg_replace('/[^a-z]/', '', $country);
+        if ($country !== '') {
+            $where[] = "country = ?";
+            $params[] = $country;
+        }
     }
 
     // Authenticated user filter

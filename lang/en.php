@@ -179,6 +179,8 @@ return [
     'filter_recipient_placeholder' => 'e.g. user@domain.com',
     'filter_ip' => 'IP address',
     'filter_ip_placeholder' => 'e.g. 192.168.1.1',
+    'filter_country' => 'Country',
+    'filter_country_placeholder' => 'e.g. CZ',
     'filter_auth_user' => 'Auth user',
     'filter_auth_user_placeholder' => 'e.g. user@domain',
     'filter_virus' => 'Virus',

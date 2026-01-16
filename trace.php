@@ -149,6 +149,7 @@ include 'menu.php';
             'show_recipient' => true,
             'show_state' => false,
             'show_ip' => ($filters['ip'] ?? false),
+            'show_country' => true,
             'show_auth_user' => false,
             'form_id' => 'filterForm',
             'reset_url' => 'trace.php',
@@ -204,6 +205,13 @@ include 'menu.php';
                             $action = $msg['action'] ?? 'unknown';
                             $ipAddress = $msg['ip_address'] ?? '-';
                             $hostname = $msg['hostname'] ?? '-';
+                            $countryCode = $msg['country'] ?? '';
+                            if ($countryCode === '' && $ipAddress !== '-') {
+                                $countryCode = getCountryCodeForIp($ipAddress);
+                            }
+                            $flag = $countryCode !== ''
+                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                                : '-';
                             $symbols = $msg['symbols'] ?? '';
                             $symbolData = buildMessageSymbolData($symbols);
                             $parsed_symbols = $symbolData['parsed_symbols'];
@@ -373,6 +381,9 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
                                         <?php echo htmlspecialchars($ipAddress); ?>
                                     </a>
+                                </td>
+                                <td class="text-center">
+                                    <?php echo $flag; ?>
                                 </td>
                                 <td class="hostname-field">
                                     <?php echo htmlspecialchars($hostname); ?>

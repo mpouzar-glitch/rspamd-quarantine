@@ -221,6 +221,8 @@ return [
     'filter_recipient_placeholder' => 'např. user@domain.com',
     'filter_ip' => 'IP adresa',
     'filter_ip_placeholder' => 'např. 192.168.1.1',
+    'filter_country' => 'Země',
+    'filter_country_placeholder' => 'např. CZ',
     'filter_auth_user' => 'Auth. uživatel',
     'filter_auth_user_placeholder' => 'např. user@domain',
     'filter_virus' => 'Virus',
