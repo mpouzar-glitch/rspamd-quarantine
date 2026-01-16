@@ -205,7 +205,7 @@ include 'menu.php';
                     ); ?>
                 </div>
             </div>
-
+        <div class="table-container">
             <table class="messages-table">
                 <thead>
                     <tr>
@@ -444,6 +444,7 @@ include 'menu.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
 
              <!-- Pagination -->
             <?php if ($totalPages > 1): ?>

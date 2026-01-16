@@ -210,26 +210,26 @@ include 'menu.php';
             <strong><?php echo htmlspecialchars(__('bulk_instructions_label')); ?></strong> <?php echo htmlspecialchars(__('bulk_instructions_text')); ?>
         </div>
 
-        <?php if (empty($messages)): ?>
-            <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <h3><?php echo htmlspecialchars(__('bulk_no_messages_title')); ?></h3>
-                <p><?php echo htmlspecialchars(__('bulk_no_messages_desc')); ?></p>
+    <?php if (empty($messages)): ?>
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3><?php echo htmlspecialchars(__('bulk_no_messages_title')); ?></h3>
+            <p><?php echo htmlspecialchars(__('bulk_no_messages_desc')); ?></p>
+        </div>
+    <?php else: ?>
+        <form method="POST" action="process_bulk.php" id="bulkForm">
+            <div class="results-info">
+                <?php echo __(
+                    'bulk_results_info',
+                    [
+                        'shown' => count($messages),
+                        'total' => number_format($totalItems),
+                        'page' => $page,
+                        'pages' => $totalPages,
+                    ]
+                ); ?>
             </div>
-        <?php else: ?>
-            <form method="POST" action="process_bulk.php" id="bulkForm">
-                <div class="results-info">
-                    <?php echo __(
-                        'bulk_results_info',
-                        [
-                            'shown' => count($messages),
-                            'total' => number_format($totalItems),
-                            'page' => $page,
-                            'pages' => $totalPages,
-                        ]
-                    ); ?>
-                </div>
-
+            <div class="table-container">
                 <table class="messages-table">
                     <thead>
                         <tr>
@@ -442,6 +442,7 @@ include 'menu.php';
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
 
                 <!-- Bulk Submit Button -->
                 <div class="bulk-submit-container">
