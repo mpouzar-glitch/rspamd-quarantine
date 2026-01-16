@@ -136,6 +136,7 @@ include 'menu.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/bulk.css">
@@ -218,6 +219,7 @@ include 'menu.php';
                         'recipients',
                         'subject',
                         ['key' => 'hostname', 'style' => 'width: 100px;'],
+                        ['key' => 'country', 'style' => 'width: 50px;', 'sortable' => false],
                         ['key' => 'size', 'style' => 'width: 90px;'],
                         ['key' => 'score', 'style' => 'width: 60px;'],
                         'status',
@@ -238,6 +240,11 @@ include 'menu.php';
                         $score = round($msg['score'], 2);
                         $action = strtolower(trim($msg['action'] ?? ''));
                         $hostname = $msg['hostname'] ?? '-';
+                        $ipAddress = $msg['ip_address'] ?? '';
+                        $countryCode = getCountryCodeForIp($ipAddress);
+                        $flag = $countryCode !== ''
+                            ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                            : '-';
 
                         $symbols = $msg['symbols'] ?? '';
                         $symbolData = buildMessageSymbolData($symbols);
@@ -309,6 +316,9 @@ include 'menu.php';
                             </td>
                             <td class="hostname-field">
                                 <?php echo htmlspecialchars($hostname); ?>
+                            </td>
+                            <td class="text-center">
+                                <?php echo $flag; ?>
                             </td>
                             <td class="text-right no-wrap">
                                 <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
