@@ -561,6 +561,38 @@ function formatMessageSize($bytes) {
     return round($bytes, 2) . ' ' . $units[$pow];
 }
 
+function getCountryCodeForIp(?string $ip): string {
+    $ip = trim((string)$ip);
+    if ($ip === '' || !filter_var($ip, FILTER_VALIDATE_IP)) {
+        return '';
+    }
+
+    $code = '';
+    $geoDbPath = '/usr/local/share/GeoIP/GeoLite2-City.mmdb';
+    $geoAutoload = __DIR__ . '/vendor/autoload.php';
+    if (!class_exists('GeoIp2\\Database\\Reader') && is_readable($geoAutoload)) {
+        require_once $geoAutoload;
+    }
+
+    if (class_exists('GeoIp2\\Database\\Reader') && is_readable($geoDbPath)) {
+        try {
+            $reader = new GeoIp2\Database\Reader($geoDbPath);
+            $record = $reader->city($ip);
+            $code = $record->country->isoCode ?? '';
+        } catch (Throwable $exception) {
+            $code = '';
+        }
+    }
+
+    $code = strtolower((string)$code);
+    $code = preg_replace('/[^a-z]/', '', $code);
+    if (strlen($code) !== 2) {
+        return '';
+    }
+
+    return $code;
+}
+
 function getScoreBadgeClass(float $score, string $action = ''): string {
     $action = strtolower(trim($action));
     $actionMap = [
@@ -1071,7 +1103,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1701,6 +1733,11 @@ function renderMessagesTableHeader(array $options = []): string {
             'label' => __('hostname'),
             'class' => 'col-hostname',
             'sort' => 'hostname',
+        ],
+        'country' => [
+            'label' => __('msg_country'),
+            'class' => 'col-country',
+            'sortable' => false,
         ],
         'actions' => [
             'label' => __('actions'),

@@ -116,6 +116,7 @@ return [
     'msg_sender' => 'Sender',
     'msg_recipient' => 'Recipient',
     'msg_recipients' => 'Recipients',
+    'msg_country' => 'Country',
     'msg_subject' => 'Subject',
     'msg_date' => 'Date',
     'msg_size' => 'Size',
