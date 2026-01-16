@@ -182,65 +182,13 @@ include 'menu.php';
         <?php else: ?>
             <div class="table-container">
                 <table class="messages-table">
-                    <thead>
-                        <tr>
-                            <th class="col-timestamp">
-                                <a class="sort-link <?php echo $sort === 'timestamp' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('timestamp'); ?>">
-                                    <?php echo htmlspecialchars(__('time')); ?>
-                                    <i class="fas <?php echo $getSortIcon('timestamp'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-email">
-                                <a class="sort-link <?php echo $sort === 'sender' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('sender'); ?>">
-                                    <?php echo htmlspecialchars(__('msg_sender')); ?>
-                                    <i class="fas <?php echo $getSortIcon('sender'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-email">
-                                <a class="sort-link <?php echo $sort === 'recipients' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('recipients'); ?>">
-                                    <?php echo htmlspecialchars(__('msg_recipient')); ?>
-                                    <i class="fas <?php echo $getSortIcon('recipients'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-subject">
-                                <a class="sort-link <?php echo $sort === 'subject' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('subject'); ?>">
-                                    <?php echo htmlspecialchars(__('msg_subject')); ?>
-                                    <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-action">
-                                <a class="sort-link <?php echo $sort === 'action' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('action'); ?>">
-                                    <?php echo htmlspecialchars(__('action')); ?>
-                                    <i class="fas <?php echo $getSortIcon('action'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-score">
-                                <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
-                                    <?php echo htmlspecialchars(__('msg_score')); ?>
-                                    <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-size">
-                                <a class="sort-link <?php echo $sort === 'size_bytes' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('size_bytes'); ?>">
-                                    <?php echo htmlspecialchars(__('msg_size')); ?>
-                                    <i class="fas <?php echo $getSortIcon('size_bytes'); ?>"></i>
-                                </a>
-                            </th>
-                            <th style="width: 180px;">STATUS</th>
-                            <th class="col-ip">
-                                <a class="sort-link <?php echo $sort === 'ip_address' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('ip_address'); ?>">
-                                    <?php echo htmlspecialchars(__('ip_address')); ?>
-                                    <i class="fas <?php echo $getSortIcon('ip_address'); ?>"></i>
-                                </a>
-                            </th>
-                            <th class="col-hostname">
-                                <a class="sort-link <?php echo $sort === 'hostname' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('hostname'); ?>">
-                                    <?php echo htmlspecialchars(__('hostname')); ?>
-                                    <i class="fas <?php echo $getSortIcon('hostname'); ?>"></i>
-                                </a>
-                            </th>
-                        </tr>
-                    </thead>
+                    <?php
+                    echo renderMessagesTableHeader([
+                        'sort' => $sort,
+                        'buildSortLink' => $buildSortLink,
+                        'getSortIcon' => $getSortIcon,
+                    ]);
+                    ?>
                     <tbody>
                         <?php foreach ($messages as $msg): ?>
                             <?php
