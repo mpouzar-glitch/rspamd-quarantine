@@ -207,54 +207,24 @@ include 'menu.php';
             </div>
 
             <table class="messages-table">
-                <thead>
-                    <tr>
-                        <th style="width: 110px;">
-                            <a class="sort-link <?php echo $sort === 'timestamp' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('timestamp'); ?>">
-                                <?php echo htmlspecialchars(__('time')); ?>
-                                <i class="fas <?php echo $getSortIcon('timestamp'); ?>"></i>
-                            </a>
-                        </th>
-                        <th>
-                            <a class="sort-link <?php echo $sort === 'sender' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('sender'); ?>">
-                                <?php echo htmlspecialchars(__('msg_sender')); ?>
-                                <i class="fas <?php echo $getSortIcon('sender'); ?>"></i>
-                            </a>
-                        </th>
-                        <th>
-                            <a class="sort-link <?php echo $sort === 'recipients' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('recipients'); ?>">
-                                <?php echo htmlspecialchars(__('msg_recipient')); ?>
-                                <i class="fas <?php echo $getSortIcon('recipients'); ?>"></i>
-                            </a>
-                        </th>
-                        <th>
-                            <a class="sort-link <?php echo $sort === 'subject' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('subject'); ?>">
-                                <?php echo htmlspecialchars(__('subject')); ?>
-                                <i class="fas <?php echo $getSortIcon('subject'); ?>"></i>
-                            </a>
-                        </th>            
-                        <th style="width: 100px;" class="col-hostname">
-                            <a class="sort-link <?php echo $sort === 'hostname' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('hostname'); ?>">
-                                <?php echo htmlspecialchars(__('hostname')); ?>
-                                <i class="fas <?php echo $getSortIcon('hostname'); ?>"></i>
-                            </a>
-                        </th>
-                        <th style="width: 90px;" class="col-size">
-                            <a class="sort-link <?php echo $sort === 'size' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('size'); ?>">
-                                <?php echo htmlspecialchars(__('size')); ?>
-                                <i class="fas <?php echo $getSortIcon('size'); ?>"></i>
-                            </a>
-                        </th>
-                        <th style="width: 60px;">
-                            <a class="sort-link <?php echo $sort === 'score' ? 'active' : ''; ?>" href="<?php echo $buildSortLink('score'); ?>">
-                                <?php echo htmlspecialchars(__('msg_score')); ?>
-                                <i class="fas <?php echo $getSortIcon('score'); ?>"></i>
-                            </a>
-                        </th>
-                        <th style="width: 180px;">STATUS</th>
-                        <th style="width: 150px;"><?php echo htmlspecialchars(__('actions')); ?></th>
-                    </tr>
-                </thead>
+                <?php
+                echo renderMessagesTableHeader([
+                    'sort' => $sort,
+                    'buildSortLink' => $buildSortLink,
+                    'getSortIcon' => $getSortIcon,
+                    'columns' => [
+                        ['key' => 'timestamp', 'style' => 'width: 110px;'],
+                        'sender',
+                        'recipients',
+                        'subject',
+                        ['key' => 'hostname', 'style' => 'width: 100px;'],
+                        ['key' => 'size', 'style' => 'width: 90px;'],
+                        ['key' => 'score', 'style' => 'width: 60px;'],
+                        'status',
+                        ['key' => 'actions', 'style' => 'width: 150px;'],
+                    ],
+                ]);
+                ?>
                 <tbody>
                     <?php foreach ($messages as $msg): ?>
                         <?php
