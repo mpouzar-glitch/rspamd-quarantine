@@ -588,6 +588,89 @@ function buildQueryString($params = []) {
 }
 
 /**
+ * Render pagination controls.
+ *
+ * @param int   $page        Current page.
+ * @param int   $totalPages  Total number of pages.
+ * @param array $queryParams Base query parameters (without page).
+ * @param array $options     Rendering options.
+ * @return string HTML for pagination.
+ */
+function renderPagination(int $page, int $totalPages, array $queryParams = [], array $options = []): string {
+    if ($totalPages <= 1) {
+        return '';
+    }
+
+    $defaults = [
+        'max_buttons' => 7,
+        'show_first_last' => false,
+        'show_prev_next' => true,
+        'link_class' => '',
+        'active_class' => 'active',
+        'first_label' => '&laquo;',
+        'prev_label' => '&lsaquo;',
+        'next_label' => '&rsaquo;',
+        'last_label' => '&raquo;',
+        'title_first' => null,
+        'title_prev' => null,
+        'title_next' => null,
+        'title_last' => null,
+    ];
+
+    $opts = array_merge($defaults, $options);
+    $maxButtons = max(1, (int)$opts['max_buttons']);
+    $startPage = max(1, $page - floor($maxButtons / 2));
+    $endPage = min($totalPages, $startPage + $maxButtons - 1);
+    $startPage = max(1, $endPage - $maxButtons + 1);
+
+    $linkClass = trim((string)$opts['link_class']);
+
+    $buildLink = function (int $targetPage) use ($queryParams): string {
+        return '?' . buildQueryString(array_merge($queryParams, ['page' => $targetPage]));
+    };
+
+    $renderLink = function (string $href, string $label, bool $isActive = false, ?string $title = null) use ($linkClass, $opts): void {
+        $classes = [];
+        if ($linkClass !== '') {
+            $classes[] = $linkClass;
+        }
+        if ($isActive && $opts['active_class'] !== '') {
+            $classes[] = $opts['active_class'];
+        }
+        $classAttr = $classes ? ' class="' . htmlspecialchars(implode(' ', $classes)) . '"' : '';
+        $titleAttr = $title ? ' title="' . htmlspecialchars($title) . '"' : '';
+        echo '<a href="' . $href . '"' . $classAttr . $titleAttr . '>' . $label . '</a>';
+    };
+
+    ob_start();
+    ?>
+    <div class="pagination">
+        <?php if ($opts['show_first_last'] && $page > 1): ?>
+            <?php $renderLink($buildLink(1), $opts['first_label'], false, $opts['title_first']); ?>
+        <?php endif; ?>
+
+        <?php if ($opts['show_prev_next'] && $page > 1): ?>
+            <?php $renderLink($buildLink($page - 1), $opts['prev_label'], false, $opts['title_prev']); ?>
+        <?php endif; ?>
+
+        <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+            <?php $renderLink($buildLink($i), (string)$i, $i === $page); ?>
+        <?php endfor; ?>
+
+        <?php if ($opts['show_prev_next'] && $page < $totalPages): ?>
+            <?php $renderLink($buildLink($page + 1), $opts['next_label'], false, $opts['title_next']); ?>
+        <?php endif; ?>
+
+        <?php if ($opts['show_first_last'] && $page < $totalPages): ?>
+            <?php $renderLink($buildLink($totalPages), $opts['last_label'], false, $opts['title_last']); ?>
+        <?php endif; ?>
+    </div>
+    <?php
+
+    return ob_get_clean();
+}
+
+/**
  * Render stats cards for trace page
  * 
  * @param array $stats Statistics data

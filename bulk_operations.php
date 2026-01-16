@@ -436,33 +436,15 @@ include 'menu.php';
                 </div>
 
                 <!-- Pagination -->
-                <?php if ($totalPages > 1): ?>
-                    <div class="pagination">
-                        <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => '', 'reset_page' => ''])); ?>" class="page-link">
-                            <i class="fas fa-chevron-left"></i> <?php echo htmlspecialchars(__('pagination_previous')); ?>
-                        </a>
-                    <?php endif; ?>
-
-                        <?php
-                        $start = max(1, $page - 2);
-                        $end = min($totalPages, $page + 2);
-                        for ($i = $start; $i <= $end; $i++):
-                            $activeClass = ($i == $page) ? 'active' : '';
-                        ?>
-                        <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => '', 'reset_page' => ''])); ?>" 
-                           class="page-link <?php echo $activeClass; ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $totalPages): ?>
-                        <a href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query(array_diff_key($_GET, ['page' => '', 'reset_page' => ''])); ?>" class="page-link">
-                            <?php echo htmlspecialchars(__('pagination_next')); ?> <i class="fas fa-chevron-right"></i>
-                        </a>
-                    <?php endif; ?>
-                    </div>
-                <?php endif; ?>
+                <?php
+                $paginationQuery = array_diff_key($_GET, ['page' => '', 'reset_page' => '']);
+                echo renderPagination($page, $totalPages, $paginationQuery, [
+                    'max_buttons' => 5,
+                    'link_class' => 'page-link',
+                    'prev_label' => '<i class="fas fa-chevron-left"></i> ' . htmlspecialchars(__('pagination_previous')),
+                    'next_label' => htmlspecialchars(__('pagination_next')) . ' <i class="fas fa-chevron-right"></i>',
+                ]);
+                ?>
             </form>
         <?php endif; ?>
     </div>
