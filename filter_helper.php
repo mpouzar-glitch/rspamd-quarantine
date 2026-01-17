@@ -868,9 +868,9 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['search'] = [
             'key' => 'search',
             'type' => 'text',
-            'label' => 'Hledat',
+            'label' => __('audit_filter_search_label'),
             'icon' => 'fas fa-search',
-            'placeholder' => 'Uživatel, akce, IP, detail...',
+            'placeholder' => __('audit_filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -880,21 +880,21 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['action'] = [
             'key' => 'action',
             'type' => 'select',
-            'label' => 'Akce',
+            'label' => __('audit_filter_action_label'),
             'icon' => 'fas fa-bolt',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
             'options' => [
-                '' => 'Všechny akce',
-                'release_message' => 'Uvolnění zprávy',
-                'learn_spam' => 'Naučit SPAM',
-                'learn_ham' => 'Naučit HAM',
-                'delete_message' => 'Smazání zprávy',
-                'user_updated' => 'Úprava systémového uživatele',
-                'mailbox_updated' => 'Úprava doménového uživatele',
-                'alias_updated' => 'Úprava doménového aliasu',
-                'login_success' => 'Úspěšné přihlášení',
-                'login_failed' => 'Neúspěšné přihlášení',
+                '' => __('audit_filter_action_all'),
+                'release_message' => __('audit_filter_action_release'),
+                'learn_spam' => __('audit_filter_action_learn_spam'),
+                'learn_ham' => __('audit_filter_action_learn_ham'),
+                'delete_message' => __('audit_filter_action_delete'),
+                'user_updated' => __('audit_filter_action_user_updated'),
+                'mailbox_updated' => __('audit_filter_action_mailbox_updated'),
+                'alias_updated' => __('audit_filter_action_alias_updated'),
+                'login_success' => __('audit_filter_action_login_success'),
+                'login_failed' => __('audit_filter_action_login_failed'),
             ],
         ];
     }
@@ -903,9 +903,9 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['username'] = [
             'key' => 'username',
             'type' => 'text',
-            'label' => 'Uživatel',
+            'label' => __('audit_filter_username_label'),
             'icon' => 'fas fa-user',
-            'placeholder' => 'Uživatelské jméno',
+            'placeholder' => __('audit_filter_username_placeholder'),
             'value' => getFilterValue('username', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -915,7 +915,7 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['date_from'] = [
             'key' => 'date_from',
             'type' => 'date',
-            'label' => 'Datum od',
+            'label' => __('audit_filter_date_from_label'),
             'icon' => 'far fa-calendar-alt',
             'value' => getFilterValue('date_from', $sessionKey),
             'class' => 'filter-group',
@@ -926,7 +926,7 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['date_to'] = [
             'key' => 'date_to',
             'type' => 'date',
-            'label' => 'Datum do',
+            'label' => __('audit_filter_date_to_label'),
             'icon' => 'far fa-calendar-alt',
             'value' => getFilterValue('date_to', $sessionKey),
             'class' => 'filter-group',
