@@ -2357,7 +2357,7 @@ function buildMessageSymbolData($symbols) {
         'virus' => $virusSymbols,
         'bad-extension' => $badAttachmentSymbols,
         'policy-reject' => $policyRejectSymbols,
-        'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
+        'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME','BAD_SUBJECT'],
         'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
     ];
 
