@@ -395,7 +395,7 @@ td {
     font-size: 13px;
 }
 
-tbody tr:nth-child(even):not(.selected):not([style*="background"]):not([style*="background-color"]) {
+tbody tr:nth-child(even):not(.selected):not(.state-learned-ham):not(.state-learned-spam):not(.state-released):not(.status-row-virus):not(.status-row-bad-extension) {
     background: #e2e1e4;
 }
 
@@ -1162,6 +1162,9 @@ tr.selected {
 .status-pill--whitelist {
     background-color: #5ad76a;
     color: #0b3d18;
+}
+.status-pill--policy-reject {
+    background-color: #666666;
 }
 
 .data-table .col-operations {

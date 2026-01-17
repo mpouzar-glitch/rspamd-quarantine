@@ -265,12 +265,13 @@ include 'menu.php';
                             $score = round($msg['score'], 2);
                             $action = strtolower(trim($msg['action'] ?? ''));
                             $ipAddress = $msg['ip_address'] ?? '';
-                            $countryCode = $msg['country'] ?? '';
-                            if ($countryCode === '' && $ipAddress !== '') {
-                                $countryCode = getCountryCodeForIp($ipAddress);
-                            }
+                            $countryCode = strtolower(trim((string)($msg['country'] ?? getCountryCodeForIp($ipAddress))));
+                            $countryTitle = $countryCode !== '' ? strtoupper($countryCode) : '-';
+                            $countryLink = $countryCode !== ''
+                                ? '?' . buildQueryString(array_merge($filters, ['country' => $countryCode, 'page' => 1]))
+                                : '';
                             $flag = $countryCode !== ''
-                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars($countryTitle) . '"></span>'
                                 : '-';
 
                             $symbols = $msg['symbols'] ?? '';
