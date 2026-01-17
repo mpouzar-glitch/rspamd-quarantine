@@ -231,6 +231,7 @@ return [
     'filter_clear' => 'Vymazat',
     'filter_by_sender' => 'Filtrovat podle odesílatele: {sender}',
     'filter_by_recipient' => 'Filtrovat podle příjemce: {recipient}',
+    'filter_by_country' => 'Filtrovat podle země: {country}',
     'filter_by_ip' => 'Filtrovat podle IP: {ip}',
     'filter_has_attachments' => 'Má přílohy',
     'filter_spam_level' => 'Úroveň spamu',
