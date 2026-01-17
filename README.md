@@ -30,6 +30,28 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - Useful for debugging deliverability and spam classification issues
 - Same filtering capabilities as quarantine view
 
+### Whitelist/Blacklist Map Management (Multimap)
+- Dedicated maps view for maintaining Rspamd multimap entries
+- Supports whitelist and blacklist lists with tabbed groups per entry type
+- Entry types:
+  - **Email/domain** (exact match)
+  - **Email regex** (regexp entries for mailbox patterns)
+  - **Subject regex** (regexp entries for subject filtering)
+  - **IP address** (exact match)
+- Quick add/remove actions from quarantine and message detail views
+- Automatic sync to configured Rspamd servers after every change
+- Domain admins can only manage entries they created
+
+### Bulk Operations
+- Multi-select actions for quarantine items
+- Bulk release, delete, or learn spam/ham in one step
+- Confirmation dialogs for destructive actions
+
+### User Management
+- Admin UI for creating, editing, and deactivating users
+- Role assignment (admin, domain admin, viewer)
+- Domain scoping for domain admins
+
 ### Statistics and Charts
 - **Volume statistics** for quarantine and trace data
 - **Top senders/recipients** with sortable tables (up to 40 records)
@@ -54,6 +76,8 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
   - Message releases
   - Spam/HAM training
   - Deletions
+  - Map additions/removals
+  - Bulk actions
   - User logins
 - Shows username, action type, timestamp, IP address, and details
 - Colored badges and icons per action type
@@ -103,14 +127,44 @@ Complete MariaDB/MySQL schema with:
 
 ## Screenshots
 
+### Login
+![Login page](docs/login_page.jpg)
+
 ### Quarantine View
-Compact table with inline statistics, filters, and quick actions.
+![Quarantine view](docs/quarantine_page.jpg)
+
+### Message Preview
+![Message preview](docs/message_preview.jpg)
+
+### Quick Preview Tooltip
+![Quick message preview](docs/quick_message_preview.jpg)
+
+### Whitelist/Blacklist Maps
+![Whitelist and blacklist maps](docs/whitelist_blacklist.jpg)
+
+### Add to Whitelist (Subject Regex)
+![Add subject to whitelist](docs/add_subject_to_whitelist.jpg)
+
+### Add to Blacklist (Sender)
+![Add sender to blacklist](docs/add_sender%20_to_blacklist.jpg)
+
+### Bulk Operations
+![Bulk operation](docs/bulk_operation.jpg)
+
+### Message Trace
+![Messages trace](docs/messages_trace.jpg)
+
+### Symbol Details
+![Symbol popup view](docs/symbol_popup_view.jpg)
 
 ### Statistics Dashboard
-2×2 grid with action/state distribution charts and time-based trends.
+![Statistics dashboard](docs/stats_page.jpg)
 
 ### Audit Log
-Complete user action history with filtering and pagination.
+![Audit log](docs/audit_log.jpg)
+
+### User Management
+![User management](docs/users_management.jpg)
 
 ---
 
@@ -276,10 +330,12 @@ chmod 600 config.php
 2. Log in with admin credentials
 
 3. Use the top navigation menu:
-   - **Karanténa** – Quarantined messages browser
+   - **Quarantine** – Quarantined messages browser
    - **Message Trace** – Complete message history
-   - **Statistiky** – Statistics and charts
-   - **Audit Log** – User action history (admin/domainadmin only)
+   - **Statistics** – Statistics and charts
+   - **Audit Log** – User action history (admin/domain admin only)
+   - **Maps** – Whitelist/blacklist multimap management
+   - **Users** – User management (admin only)
 
 ### Working with Messages
 
@@ -300,7 +356,7 @@ chmod 600 config.php
 1. Enter search criteria in the filter bar
 2. Active filters are highlighted with blue border
 3. Use the × button to clear individual fields
-4. Click "Hledat" to apply filters
+4. Click "Search" to apply filters
 5. Click "Reset" to clear all filters
 
 ---
@@ -313,6 +369,10 @@ rspamd-quarantine-webui/
 ├── trace.php              # Message trace view
 ├── stats.php              # Statistics and charts
 ├── audit.php              # Audit log view
+├── maps.php               # Whitelist/blacklist map manager
+├── map_quick_add.php       # Quick add/remove map entries
+├── bulk_operations.php     # Bulk action handler
+├── users.php              # User management
 ├── view.php               # Single message detail view
 ├── operations.php         # Message operations handler
 ├── login.php              # Login page
