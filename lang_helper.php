@@ -27,17 +27,21 @@ class Lang {
      * Detect language from browser Accept-Language header
      */
     private function detectLanguage() {
-        // Check if language is set in session
-        if (isset($_SESSION['lang']) && in_array($_SESSION['lang'], $this->availableLangs)) {
-            $this->currentLang = $_SESSION['lang'];
-            return;
-        }
+        $hasManualSelection = (!empty($_SESSION['lang_manual']) || (!empty($_COOKIE['lang_manual']) && $_COOKIE['lang_manual'] === '1'));
 
-        // Check if language is set in cookie
-        if (isset($_COOKIE['lang']) && in_array($_COOKIE['lang'], $this->availableLangs)) {
-            $this->currentLang = $_COOKIE['lang'];
-            $_SESSION['lang'] = $this->currentLang;
-            return;
+        if ($hasManualSelection) {
+            // Check if language is set in session
+            if (isset($_SESSION['lang']) && in_array($_SESSION['lang'], $this->availableLangs)) {
+                $this->currentLang = $_SESSION['lang'];
+                return;
+            }
+
+            // Check if language is set in cookie
+            if (isset($_COOKIE['lang']) && in_array($_COOKIE['lang'], $this->availableLangs)) {
+                $this->currentLang = $_COOKIE['lang'];
+                $_SESSION['lang'] = $this->currentLang;
+                return;
+            }
         }
 
         // Detect from browser
@@ -54,6 +58,19 @@ class Lang {
                     setcookie('lang', $this->currentLang, time() + (365 * 24 * 60 * 60), '/');
                     return;
                 }
+            }
+        }
+
+        if (!$hasManualSelection) {
+            if (isset($_SESSION['lang']) && in_array($_SESSION['lang'], $this->availableLangs)) {
+                $this->currentLang = $_SESSION['lang'];
+                return;
+            }
+
+            if (isset($_COOKIE['lang']) && in_array($_COOKIE['lang'], $this->availableLangs)) {
+                $this->currentLang = $_COOKIE['lang'];
+                $_SESSION['lang'] = $this->currentLang;
+                return;
             }
         }
 
@@ -112,7 +129,9 @@ class Lang {
         if (in_array($langCode, $this->availableLangs)) {
             $this->currentLang = $langCode;
             $_SESSION['lang'] = $langCode;
+            $_SESSION['lang_manual'] = true;
             setcookie('lang', $langCode, time() + (365 * 24 * 60 * 60), '/');
+            setcookie('lang_manual', '1', time() + (365 * 24 * 60 * 60), '/');
             $this->loadTranslations();
             return true;
         }
