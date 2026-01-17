@@ -134,6 +134,260 @@ if (!function_exists('safe_html')) {
     }
 }
 
+// ============================================
+// Service Health Functions
+// ============================================
+
+function isSystemctlAvailable(): bool {
+    return !empty(trim((string)shell_exec('command -v systemctl 2>/dev/null')));
+}
+
+function getSystemctlValue(string $property, string $unit): string {
+    $command = sprintf(
+        'systemctl show -p %s --value %s 2>/dev/null',
+        escapeshellarg($property),
+        escapeshellarg($unit)
+    );
+    return trim((string)shell_exec($command));
+}
+
+function resolveServiceUnit(array $units, bool $systemctlAvailable): string {
+    if (!$systemctlAvailable) {
+        return $units[0];
+    }
+    foreach ($units as $unit) {
+        $loadState = getSystemctlValue('LoadState', $unit);
+        if ($loadState === 'loaded') {
+            return $unit;
+        }
+    }
+    return $units[0];
+}
+
+function formatBytes(int $bytes): string {
+    if ($bytes === 0) {
+        return '0 B';
+    }
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $power = floor(log($bytes, 1024));
+    return round($bytes / pow(1024, $power), 2) . ' ' . $units[$power];
+}
+
+function formatUptime(int $seconds): string {
+    $days = floor($seconds / 86400);
+    $hours = floor(($seconds % 86400) / 3600);
+    $minutes = floor(($seconds % 3600) / 60);
+
+    $parts = [];
+    if ($days > 0) {
+        $parts[] = $days . 'd';
+    }
+    if ($hours > 0) {
+        $parts[] = $hours . 'h';
+    }
+    if ($minutes > 0) {
+        $parts[] = $minutes . 'm';
+    }
+
+    return !empty($parts) ? implode(' ', $parts) : '< 1m';
+}
+
+function getServiceStatus(string $unit, bool $systemctlAvailable): array {
+    if (!$systemctlAvailable) {
+        return [
+            'state' => 'unknown',
+            'active' => '',
+            'sub' => '',
+            'detail' => __('health_systemctl_missing'),
+            'memory' => 0,
+            'memory_formatted' => 'N/A',
+            'process_count' => 0,
+            'cpu_usage' => 0,
+            'uptime' => 'N/A',
+            'restart_count' => 0,
+        ];
+    }
+
+    $loadState = getSystemctlValue('LoadState', $unit);
+    if ($loadState !== 'loaded') {
+        return [
+            'state' => 'missing',
+            'active' => '',
+            'sub' => '',
+            'detail' => __('health_detail_missing'),
+            'memory' => 0,
+            'memory_formatted' => 'N/A',
+            'process_count' => 0,
+            'cpu_usage' => 0,
+            'uptime' => 'N/A',
+            'restart_count' => 0,
+        ];
+    }
+
+    $activeState = getSystemctlValue('ActiveState', $unit);
+    $subState = getSystemctlValue('SubState', $unit);
+
+    if ($activeState === 'active') {
+        $state = 'running';
+    } elseif ($activeState === 'activating') {
+        $state = 'starting';
+    } elseif ($activeState === 'inactive') {
+        $state = 'stopped';
+    } elseif ($activeState === 'failed') {
+        $state = 'failed';
+    } else {
+        $state = 'unknown';
+    }
+
+    $memoryCurrent = getSystemctlValue('MemoryCurrent', $unit);
+    $memory = $memoryCurrent !== '' && $memoryCurrent !== '[not set]' ? (int)$memoryCurrent : 0;
+    $memoryFormatted = formatBytes($memory);
+
+    $mainPID = getSystemctlValue('MainPID', $unit);
+    $processCount = 0;
+
+    if ($mainPID !== '' && $mainPID !== '0' && $mainPID !== '[not set]') {
+        $processName = trim((string)shell_exec("ps -p " . escapeshellarg($mainPID) . " -o comm= 2>/dev/null"));
+        if ($processName !== '') {
+            $processCount = (int)trim((string)shell_exec("pgrep -c '^" . escapeshellarg($processName) . "$' 2>/dev/null || echo 0"));
+        }
+    }
+
+    $cpuUsage = 0;
+    if ($mainPID !== '' && $mainPID !== '0' && $mainPID !== '[not set]') {
+        $processName = trim((string)shell_exec("ps -p " . escapeshellarg($mainPID) . " -o comm= 2>/dev/null"));
+        if ($processName !== '') {
+            $cpuOutput = trim((string)shell_exec("ps -C " . escapeshellarg($processName) . " -o %cpu= 2>/dev/null | awk '{s+=\\$1} END {print s}'"));
+            $cpuUsage = $cpuOutput !== '' ? round((float)$cpuOutput, 1) : 0;
+        }
+    }
+
+    $activeEnterTimestamp = getSystemctlValue('ActiveEnterTimestamp', $unit);
+    $uptime = 'N/A';
+    if ($activeEnterTimestamp !== '' && $activeEnterTimestamp !== '[not set]' && $state === 'running') {
+        $startTime = strtotime($activeEnterTimestamp);
+        if ($startTime !== false) {
+            $uptimeSeconds = time() - $startTime;
+            $uptime = formatUptime($uptimeSeconds);
+        }
+    }
+
+    $restartCount = getSystemctlValue('NRestarts', $unit);
+    $restartCount = $restartCount !== '' && $restartCount !== '[not set]' ? (int)$restartCount : 0;
+
+    $detail = __('health_detail_state', [
+        'active' => $activeState !== '' ? $activeState : __('health_value_unknown'),
+        'sub' => $subState !== '' ? $subState : __('health_value_unknown'),
+    ]);
+
+    return [
+        'state' => $state,
+        'active' => $activeState,
+        'sub' => $subState,
+        'detail' => $detail,
+        'memory' => $memory,
+        'memory_formatted' => $memoryFormatted,
+        'process_count' => $processCount,
+        'cpu_usage' => $cpuUsage,
+        'uptime' => $uptime,
+        'restart_count' => $restartCount,
+    ];
+}
+
+function getServiceHealthServices(): array {
+    return [
+        [
+            'label' => __('service_postfix'),
+            'units' => ['postfix.service', 'postfix'],
+        ],
+        [
+            'label' => __('service_dovecot'),
+            'units' => ['dovecot.service', 'dovecot'],
+        ],
+        [
+            'label' => __('service_nginx'),
+            'units' => ['nginx.service', 'nginx'],
+        ],
+        [
+            'label' => __('service_rspamd'),
+            'units' => ['rspamd.service', 'rspamd'],
+        ],
+        [
+            'label' => __('service_eset_efs'),
+            'units' => ['efs.service', 'eset-efs.service', 'esets.service', 'efs', 'eset-efs', 'esets'],
+        ],
+        [
+            'label' => __('service_clamav'),
+            'units' => ['clamav-daemon.service', 'clamd.service', 'clamav-daemon', 'clamd'],
+        ],
+    ];
+}
+
+function getServiceHealthData(): array {
+    $services = getServiceHealthServices();
+    $systemctlAvailable = isSystemctlAvailable();
+
+    $serviceRows = [];
+    $healthyCount = 0;
+    $hasWarning = !$systemctlAvailable;
+    $hasCritical = false;
+
+    foreach ($services as $service) {
+        $unit = resolveServiceUnit($service['units'], $systemctlAvailable);
+        $status = getServiceStatus($unit, $systemctlAvailable);
+        $isHealthy = $status['state'] === 'running';
+
+        if ($isHealthy) {
+            $healthyCount++;
+        }
+
+        if (in_array($status['state'], ['failed', 'stopped', 'missing'], true)) {
+            $hasCritical = true;
+        } elseif (in_array($status['state'], ['starting', 'unknown'], true)) {
+            $hasWarning = true;
+        }
+
+        $serviceRows[] = [
+            'label' => $service['label'],
+            'unit' => $unit,
+            'state' => $status['state'],
+            'detail' => $status['detail'],
+            'healthy' => $status['state'] === 'unknown' ? 'unknown' : ($isHealthy ? 'healthy' : 'unhealthy'),
+            'memory' => $status['memory'],
+            'memory_formatted' => $status['memory_formatted'],
+            'process_count' => $status['process_count'],
+            'cpu_usage' => $status['cpu_usage'],
+            'uptime' => $status['uptime'],
+            'restart_count' => $status['restart_count'],
+        ];
+    }
+
+    $overallStatus = 'healthy';
+    if ($hasCritical) {
+        $overallStatus = 'critical';
+    } elseif ($hasWarning) {
+        $overallStatus = 'warning';
+    }
+
+    return [
+        'services' => $services,
+        'rows' => $serviceRows,
+        'healthy_count' => $healthyCount,
+        'total' => count($services),
+        'overall_status' => $overallStatus,
+    ];
+}
+
+function getServiceHealthSummary(): array {
+    $healthData = getServiceHealthData();
+
+    return [
+        'status' => $healthData['overall_status'],
+        'healthy' => $healthData['healthy_count'],
+        'total' => $healthData['total'],
+    ];
+}
+
 // Prevent direct access
 if (!defined('DB_HOST')) {
     die('Configuration not loaded. Include config.php first.');
