@@ -27,12 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$action = $_POST['action'] ?? 'add';
 $listType = $_POST['list_type'] ?? '';
 $entryValue = trim($_POST['entry_value'] ?? '');
 $entryType = $_POST['entry_type'] ?? 'email';
 
+$allowedActions = ['add', 'delete'];
 $allowedLists = ['whitelist', 'blacklist'];
 $allowedEntryTypes = ['email', 'subject'];
+
+if (!in_array($action, $allowedActions, true)) {
+    $_SESSION['error_msg'] = __('maps_invalid_input');
+    header('Location: ' . $returnUrl);
+    exit;
+}
 
 if (!in_array($listType, $allowedLists, true)) {
     $_SESSION['error_msg'] = __('maps_invalid_input');
@@ -68,20 +76,37 @@ $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
 $userId = $_SESSION['user_id'] ?? null;
 
-$checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
-$checkStmt->execute([$listType, $entryType, $entryValue]);
-if ($checkStmt->fetchColumn() > 0) {
-    $_SESSION['error_msg'] = __('maps_duplicate');
-    header('Location: ' . $returnUrl);
-    exit;
-}
+if ($action === 'delete') {
+    $entryStmt = $db->prepare("SELECT id FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
+    $entryStmt->execute([$listType, $entryType, $entryValue]);
+    $entry = $entryStmt->fetch(PDO::FETCH_ASSOC);
 
-$insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, NOW(), NOW())");
-$insertStmt->execute([$listType, $entryType, $entryValue, $user]);
-$entryId = $db->lastInsertId();
-$details = "Added {$listType} {$entryType}: {$entryValue}";
-logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
+    if (!$entry) {
+        $_SESSION['error_msg'] = __('maps_not_found');
+        header('Location: ' . $returnUrl);
+        exit;
+    }
+
+    $deleteStmt = $db->prepare("DELETE FROM rspamd_map_entries WHERE id = ?");
+    $deleteStmt->execute([$entry['id']]);
+    $details = "Deleted {$listType} {$entryType}: {$entryValue}";
+    logAudit($userId, $user, 'map_delete', 'rspamd_map_entry', $entry['id'], $details);
+} else {
+    $checkStmt = $db->prepare("SELECT COUNT(*) FROM rspamd_map_entries WHERE list_type = ? AND entry_type = ? AND entry_value = ?");
+    $checkStmt->execute([$listType, $entryType, $entryValue]);
+    if ($checkStmt->fetchColumn() > 0) {
+        $_SESSION['error_msg'] = __('maps_duplicate');
+        header('Location: ' . $returnUrl);
+        exit;
+    }
+
+    $insertStmt = $db->prepare("INSERT INTO rspamd_map_entries (list_type, entry_type, entry_value, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NOW(), NOW())");
+    $insertStmt->execute([$listType, $entryType, $entryValue, $user]);
+    $entryId = $db->lastInsertId();
+    $details = "Added {$listType} {$entryType}: {$entryValue}";
+    logAudit($userId, $user, 'map_add', 'rspamd_map_entry', $entryId, $details);
+}
 
 $mapName = getRspamdMapName($listType, $entryType);
 if (!$mapName) {
@@ -112,6 +137,6 @@ if (!$upload['success']) {
     exit;
 }
 
-$_SESSION['success_msg'] = __('maps_added');
+$_SESSION['success_msg'] = $action === 'delete' ? __('maps_deleted') : __('maps_added');
 header('Location: ' . $returnUrl);
 exit;
