@@ -269,26 +269,46 @@ include 'menu.php';
                                         <?php echo htmlspecialchars(truncateText($sender, 40)); ?>
                                     </a>
                                 <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
+                                    <?php
+                                    $isWhitelisted = isset($listedEmails['whitelist'][$senderEmailKey]);
+                                    $isBlacklisted = isset($listedEmails['blacklist'][$senderEmailKey]);
+                                    ?>
                                     <span class="sender-actions">
-                                        <form method="POST" action="map_quick_add.php" class="sender-action-form">
-                                            <input type="hidden" name="list_type" value="whitelist">
-                                            <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
-                                            <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                            <button type="submit" class="sender-action-btn whitelist-btn<?php echo isset($listedEmails['whitelist'][$senderEmailKey]) ? ' is-listed' : ''; ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>">
+                                        <?php if ($isWhitelisted): ?>
+                                            <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="list_type" value="whitelist">
+                                                <input type="hidden" name="entry_type" value="email">
+                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                <button type="submit" class="sender-action-btn whitelist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
+                                                    <i class="fas fa-xmark"></i>
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <button type="button" class="sender-action-btn whitelist-btn sender-map-btn" data-list-type="whitelist" data-sender="<?php echo htmlspecialchars($senderEmail, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>">
                                                 <i class="fas fa-shield-alt"></i>
                                             </button>
-                                        </form>
-                                        <form method="POST" action="map_quick_add.php" class="sender-action-form">
-                                            <input type="hidden" name="list_type" value="blacklist">
-                                            <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
-                                            <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                            <button type="submit" class="sender-action-btn blacklist-btn<?php echo isset($listedEmails['blacklist'][$senderEmailKey]) ? ' is-listed' : ''; ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
+                                        <?php endif; ?>
+                                        <?php if ($isBlacklisted): ?>
+                                            <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="list_type" value="blacklist">
+                                                <input type="hidden" name="entry_type" value="email">
+                                                <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
+                                                <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_blacklist_sender')); ?>">
+                                                    <i class="fas fa-xmark"></i>
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <button type="button" class="sender-action-btn blacklist-btn sender-map-btn" data-list-type="blacklist" data-sender="<?php echo htmlspecialchars($senderEmail, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>">
                                                 <i class="fas fa-ban"></i>
                                             </button>
-                                        </form>
+                                        <?php endif; ?>
                                     </span>
                                 <?php endif; ?>
-                                </td>
+                            </td>
                                 <td class="email-field">
                                     <i class="fas fa-inbox"></i> 
                                     <a href="?recipient=<?php echo urlencode($recipients); ?>" 
@@ -453,7 +473,44 @@ include 'menu.php';
         </div>
     </div>
 
+    <div id="senderMapModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="senderMapModalTitle"><i class="fas fa-paper-plane"></i> <?php echo htmlspecialchars(__('maps_add_sender')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="senderMapForm" method="POST" action="map_quick_add.php">
+                    <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="list_type" id="senderMapListType" value="">
+                    <input type="hidden" name="entry_type" value="email">
+                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                    <div class="form-group">
+                        <label for="senderMapValue"><?php echo htmlspecialchars(__('msg_sender')); ?></label>
+                        <input type="text" id="senderMapValue" name="entry_value" class="form-control" placeholder="<?php echo htmlspecialchars(__('maps_sender_placeholder')); ?>" required>
+                        <small><?php echo htmlspecialchars(__('maps_sender_hint')); ?></small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                        <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const senderModal = document.getElementById('senderMapModal');
+        const senderModalTitle = document.getElementById('senderMapModalTitle');
+        const senderModalValue = document.getElementById('senderMapValue');
+        const senderModalListType = document.getElementById('senderMapListType');
+        const senderStrings = {
+            whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>",
+            blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>"
+        };
+
         const subjectModal = document.getElementById('subjectMapModal');
         const subjectModalTitle = document.getElementById('subjectMapModalTitle');
         const subjectModalValue = document.getElementById('subjectMapValue');
@@ -465,6 +522,15 @@ include 'menu.php';
 
         function escapeRegex(value) {
             return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/');
+        }
+
+        function openSenderModal(listType, sender) {
+            senderModalListType.value = listType;
+            senderModalTitle.innerHTML = `<i class="fas fa-paper-plane"></i> ${senderStrings[listType]}`;
+            senderModalValue.value = sender.trim();
+            senderModal.classList.add('active');
+            senderModal.setAttribute('aria-hidden', 'false');
+            senderModalValue.focus();
         }
 
         function openSubjectModal(listType, subject) {
@@ -482,14 +548,35 @@ include 'menu.php';
             subjectModal.setAttribute('aria-hidden', 'true');
         }
 
+        function closeSenderModal() {
+            senderModal.classList.remove('active');
+            senderModal.setAttribute('aria-hidden', 'true');
+        }
+
+        document.querySelectorAll('.sender-map-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openSenderModal(button.dataset.listType, button.dataset.sender || '');
+            });
+        });
+
         document.querySelectorAll('.subject-map-btn').forEach((button) => {
             button.addEventListener('click', () => {
                 openSubjectModal(button.dataset.listType, button.dataset.subject || '');
             });
         });
 
+        senderModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
+            button.addEventListener('click', closeSenderModal);
+        });
+
         subjectModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
             button.addEventListener('click', closeSubjectModal);
+        });
+
+        senderModal.addEventListener('click', (event) => {
+            if (event.target === senderModal) {
+                closeSenderModal();
+            }
         });
 
         subjectModal.addEventListener('click', (event) => {

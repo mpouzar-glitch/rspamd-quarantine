@@ -239,9 +239,14 @@ return [
     'maps_upload_failed_generic' => 'Nahranie mapy zlyhalo.',
     'maps_add_whitelist_sender' => 'Pridať odosielateľa do whitelistu',
     'maps_add_blacklist_sender' => 'Pridať odosielateľa do blacklistu',
+    'maps_remove_whitelist_sender' => 'Odstrániť odosielateľa z whitelistu',
+    'maps_remove_blacklist_sender' => 'Odstrániť odosielateľa z blacklistu',
+    'maps_add_sender' => 'Pridať odosielateľa',
     'maps_add_subject' => 'Pridať predmet',
     'maps_add_whitelist_subject' => 'Pridať predmet do whitelistu',
     'maps_add_blacklist_subject' => 'Pridať predmet do blacklistu',
+    'maps_sender_placeholder' => 'napr. user@example.com',
+    'maps_sender_hint' => 'Zadajte emailovú adresu odosielateľa.',
     'maps_permission_denied' => 'Nemáte oprávnenie spravovať mapy.',
 
     // Statistics

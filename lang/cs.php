@@ -149,9 +149,14 @@ return [
     'maps_upload_failed_generic' => 'Nahrání mapy selhalo.',
     'maps_add_whitelist_sender' => 'Přidat odesílatele do whitelistu',
     'maps_add_blacklist_sender' => 'Přidat odesílatele do blacklistu',
+    'maps_remove_whitelist_sender' => 'Odstranit odesílatele z whitelistu',
+    'maps_remove_blacklist_sender' => 'Odstranit odesílatele z blacklistu',
+    'maps_add_sender' => 'Přidat odesílatele',
     'maps_add_subject' => 'Přidat předmět',
     'maps_add_whitelist_subject' => 'Přidat předmět do whitelistu',
     'maps_add_blacklist_subject' => 'Přidat předmět do blacklistu',
+    'maps_sender_placeholder' => 'např. user@example.com',
+    'maps_sender_hint' => 'Zadejte emailovou adresu odesílatele.',
     'maps_permission_denied' => 'Nemáte oprávnění spravovat mapy.',
 
     // Message details

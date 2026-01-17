@@ -239,9 +239,14 @@ return [
     'maps_upload_failed_generic' => 'Hochladen der Map fehlgeschlagen.',
     'maps_add_whitelist_sender' => 'Absender zur Whitelist hinzufügen',
     'maps_add_blacklist_sender' => 'Absender zur Blacklist hinzufügen',
+    'maps_remove_whitelist_sender' => 'Absender aus der Whitelist entfernen',
+    'maps_remove_blacklist_sender' => 'Absender aus der Blacklist entfernen',
+    'maps_add_sender' => 'Absender hinzufügen',
     'maps_add_subject' => 'Betreff hinzufügen',
     'maps_add_whitelist_subject' => 'Betreff zur Whitelist hinzufügen',
     'maps_add_blacklist_subject' => 'Betreff zur Blacklist hinzufügen',
+    'maps_sender_placeholder' => 'z. B. user@example.com',
+    'maps_sender_hint' => 'Geben Sie die Absender-E-Mail-Adresse ein.',
     'maps_permission_denied' => 'Sie haben keine Berechtigung, die Maps zu verwalten.',
 
     // Statistics

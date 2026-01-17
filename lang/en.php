@@ -239,9 +239,14 @@ return [
     'maps_upload_failed_generic' => 'Map upload failed.',
     'maps_add_whitelist_sender' => 'Add sender to whitelist',
     'maps_add_blacklist_sender' => 'Add sender to blacklist',
+    'maps_remove_whitelist_sender' => 'Remove sender from whitelist',
+    'maps_remove_blacklist_sender' => 'Remove sender from blacklist',
+    'maps_add_sender' => 'Add sender',
     'maps_add_subject' => 'Add subject',
     'maps_add_whitelist_subject' => 'Add subject to whitelist',
     'maps_add_blacklist_subject' => 'Add subject to blacklist',
+    'maps_sender_placeholder' => 'e.g. user@example.com',
+    'maps_sender_hint' => 'Enter the sender email address.',
     'maps_permission_denied' => 'You do not have permission to manage maps.',
 
     // Statistics
