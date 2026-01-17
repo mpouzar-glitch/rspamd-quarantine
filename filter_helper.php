@@ -112,6 +112,19 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
     $opts = array_merge($defaults, $options);
     $filters = [];
     $itemMaxWidths = is_array($opts['item_max_widths']) ? $opts['item_max_widths'] : [];
+    $getMaxWidth = function (string $key) use ($itemMaxWidths): ?string {
+        if (!array_key_exists($key, $itemMaxWidths)) {
+            return null;
+        }
+        $value = $itemMaxWidths[$key];
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_numeric($value)) {
+            return $value . 'px';
+        }
+        return (string)$value;
+    };
 
     if ($opts['show_search']) {
         $filters['search'] = [
@@ -122,7 +135,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['search'] ?? null,
+            'max_width' => $getMaxWidth('search'),
         ];
     }
 
@@ -134,7 +147,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['action'] ?? null,
+            'max_width' => $getMaxWidth('action'),
             'options' => [
                 '' => __('filter_all_actions'),
                 'reject' => __('action_reject'),
@@ -155,7 +168,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_min_placeholder'),
             'value' => getFilterValue('score_min', $sessionKey),
             'class' => 'filter-group score-min',
-            'max_width' => $itemMaxWidths['score_min'] ?? null,
+            'max_width' => $getMaxWidth('score_min'),
         ];
     }
 
@@ -181,7 +194,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('statefilter', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['statefilter'] ?? null,
+            'max_width' => $getMaxWidth('statefilter'),
             'options' => [
                 '' => __('state_all'),
                 '0' => __('state_quarantined'),
@@ -200,7 +213,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-calendar',
             'value' => getFilterValue('date', $sessionKey),
             'class' => 'filter-group date-filter',
-            'max_width' => $itemMaxWidths['date'] ?? null,
+            'max_width' => $getMaxWidth('date'),
         ];
     }
 
@@ -213,7 +226,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_sender_placeholder'),
             'value' => getFilterValue('sender', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['sender'] ?? null,
+            'max_width' => $getMaxWidth('sender'),
         ];
     }
 
@@ -226,7 +239,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_recipient_placeholder'),
             'value' => getFilterValue('recipient', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['recipient'] ?? null,
+            'max_width' => $getMaxWidth('recipient'),
         ];
     }
 
@@ -239,7 +252,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['ip'] ?? null,
+            'max_width' => $getMaxWidth('ip'),
         ];
     }
 
@@ -252,7 +265,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_country_placeholder'),
             'value' => getFilterValue('country', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['country'] ?? null,
+            'max_width' => $getMaxWidth('country'),
         ];
     }
 
@@ -265,7 +278,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_auth_user_placeholder'),
             'value' => getFilterValue('auth_user', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['auth_user'] ?? null,
+            'max_width' => $getMaxWidth('auth_user'),
         ];
     }
 
@@ -277,7 +290,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-virus',
             'value' => getFilterValue('virus', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['virus'] ?? null,
+            'max_width' => $getMaxWidth('virus'),
         ];
     }
 
@@ -289,7 +302,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-file-circle-xmark',
             'value' => getFilterValue('bad_extension', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => $itemMaxWidths['bad_extension'] ?? null,
+            'max_width' => $getMaxWidth('bad_extension'),
         ];
     }
 
