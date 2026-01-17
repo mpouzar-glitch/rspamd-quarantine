@@ -182,7 +182,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_max_placeholder'),
             'value' => getFilterValue('score_max', $sessionKey),
             'class' => 'filter-group score-max',
-            'max_width' => $getMaxWidth('score_max'),
+            'max_width' => $itemMaxWidths['score_max'] ?? null,
         ];
     }
 
