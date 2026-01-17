@@ -482,7 +482,6 @@ include 'menu.php';
             <div class="modal-header">
                 <div class="modal-header-title">
                     <h3 id="detailModalTitle"><i class="fas fa-envelope-open-text"></i> <?php echo htmlspecialchars(__('view_title')); ?></h3>
-                    <div class="modal-subtitle" id="detailModalSubtitle"></div>
                 </div>
                 <div class="modal-header-actions">
                     <form method="POST" action="operations.php" class="modal-action-form">
@@ -581,7 +580,6 @@ include 'menu.php';
     let activeRequest = null;
     const detailModal = document.getElementById('messageDetailModal');
     const detailModalContent = document.getElementById('detailModalContent');
-    const detailModalSubtitle = document.getElementById('detailModalSubtitle');
     const actionIdFields = [
         document.getElementById('detailActionSpamId'),
         document.getElementById('detailActionHamId'),
@@ -620,8 +618,6 @@ include 'menu.php';
         stateLearnedHam: "<?php echo htmlspecialchars(__('state_learned_ham')); ?>",
         stateLearnedSpam: "<?php echo htmlspecialchars(__('state_learned_spam')); ?>",
         stateReleased: "<?php echo htmlspecialchars(__('state_released')); ?>",
-        messageIdLabel: "<?php echo htmlspecialchars(__('view_message_id_label')); ?>",
-        messageIdNa: "<?php echo htmlspecialchars(__('view_message_id_na')); ?>",
         actionReject: "<?php echo htmlspecialchars(__('action_reject')); ?>",
         actionNoAction: "<?php echo htmlspecialchars(__('action_no_action')); ?>",
         actionAddHeader: "<?php echo htmlspecialchars(__('action_add_header')); ?>",
@@ -667,7 +663,6 @@ include 'menu.php';
         }
 
         detailModalContent.innerHTML = `<div class="detail-loading"><i class="fas fa-spinner fa-spin"></i> ${detailStrings.loading}</div>`;
-        detailModalSubtitle.textContent = '';
         detailModal.classList.add('active');
         detailModal.setAttribute('aria-hidden', 'false');
 
@@ -702,9 +697,6 @@ include 'menu.php';
     }
 
     function renderDetailModal(data) {
-        const messageIdText = data.message_id ? data.message_id : detailStrings.messageIdNa;
-        detailModalSubtitle.textContent = `${detailStrings.messageIdLabel}: ${messageIdText} · ${data.timestamp}`;
-
         const senderValue = data.sender_decoded || data.sender || '';
         const subjectValue = data.subject_decoded || data.subject || '';
 
