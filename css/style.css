@@ -395,6 +395,10 @@ td {
     font-size: 13px;
 }
 
+tbody tr:nth-child(even) {
+    background: #f6f8fb;
+}
+
 tr:hover {
     background: #f8f9fa;
 }
