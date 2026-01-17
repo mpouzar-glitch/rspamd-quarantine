@@ -378,6 +378,17 @@ th i {
     margin-right: 5px;
 }
 
+.country-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.country-link:hover {
+    text-decoration: none;
+}
+
 td {
     padding: 12px 10px;
     border-bottom: 1px solid #ecf0f1;
@@ -622,6 +633,7 @@ tr.selected {
     max-width: 1200px;
     width: min(1200px, 96vw);
     max-height: 90vh;
+    overflow: hidden;
 }
 
 .message-detail-modal .modal-header {
@@ -654,6 +666,7 @@ tr.selected {
 
 .message-detail-modal .detail-modal-content {
     min-height: 320px;
+    overflow: hidden;
 }
 
 .message-detail-modal .detail-loading {
@@ -688,6 +701,7 @@ tr.selected {
     flex-direction: column;
     gap: 12px;
     max-height: 70vh;
+    overflow: hidden;
 }
 
 .message-detail-modal .detail-panel-title {

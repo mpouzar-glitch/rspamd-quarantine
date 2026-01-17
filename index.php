@@ -179,6 +179,7 @@ include 'menu.php';
             'show_state' => true,
             'show_ip' => false,
             'show_auth_user' => false,
+            'show_country' => true,
             'show_virus' => true,
             'show_bad_extension' => true,
             'form_id' => 'filterForm',
@@ -241,9 +242,17 @@ include 'menu.php';
                         $action = strtolower(trim($msg['action'] ?? ''));
                         $hostname = $msg['hostname'] ?? '-';
                         $ipAddress = $msg['ip_address'] ?? '';
-                        $countryCode = getCountryCodeForIp($ipAddress);
+                        $countryCode = strtolower(trim((string)($msg['country'] ?? '')));
+                        $countryCode = preg_replace('/[^a-z]/', '', $countryCode);
+                        if ($countryCode === '') {
+                            $countryCode = getCountryCodeForIp($ipAddress);
+                        }
+                        $countryTitle = $countryCode !== '' ? strtoupper($countryCode) : '-';
+                        $countryLink = $countryCode !== ''
+                            ? '?' . buildQueryString(array_merge($filters, ['country' => $countryCode, 'page' => 1]))
+                            : '';
                         $flag = $countryCode !== ''
-                            ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                            ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars($countryTitle) . '"></span>'
                             : '-';
 
                         $symbols = $msg['symbols'] ?? '';
@@ -318,7 +327,13 @@ include 'menu.php';
                                 <?php echo htmlspecialchars($hostname); ?>
                             </td>
                             <td class="text-center">
-                                <?php echo $flag; ?>
+                                <?php if ($countryLink !== ''): ?>
+                                    <a href="<?php echo htmlspecialchars($countryLink); ?>" class="country-link" title="<?php echo htmlspecialchars(__('filter_by_country', ['country' => $countryTitle])); ?>">
+                                        <?php echo $flag; ?>
+                                    </a>
+                                <?php else: ?>
+                                    <?php echo $flag; ?>
+                                <?php endif; ?>
                             </td>
                             <td class="text-right no-wrap">
                                 <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>

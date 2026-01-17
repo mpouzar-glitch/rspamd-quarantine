@@ -189,6 +189,7 @@ return [
     'filter_clear' => 'Vymazať',
     'filter_by_sender' => 'Filtrovať podľa odosielateľa: {sender}',
     'filter_by_recipient' => 'Filtrovať podľa príjemcu: {recipient}',
+    'filter_by_country' => 'Filtrovať podľa krajiny: {country}',
     'filter_by_ip' => 'Filtrovať podľa IP: {ip}',
     'filter_has_attachments' => 'Má prílohy',
     'filter_spam_level' => 'Úroveň spamu',

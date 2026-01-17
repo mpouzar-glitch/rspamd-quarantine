@@ -189,6 +189,7 @@ return [
     'filter_clear' => 'Clear',
     'filter_by_sender' => 'Filter by sender: {sender}',
     'filter_by_recipient' => 'Filter by recipient: {recipient}',
+    'filter_by_country' => 'Filter by country: {country}',
     'filter_by_ip' => 'Filter by IP: {ip}',
     'filter_has_attachments' => 'Has attachments',
     'filter_spam_level' => 'Spam level',
