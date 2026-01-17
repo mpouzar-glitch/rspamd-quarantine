@@ -124,6 +124,23 @@ try {
             font-size: 16px;
         }
 
+        .health-status-icon {
+            color: #bdc3c7;
+            transition: color 0.3s ease-in-out;
+        }
+
+        .health-status-icon.health-healthy {
+            color: #27ae60;
+        }
+
+        .health-status-icon.health-warning {
+            color: #f39c12;
+        }
+
+        .health-status-icon.health-critical {
+            color: #e74c3c;
+        }
+
         .badge-count {
             background: #e74c3c;
             color: white;
@@ -390,7 +407,7 @@ try {
 
             <?php if (checkPermission('admin')): ?>
                 <a href="service_health.php" class="nav-item <?= $current_page === 'service_health.php' ? 'active' : '' ?>">
-                    <i class="fas fa-heart-pulse"></i>
+                    <i class="fas fa-heart-pulse health-status-icon" id="healthStatusIcon"></i>
                 </a>
             <?php endif; ?>
 
@@ -468,5 +485,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    const healthIcon = document.getElementById('healthStatusIcon');
+    if (healthIcon) {
+        fetch('service_health.php?action=health_status', { credentials: 'same-origin' })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                if (!data || !data.status) {
+                    return;
+                }
+                healthIcon.classList.remove('health-healthy', 'health-warning', 'health-critical');
+                if (data.status === 'healthy') {
+                    healthIcon.classList.add('health-healthy');
+                } else if (data.status === 'critical') {
+                    healthIcon.classList.add('health-critical');
+                } else {
+                    healthIcon.classList.add('health-warning');
+                }
+            })
+            .catch(() => {
+                healthIcon.classList.remove('health-healthy', 'health-warning', 'health-critical');
+            });
+    }
 });
 </script>
