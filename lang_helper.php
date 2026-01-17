@@ -12,6 +12,9 @@ class Lang {
     private $availableLangs = ['cs', 'en', 'de', 'sk'];
 
     private function __construct() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $this->detectLanguage();
         $this->loadTranslations();
     }
@@ -45,20 +48,12 @@ class Lang {
         }
 
         // Detect from browser
-        if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-            $browserLangs = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-
-            foreach ($browserLangs as $lang) {
-                // Extract language code (e.g., "cs" from "cs-CZ" or "cs")
-                $langCode = strtolower(substr(trim($lang), 0, 2));
-
-                if (in_array($langCode, $this->availableLangs)) {
-                    $this->currentLang = $langCode;
-                    $_SESSION['lang'] = $this->currentLang;
-                    setcookie('lang', $this->currentLang, time() + (365 * 24 * 60 * 60), '/');
-                    return;
-                }
-            }
+        $browserLang = $this->getPreferredBrowserLanguage();
+        if ($browserLang !== null) {
+            $this->currentLang = $browserLang;
+            $_SESSION['lang'] = $this->currentLang;
+            setcookie('lang', $this->currentLang, time() + (365 * 24 * 60 * 60), '/');
+            return;
         }
 
         if (!$hasManualSelection) {
@@ -76,6 +71,45 @@ class Lang {
 
         // Default to Czech
         $this->currentLang = $this->fallbackLang;
+    }
+
+    /**
+     * Get best matching language from Accept-Language header.
+     */
+    private function getPreferredBrowserLanguage() {
+        if (!isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+            return null;
+        }
+
+        $candidates = [];
+        $browserLangs = explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+        foreach ($browserLangs as $lang) {
+            $parts = explode(';', trim($lang));
+            $langCode = strtolower(substr(trim($parts[0]), 0, 2));
+
+            if (!in_array($langCode, $this->availableLangs)) {
+                continue;
+            }
+
+            $quality = 1.0;
+            if (isset($parts[1])) {
+                $qualityPart = trim($parts[1]);
+                if (stripos($qualityPart, 'q=') === 0) {
+                    $quality = (float) substr($qualityPart, 2);
+                }
+            }
+
+            if (!isset($candidates[$langCode]) || $quality > $candidates[$langCode]) {
+                $candidates[$langCode] = $quality;
+            }
+        }
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        arsort($candidates, SORT_NUMERIC);
+        return array_key_first($candidates);
     }
 
     /**
