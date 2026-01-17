@@ -119,7 +119,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 160,
+            'max_width' => 280,
         ];
     }
 
@@ -131,7 +131,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 80,
+            'max_width' => 160,
             'options' => [
                 '' => __('filter_all_actions'),
                 'reject' => __('action_reject'),
@@ -152,7 +152,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_min_placeholder'),
             'value' => getFilterValue('score_min', $sessionKey),
             'class' => 'filter-group score-min',
-            'max_width' => 20,
+            'max_width' => 100,
         ];
     }
 
@@ -166,7 +166,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_max_placeholder'),
             'value' => getFilterValue('score_max', $sessionKey),
             'class' => 'filter-group score-max',
-            'max_width' => 20,
+            'max_width' => 100,
         ];
     }
 
@@ -178,7 +178,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('statefilter', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 80,
+            'max_width' => 160,
             'options' => [
                 '' => __('state_all'),
                 '0' => __('state_quarantined'),
@@ -197,7 +197,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-calendar',
             'value' => getFilterValue('date', $sessionKey),
             'class' => 'filter-group date-filter',
-            'max_width' => 80,
+            'max_width' => 160,
         ];
     }
 
@@ -210,7 +210,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_sender_placeholder'),
             'value' => getFilterValue('sender', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 180,
+            'max_width' => 200,
         ];
     }
 
@@ -223,7 +223,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_recipient_placeholder'),
             'value' => getFilterValue('recipient', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 180,
+            'max_width' => 200,
         ];
     }
 
@@ -236,7 +236,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 80,
+            'max_width' => 100,
         ];
     }
 
@@ -249,7 +249,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_country_placeholder'),
             'value' => getFilterValue('country', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 10,
+            'max_width' => 80,
         ];
     }
 
@@ -274,7 +274,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-virus',
             'value' => getFilterValue('virus', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 20,
+            'max_width' => 60,
         ];
     }
 
@@ -286,7 +286,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-file-circle-xmark',
             'value' => getFilterValue('bad_extension', $sessionKey),
             'class' => 'filter-group',
-            'max_width' => 30,
+            'max_width' => 60,
         ];
     }
 
@@ -328,8 +328,8 @@ function renderSearchFilters(array $filters_def): string {
 
     .compact-filter-item {
         flex: 1 1 auto;
-        min-width: 150px;
-        position: relative;
+        min-width: 50px;
+        position: relative
     }
 
     .compact-filter-item label {
@@ -435,7 +435,7 @@ function renderSearchFilters(array $filters_def): string {
 
     @media (max-width: 768px) {
         .compact-filter-item {
-            min-width: 120px;
+            min-width: 50px;
         }
         .compact-filter-submit {
             width: 100%;

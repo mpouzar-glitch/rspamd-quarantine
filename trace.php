@@ -34,6 +34,7 @@ $sortableColumns = [
     'subject' => 'subject',
     'action' => 'action',
     'score' => 'score',
+    'country' => 'country',
     'ip_address' => 'ip_address',
     'hostname' => 'hostname',
     'size_bytes' => 'size_bytes',
@@ -108,6 +109,7 @@ include 'menu.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/bulk.css">
@@ -142,7 +144,7 @@ include 'menu.php';
             'columns' => null,
             'show_search' => true,
             'show_action' => true,
-            'show_score_min' => false,
+            'show_score_min' => true,
             'show_score_max' => false,
             'show_dates' => true,
             'show_sender' => true,
@@ -205,12 +207,13 @@ include 'menu.php';
                             $action = $msg['action'] ?? 'unknown';
                             $ipAddress = $msg['ip_address'] ?? '-';
                             $hostname = $msg['hostname'] ?? '-';
-                            $countryCode = $msg['country'] ?? '';
-                            if ($countryCode === '' && $ipAddress !== '-') {
-                                $countryCode = getCountryCodeForIp($ipAddress);
-                            }
+                            $countryCode = strtolower(trim((string)($msg['country'] ?? getCountryCodeForIp($ipAddress))));
+                            $countryTitle = $countryCode !== '' ? strtoupper($countryCode) : '-';
+                            $countryLink = $countryCode !== ''
+                                ? '?' . buildQueryString(array_merge($filters, ['country' => $countryCode, 'page' => 1]))
+                                : '';
                             $flag = $countryCode !== ''
-                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars(strtoupper($countryCode)) . '"></span>'
+                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars($countryTitle) . '"></span>'
                                 : '-';
                             $symbols = $msg['symbols'] ?? '';
                             $symbolData = buildMessageSymbolData($symbols);
@@ -307,6 +310,15 @@ include 'menu.php';
                                         </span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="text-center">
+                                    <?php if ($countryLink !== ''): ?>
+                                        <a href="<?php echo htmlspecialchars($countryLink); ?>" class="country-link" title="<?php echo htmlspecialchars(__('filter_by_country', ['country' => $countryTitle])); ?>">
+                                            <?php echo $flag; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <?php echo $flag; ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="action-cell">
                                     <span class="action-badge <?php echo $actionClass; ?>">
                                         <i class="fas <?php echo $actionIcon; ?>"></i>
@@ -381,9 +393,6 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
                                         <?php echo htmlspecialchars($ipAddress); ?>
                                     </a>
-                                </td>
-                                <td class="text-center">
-                                    <?php echo $flag; ?>
                                 </td>
                                 <td class="hostname-field">
                                     <?php echo htmlspecialchars($hostname); ?>

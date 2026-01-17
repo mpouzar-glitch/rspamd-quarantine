@@ -1680,12 +1680,12 @@ function renderMessagesTableHeader(array $options = []): string {
         'sender',
         'recipients',
         'subject',
+        'country',
         'action',
         'score',
         'size_bytes',
         'status',
         'ip_address',
-        'country',
         'hostname',
     ];
 
@@ -1732,7 +1732,7 @@ function renderMessagesTableHeader(array $options = []): string {
         ],
         'status' => [
             'label' => 'STATUS',
-            'style' => 'width: 180px;',
+            'style' => 'width: 80px;',
         ],
         'ip_address' => [
             'label' => __('ip_address'),
@@ -1747,7 +1747,7 @@ function renderMessagesTableHeader(array $options = []): string {
         'country' => [
             'label' => __('msg_country'),
             'class' => 'col-country',
-            'sortable' => false,
+            'sort' => 'country',
         ],
         'actions' => [
             'label' => __('actions'),

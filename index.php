@@ -243,11 +243,7 @@ include 'menu.php';
                         $action = strtolower(trim($msg['action'] ?? ''));
                         $hostname = $msg['hostname'] ?? '-';
                         $ipAddress = $msg['ip_address'] ?? '';
-                        $countryCode = strtolower(trim((string)($msg['country'] ?? '')));
-                        $countryCode = preg_replace('/[^a-z]/', '', $countryCode);
-                        if ($countryCode === '') {
-                            $countryCode = getCountryCodeForIp($ipAddress);
-                        }
+                        $countryCode = strtolower(trim((string)($msg['country'] ?? getCountryCodeForIp($ipAddress))));
                         $countryTitle = $countryCode !== '' ? strtoupper($countryCode) : '-';
                         $countryLink = $countryCode !== ''
                             ? '?' . buildQueryString(array_merge($filters, ['country' => $countryCode, 'page' => 1]))

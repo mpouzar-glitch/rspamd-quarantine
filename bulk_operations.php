@@ -47,6 +47,8 @@ $sortableColumns = [
     'sender' => 'sender',
     'recipients' => 'recipients',
     'subject' => 'subject',
+    'country' => 'country',    
+    'size' => 'size',    
     'score' => 'score',
 ];
 $sort = $_GET['sort'] ?? 'timestamp';
@@ -138,6 +140,7 @@ include 'menu.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($page_title); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/stats-inline.css">
     <link rel="stylesheet" href="css/bulk.css">
@@ -242,10 +245,10 @@ include 'menu.php';
                             'sender',
                             'recipients',
                             'subject',
-                            ['key' => 'country', 'style' => 'width: 50px;', 'sortable' => false],
-                            ['key' => 'size', 'style' => 'width: 90px;', 'sortable' => false],
+                            ['key' => 'country', 'style' => 'width: 50px;', 'sortable' => true],
+                            ['key' => 'size', 'style' => 'width: 90px;', 'sortable' => true],
                             ['key' => 'score', 'style' => 'width: 60px;'],
-                            'status',
+                            ['key' => 'status', 'style' => 'col-status'],
                             ['key' => 'actions', 'style' => 'width: 180px;'],
                         ],
                     ]);
@@ -348,7 +351,13 @@ include 'menu.php';
                                     </button>
                                 </td>
                                 <td class="text-center">
-                                    <?php echo $flag; ?>
+                                    <?php if ($countryLink !== ''): ?>
+                                        <a href="<?php echo htmlspecialchars($countryLink); ?>" class="country-link" title="<?php echo htmlspecialchars(__('filter_by_country', ['country' => $countryTitle])); ?>">
+                                            <?php echo $flag; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <?php echo $flag; ?>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-right no-wrap">
                                     <?php echo htmlspecialchars(formatMessageSize((int)($msg['size_bytes'] ?? 0))); ?>
