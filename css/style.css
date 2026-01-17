@@ -395,7 +395,7 @@ td {
     font-size: 13px;
 }
 
-tbody tr:nth-child(even) {
+tbody tr:nth-child(even):not(.selected):not([style*="background"]):not([style*="background-color"]) {
     background: #e2e1e4;
 }
 
