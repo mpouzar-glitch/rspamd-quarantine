@@ -391,13 +391,11 @@ try {
             <?php if (checkPermission('admin')): ?>
                 <a href="service_health.php" class="nav-item <?= $current_page === 'service_health.php' ? 'active' : '' ?>">
                     <i class="fas fa-heart-pulse"></i>
-                    <span><?php echo htmlspecialchars(__('nav_service_health')); ?></span>
                 </a>
             <?php endif; ?>
 
             <a href="logout.php" class="nav-item">
                 <i class="fas fa-sign-out-alt"></i>
-                <span><?php echo htmlspecialchars(__('nav_logout')); ?></span>
             </a>
 
             <div class="nav-user">
