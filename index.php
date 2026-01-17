@@ -469,7 +469,7 @@ include 'menu.php';
                         <small><?php echo htmlspecialchars(__('maps_subject_hint')); ?></small>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary modal-close"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
                         <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
                     </div>
                 </form>
@@ -566,7 +566,7 @@ include 'menu.php';
         });
     });
 
-    subjectModal.querySelectorAll('.modal-close').forEach((button) => {
+    subjectModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
         button.addEventListener('click', closeSubjectModal);
     });
 
