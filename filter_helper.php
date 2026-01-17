@@ -105,10 +105,26 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         'columns' => 4,
         'form_id' => 'filterForm',
         'reset_url' => 'index.php?reset_filters=1',
+        'item_max_width' => '250px',
+        'item_max_widths' => [],
     ];
 
     $opts = array_merge($defaults, $options);
     $filters = [];
+    $itemMaxWidths = is_array($opts['item_max_widths']) ? $opts['item_max_widths'] : [];
+    $getMaxWidth = function (string $key) use ($itemMaxWidths): ?string {
+        if (!array_key_exists($key, $itemMaxWidths)) {
+            return null;
+        }
+        $value = $itemMaxWidths[$key];
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_numeric($value)) {
+            return $value . 'px';
+        }
+        return (string)$value;
+    };
 
     if ($opts['show_search']) {
         $filters['search'] = [
@@ -119,6 +135,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('search'),
         ];
     }
 
@@ -130,6 +147,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('action'),
             'options' => [
                 '' => __('filter_all_actions'),
                 'reject' => __('action_reject'),
@@ -150,6 +168,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_min_placeholder'),
             'value' => getFilterValue('score_min', $sessionKey),
             'class' => 'filter-group score-min',
+            'max_width' => $getMaxWidth('score_min'),
         ];
     }
 
@@ -163,6 +182,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_max_placeholder'),
             'value' => getFilterValue('score_max', $sessionKey),
             'class' => 'filter-group score-max',
+            'max_width' => $getMaxWidth('score_max'),
         ];
     }
 
@@ -174,6 +194,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('statefilter', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('statefilter'),
             'options' => [
                 '' => __('state_all'),
                 '0' => __('state_quarantined'),
@@ -192,6 +213,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-calendar',
             'value' => getFilterValue('date', $sessionKey),
             'class' => 'filter-group date-filter',
+            'max_width' => $getMaxWidth('date'),
         ];
     }
 
@@ -204,6 +226,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_sender_placeholder'),
             'value' => getFilterValue('sender', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('sender'),
         ];
     }
 
@@ -216,6 +239,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_recipient_placeholder'),
             'value' => getFilterValue('recipient', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('recipient'),
         ];
     }
 
@@ -228,6 +252,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('ip'),
         ];
     }
 
@@ -240,6 +265,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_country_placeholder'),
             'value' => getFilterValue('country', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('country'),
         ];
     }
 
@@ -252,6 +278,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_auth_user_placeholder'),
             'value' => getFilterValue('auth_user', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('auth_user'),
         ];
     }
 
@@ -263,6 +290,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-virus',
             'value' => getFilterValue('virus', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('virus'),
         ];
     }
 
@@ -274,6 +302,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-file-circle-xmark',
             'value' => getFilterValue('bad_extension', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => $getMaxWidth('bad_extension'),
         ];
     }
 
@@ -281,6 +310,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         'columns' => $opts['columns'],
         'form_id' => $opts['form_id'],
         'reset_url' => $opts['reset_url'],
+        'item_max_width' => $opts['item_max_width'],
     ];
 
     return $filters;
@@ -293,6 +323,7 @@ function getQuarantineFilters(array $options = []): array {
 function renderSearchFilters(array $filters_def): string {
     $meta = $filters_def['_meta'] ?? [];
     $formId = $meta['form_id'] ?? 'filterForm';
+    $itemMaxWidth = $meta['item_max_width'] ?? '250px';
     unset($filters_def['_meta']);
 
     ob_start();
@@ -304,6 +335,7 @@ function renderSearchFilters(array $filters_def): string {
         padding: 12px;
         border-radius: 6px;
         margin-bottom: 15px;
+        --filter-item-max-width: <?php echo htmlspecialchars($itemMaxWidth); ?>;
     }
 
     .compact-filter-row {
@@ -316,7 +348,7 @@ function renderSearchFilters(array $filters_def): string {
     .compact-filter-item {
         flex: 1 1 auto;
         min-width: 150px;
-        max-width: 250px;
+        max-width: var(--filter-item-max-width, 250px);
         position: relative;
     }
 
@@ -436,7 +468,8 @@ function renderSearchFilters(array $filters_def): string {
         <div class="compact-filter-row">
             <?php foreach ($filters_def as $filter): ?>
                 <?php $isChecked = ($filter['type'] === 'checkbox' && !empty($filter['value'])); ?>
-                <div class="compact-filter-item <?php echo (!empty($filter['value']) && $filter['value'] !== '') ? 'has-value' : ''; ?>">
+                <?php $maxWidthStyle = !empty($filter['max_width']) ? ' style="max-width: ' . htmlspecialchars($filter['max_width']) . ';"' : ''; ?>
+                <div class="compact-filter-item <?php echo (!empty($filter['value']) && $filter['value'] !== '') ? 'has-value' : ''; ?>"<?php echo $maxWidthStyle; ?>>
                     <label for="<?php echo htmlspecialchars($filter['key']); ?>">
                         <?php if (!empty($filter['icon'])): ?>
                             <i class="<?php echo htmlspecialchars($filter['icon']); ?>"></i>
