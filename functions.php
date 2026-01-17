@@ -3019,6 +3019,52 @@ function getEmailMapStatus($db, array $emails): array {
     return ['whitelist' => $whitelist, 'blacklist' => $blacklist];
 }
 
+/**
+ * Match values against regex-based map entries.
+ *
+ * @param PDO $db
+ * @param array $values
+ * @param string $entryType
+ * @return array ['whitelist' => [value => entry_value], 'blacklist' => [value => entry_value]]
+ */
+function getRegexMapMatches($db, array $values, string $entryType): array {
+    $normalized = array_values(array_unique(array_filter(array_map(function ($value) {
+        return trim((string)$value);
+    }, $values))));
+
+    if (empty($normalized)) {
+        return ['whitelist' => [], 'blacklist' => []];
+    }
+
+    $stmt = $db->prepare("SELECT list_type, entry_value FROM rspamd_map_entries WHERE entry_type = ? ORDER BY entry_value ASC");
+    $stmt->execute([$entryType]);
+    $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $matches = ['whitelist' => [], 'blacklist' => []];
+
+    foreach ($entries as $entry) {
+        $regex = trim((string)$entry['entry_value']);
+        if (!isRegexMapEntry($regex)) {
+            continue;
+        }
+
+        foreach ($normalized as $value) {
+            $valueKey = $entryType === 'email' ? strtolower($value) : $value;
+            $valueMatch = $entryType === 'email' ? strtolower($value) : $value;
+
+            if (isset($matches[$entry['list_type']][$valueKey])) {
+                continue;
+            }
+
+            if (@preg_match($regex, $valueMatch) === 1) {
+                $matches[$entry['list_type']][$valueKey] = $regex;
+            }
+        }
+    }
+
+    return $matches;
+}
+
 if (!function_exists('uploadRspamdMap')) {
     function uploadRspamdMap($mapName, $content) {
         $servers = getRspamdApiServers();
