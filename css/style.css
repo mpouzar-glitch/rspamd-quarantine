@@ -1118,12 +1118,12 @@ tr.selected {
 }
 
 .data-table .col-status {
-    width: 100px;
+    width: 60px;
     text-align: center;
 }
 
 .status-explanation-cell {
-    min-width: 170px;
+    min-width: 40px;
 }
 
 .status-pills {

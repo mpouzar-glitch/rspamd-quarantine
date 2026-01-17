@@ -44,6 +44,7 @@ $sortableColumns = [
     'recipients' => 'recipients',
     'subject' => 'subject',
     'score' => 'score',
+    'country' => 'country',
     'hostname' => 'hostname',
     'size' => 'size',
 ];
@@ -219,11 +220,11 @@ include 'menu.php';
                         'sender',
                         'recipients',
                         'subject',
-                        ['key' => 'hostname', 'style' => 'width: 100px;'],
-                        ['key' => 'country', 'style' => 'width: 50px;', 'sortable' => false],
+                        ['key' => 'hostname', 'style' => 'width: 80px;'],
+                        ['key' => 'country', 'style' => 'width: 20px;'],
                         ['key' => 'size', 'style' => 'width: 90px;'],
                         ['key' => 'score', 'style' => 'width: 60px;'],
-                        'status',
+                        ['key' => 'status', 'style' => 'col-status'],
                         ['key' => 'actions', 'style' => 'width: 150px;'],
                     ],
                 ]);
@@ -512,16 +513,14 @@ include 'menu.php';
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </form>
-                    <?php if ($canDeleteMessages): ?>
-                        <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
-                            <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
-                            <input type="hidden" name="operation" value="delete">
-                            <input type="hidden" name="return_url" value="index.php">
-                            <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                    <?php endif; ?>
+                    <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
+                        <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
+                        <input type="hidden" name="operation" value="delete">
+                        <input type="hidden" name="return_url" value="index.php">
+                        <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </div>
                 <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
                     <i class="fas fa-times"></i>
