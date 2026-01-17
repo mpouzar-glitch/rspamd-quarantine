@@ -174,7 +174,7 @@ include 'menu.php';
         echo renderSearchFilters(getQuarantineFilters([
             'columns' => null,
             'show_search' => true,
-            'show_action' => false,
+            'show_action' => true,
             'show_score_min' => false,
             'show_score_max' => false,
             'show_dates' => true,
