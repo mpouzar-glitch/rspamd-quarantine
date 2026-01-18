@@ -479,7 +479,7 @@ rspamd-quarantine-webui/
 ├── login.php              # Login page
 ├── logout.php             # Logout handler
 ├── functions.php          # Core helper functions
-├── filterhelper.php       # Filter rendering functions
+├── filter_helper.php      # Filter rendering functions
 ├── config.php             # Configuration (create from example)
 ├── config.example.php     # Configuration template
 ├── database.php           # Database connection class
@@ -496,6 +496,8 @@ rspamd-quarantine-webui/
 ## Configuration Options
 
 ### config.php
+
+Quick start example (minimal edits required). For the full list of options, see the reference below.
 
 ```php
 // Database
@@ -518,6 +520,8 @@ define('AUTOLEARN_SCORE', 15.0);
 // Debug mode (development only)
 define('DEBUG_MODE', false);
 ```
+
+### Configuration reference (config.example.php)
 
 Below is a complete overview of all options present in `config.example.php`, grouped by purpose.
 
@@ -567,9 +571,20 @@ Below is a complete overview of all options present in `config.example.php`, gro
 - `ITEMS_PER_PAGE` – pagination size in lists.
 - `APP_TIMEZONE` – default timezone (applied via `date_default_timezone_set`).
 
+#### Postfix Admin Database Configuration (optional)
+- `POSTFIX_DB_HOST` – Postfix database host.
+- `POSTFIX_DB_NAME` – Postfix database name.
+- `POSTFIX_DB_USER` – Postfix database user.
+- `POSTFIX_DB_PASS` – Postfix database password.
+- `POSTFIX_DB_CHARSET` – Postfix database connection charset.
+- `POSTFIX_ALLOW_MAILBOX_EDIT` – allows mailbox and alias editing in Users.
+- `VMAIL_BASE_DIR` – base Maildir path for mailbox size calculation.
+
 #### Rspamd API Configuration
 - `RSPAMD_API_URL` – base URL for Rspamd HTTP API.
 - `RSPAMD_API_PASSWORD` – password for Rspamd API (empty if none).
+- `RSPAMD_API_SERVERS` – list of Rspamd API endpoints for map synchronization.
+- `RSPAMD_MAPS` – map names for whitelist/blacklist entries, grouped by type.
 
 #### Service Health Monitoring
 - `SERVICE_HEALTH_SERVICES` – list of service labels and systemd units checked in the service health view.
