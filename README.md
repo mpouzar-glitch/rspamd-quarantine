@@ -297,6 +297,26 @@ define('POSTFIX_ALLOW_MAILBOX_EDIT', true);
 ?>
 ```
 
+#### Optional: MaxMind GeoIP support
+
+Country detection from IP addresses uses the MaxMind GeoLite2 City database and the GeoIP2 PHP reader. To enable it:
+
+1. Install the GeoIP2 PHP library (via Composer):
+
+```bash
+composer require geoip2/geoip2
+```
+
+2. Download the **GeoLite2 City** database from MaxMind (requires a free MaxMind account) and place it at:
+
+```
+/usr/local/share/GeoIP/GeoLite2-City.mmdb
+```
+
+3. Ensure the web server user can read the database file (for example `www-data`).
+
+If the library or database is missing, country detection will stay blank.
+
 ### 4. Web Server Setup
 
 **Apache** - Create a virtual host:
