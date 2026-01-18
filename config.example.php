@@ -73,7 +73,7 @@ define('AUTH_ENABLED', true);
 define('USE_DATABASE_AUTH', true); // Nové: použít DB auth místo statického
 
 // ============================================
-// IMAP Authentication (fallback for email usernames)
+// IMAP Authentication - quarantine users (fallback for email usernames)
 // ============================================
 define('IMAP_AUTH_ENABLED', false);
 define('IMAP_SERVER', 'mail.example.com');

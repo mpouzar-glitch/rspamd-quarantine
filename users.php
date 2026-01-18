@@ -19,6 +19,7 @@ $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isAdmin = $userRole === 'admin';
 $canEditQuota = $isAdmin;
+$isConfigDbPostfix = defined('POSTFIX_DB_HOST') ? true : false;
 $canManagePostfix = defined('POSTFIX_ALLOW_MAILBOX_EDIT') ? (bool) POSTFIX_ALLOW_MAILBOX_EDIT : true;
 $passwordMinLength = defined('PASSWORD_MIN_LENGTH') ? (int) PASSWORD_MIN_LENGTH : 8;
 $postfixError = null;
@@ -1399,6 +1400,7 @@ include 'menu.php';
         <?php endif; ?>
     <?php endif; ?>
 
+  <?php if ($isConfigDbPostfix): ?>   
     <div class="domain-section">
         <div class="domain-header">
             <h2><i class="fas fa-envelope-open-text"></i> <?php echo htmlspecialchars(__('users_domain_section_title')); ?></h2>
@@ -1556,6 +1558,7 @@ include 'menu.php';
             </div>
         <?php endif; ?>
     </div>
+  <?php endif; ?>      
 </div>
 
 <!-- Add User Modal -->
