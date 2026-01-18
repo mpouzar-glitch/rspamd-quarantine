@@ -906,10 +906,33 @@ function decodeMimeHeader($header) {
     }
 
     $original = $header;
+    $header = preg_replace("/\r\n[ \t]+/", ' ', $header);
     // Remove quotes
     $header = trim($header, '"\'');
+    $decoded = '';
 
-    $decoded = mb_decode_mimeheader($header);
+    if (function_exists('imap_mime_header_decode')) {
+        $parts = @imap_mime_header_decode($header);
+        if (is_array($parts)) {
+            $decodedParts = [];
+            foreach ($parts as $part) {
+                $text = (string)($part->text ?? '');
+                $charset = strtoupper((string)($part->charset ?? 'UTF-8'));
+                if ($charset !== 'DEFAULT' && $charset !== 'UTF-8') {
+                    $converted = @iconv($charset, 'UTF-8//IGNORE', $text);
+                    if ($converted !== false) {
+                        $text = $converted;
+                    }
+                }
+                $decodedParts[] = $text;
+            }
+            $decoded = implode('', $decodedParts);
+        }
+    }
+
+    if ($decoded === '') {
+        $decoded = mb_decode_mimeheader($header);
+    }
 
     $hasEncodedWords = preg_match('/=\?[^?]+\?[BQ]\?[^?]+\?=/i', $header);
     $needsRecode = $hasEncodedWords || !mb_check_encoding($decoded, 'UTF-8');
