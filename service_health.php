@@ -143,7 +143,6 @@ include 'menu.php';
         <div class="header-with-stats">
             <div class="header-title">
                 <h1><i class="fas fa-heartbeat"></i> <?php echo __('health_page_title'); ?></h1>
-                <p class="page-description"><?php echo __('health_page_description'); ?></p>
             </div>
                 <!-- Statistiky systému -->
                 <div class="stats-inline system-stats-inline">

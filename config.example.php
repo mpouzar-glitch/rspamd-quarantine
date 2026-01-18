@@ -84,6 +84,7 @@ define('IMAP_VALIDATE_CERT', true);
 // ============================================
 // Application Settings
 // ============================================
+define('APP_VERSION', '2.0.2');
 define('ITEMS_PER_PAGE', 50);
 define('APP_TIMEZONE', 'Europe/Prague');
 
