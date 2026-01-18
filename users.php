@@ -19,6 +19,7 @@ $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isAdmin = $userRole === 'admin';
 $canEditQuota = $isAdmin;
+$canManagePostfix = defined('POSTFIX_ALLOW_MAILBOX_EDIT') ? (bool) POSTFIX_ALLOW_MAILBOX_EDIT : true;
 $passwordMinLength = defined('PASSWORD_MIN_LENGTH') ? (int) PASSWORD_MIN_LENGTH : 8;
 $postfixError = null;
 $postfixDb = getPostfixConnection($postfixError);
@@ -297,6 +298,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'mailbox_create':
+            if (!$canManagePostfix) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
             $localPart = trim($_POST['mailbox_local'] ?? '');
             $domain = trim($_POST['domain'] ?? '');
             $name = trim($_POST['name'] ?? '');
@@ -381,6 +386,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'mailbox_update':
+            if (!$canManagePostfix) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
             $mailbox = trim($_POST['mailbox'] ?? '');
             $domain = trim($_POST['domain'] ?? '');
             $name = trim($_POST['name'] ?? '');
@@ -440,6 +449,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'alias_create':
+            if (!$canManagePostfix) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
             $localPart = trim($_POST['alias_local'] ?? '');
             $domain = trim($_POST['domain'] ?? '');
             $goto = trim($_POST['goto'] ?? '');
@@ -500,6 +513,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
 
         case 'alias_update':
+            if (!$canManagePostfix) {
+                $_SESSION['error_msg'] = __('users_mailbox_access_denied');
+                break;
+            }
             $address = trim($_POST['address'] ?? '');
             $domain = trim($_POST['domain'] ?? '');
             $goto = trim($_POST['goto'] ?? '');
@@ -1413,9 +1430,11 @@ include 'menu.php';
             <div class="section-card">
                 <div class="section-header">
                     <h3><?php echo htmlspecialchars(__('users_mailbox_users_title')); ?></h3>
-                    <button class="btn-add-user" type="button" onclick="openMailboxCreateModal()">
-                        <i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_add')); ?>
-                    </button>
+                    <?php if ($canManagePostfix): ?>
+                        <button class="btn-add-user" type="button" onclick="openMailboxCreateModal()">
+                            <i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_add')); ?>
+                        </button>
+                    <?php endif; ?>
                 </div>
                 <?php if (empty($mailboxes)): ?>
                     <p class="domain-empty"><?php echo htmlspecialchars(__('users_mailbox_empty')); ?></p>
@@ -1428,7 +1447,9 @@ include 'menu.php';
                                 <th><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</th>
                                 <th><?php echo htmlspecialchars(__('users_mailbox_size')); ?></th>
                                 <th><?php echo htmlspecialchars(__('status')); ?></th>
-                                <th><?php echo htmlspecialchars(__('actions')); ?></th>
+                                <?php if ($canManagePostfix): ?>
+                                    <th><?php echo htmlspecialchars(__('actions')); ?></th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -1452,11 +1473,13 @@ include 'menu.php';
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="mailbox-actions">
-                                        <button class="action-btn btn-edit" onclick='openMailboxModal(<?php echo json_encode($mailbox); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
-                                            <i class="fas fa-pen"></i>
-                                        </button>
-                                    </td>
+                                    <?php if ($canManagePostfix): ?>
+                                        <td class="mailbox-actions">
+                                            <button class="action-btn btn-edit" onclick='openMailboxModal(<?php echo json_encode($mailbox); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -1476,9 +1499,11 @@ include 'menu.php';
                                 <?php echo htmlspecialchars(__('users_alias_hide_system')); ?>
                             </label>
                         </form>
-                        <button class="btn-add-user" type="button" onclick="openAliasCreateModal()">
-                            <i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_add')); ?>
-                        </button>
+                        <?php if ($canManagePostfix): ?>
+                            <button class="btn-add-user" type="button" onclick="openAliasCreateModal()">
+                                <i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_add')); ?>
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php if (empty($aliases)): ?>
@@ -1490,7 +1515,9 @@ include 'menu.php';
                                 <th><?php echo htmlspecialchars(__('users_alias_address')); ?></th>
                                 <th><?php echo htmlspecialchars(__('users_alias_target')); ?></th>
                                 <th><?php echo htmlspecialchars(__('status')); ?></th>
-                                <th><?php echo htmlspecialchars(__('actions')); ?></th>
+                                <?php if ($canManagePostfix): ?>
+                                    <th><?php echo htmlspecialchars(__('actions')); ?></th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
@@ -1514,11 +1541,13 @@ include 'menu.php';
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="mailbox-actions">
-                                        <button class="action-btn btn-edit" onclick='openAliasModal(<?php echo json_encode($alias); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
-                                            <i class="fas fa-pen"></i>
-                                        </button>
-                                    </td>
+                                    <?php if ($canManagePostfix): ?>
+                                        <td class="mailbox-actions">
+                                            <button class="action-btn btn-edit" onclick='openAliasModal(<?php echo json_encode($alias); ?>)' title="<?php echo htmlspecialchars(__('edit')); ?>">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -1634,161 +1663,163 @@ include 'menu.php';
     </div>
 </div>
 
-<!-- Create Mailbox Modal -->
-<div id="mailboxCreateModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_create_title')); ?></h2>
-            <span class="close" onclick="closeMailboxCreateModal()">&times;</span>
+<?php if ($canManagePostfix): ?>
+    <!-- Create Mailbox Modal -->
+    <div id="mailboxCreateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> <?php echo htmlspecialchars(__('users_mailbox_create_title')); ?></h2>
+                <span class="close" onclick="closeMailboxCreateModal()">&times;</span>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="mailbox_create">
+                <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_localpart')); ?> *</label>
+                        <input type="text" name="mailbox_local" required>
+                        <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_name')); ?> *</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
+                        <input type="number" name="quota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?> *</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="active" id="mailboxCreateActive" checked>
+                        <label for="mailboxCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeMailboxCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_create')); ?>
+                    </button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="">
-            <input type="hidden" name="action" value="mailbox_create">
-            <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_localpart')); ?> *</label>
-                    <input type="text" name="mailbox_local" required>
-                    <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_name')); ?> *</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
-                    <input type="number" name="quota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?> *</label>
-                    <input type="password" name="password" required>
-                </div>
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" name="active" id="mailboxCreateActive" checked>
-                    <label for="mailboxCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeMailboxCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_create')); ?>
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 
-<!-- Create Alias Modal -->
-<div id="aliasCreateModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_create_title')); ?></h2>
-            <span class="close" onclick="closeAliasCreateModal()">&times;</span>
+    <!-- Create Alias Modal -->
+    <div id="aliasCreateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_create_title')); ?></h2>
+                <span class="close" onclick="closeAliasCreateModal()">&times;</span>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="alias_create">
+                <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_alias_localpart')); ?> *</label>
+                        <input type="text" name="alias_local" required>
+                        <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
+                        <textarea name="goto" required></textarea>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="active" id="aliasCreateActive" checked>
+                        <label for="aliasCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeAliasCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_create')); ?>
+                    </button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="">
-            <input type="hidden" name="action" value="alias_create">
-            <input type="hidden" name="domain" value="<?php echo htmlspecialchars($selectedDomain); ?>">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_alias_localpart')); ?> *</label>
-                    <input type="text" name="alias_local" required>
-                    <small><?php echo htmlspecialchars($selectedDomain ? '@' . $selectedDomain : ''); ?></small>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
-                    <textarea name="goto" required></textarea>
-                </div>
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" name="active" id="aliasCreateActive" checked>
-                    <label for="aliasCreateActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeAliasCreateModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_create')); ?>
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 
-<!-- Edit Mailbox Modal -->
-<div id="mailboxModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('users_mailbox_edit_title')); ?></h2>
-            <span class="close" onclick="closeMailboxModal()">&times;</span>
+    <!-- Edit Mailbox Modal -->
+    <div id="mailboxModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('users_mailbox_edit_title')); ?></h2>
+                <span class="close" onclick="closeMailboxModal()">&times;</span>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="mailbox_update">
+                <input type="hidden" name="mailbox" id="mailboxUsername">
+                <input type="hidden" name="domain" id="mailboxDomain">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_address')); ?></label>
+                        <input type="text" id="mailboxAddressDisplay" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_name')); ?> *</label>
+                        <input type="text" name="name" id="mailboxName" required>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
+                        <input type="number" name="quota" id="mailboxQuota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?></label>
+                        <input type="password" name="password" id="mailboxPassword" placeholder="<?php echo htmlspecialchars(__('users_mailbox_password_hint')); ?>">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="active" id="mailboxActive">
+                        <label for="mailboxActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeMailboxModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_save')); ?>
+                    </button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="">
-            <input type="hidden" name="action" value="mailbox_update">
-            <input type="hidden" name="mailbox" id="mailboxUsername">
-            <input type="hidden" name="domain" id="mailboxDomain">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_address')); ?></label>
-                    <input type="text" id="mailboxAddressDisplay" readonly>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_name')); ?> *</label>
-                    <input type="text" name="name" id="mailboxName" required>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_quota')); ?> (GB)</label>
-                    <input type="number" name="quota" id="mailboxQuota" min="0" step="0.01" <?php echo $canEditQuota ? '' : 'readonly class="readonly-field"'; ?>>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_mailbox_password')); ?></label>
-                    <input type="password" name="password" id="mailboxPassword" placeholder="<?php echo htmlspecialchars(__('users_mailbox_password_hint')); ?>">
-                </div>
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" name="active" id="mailboxActive">
-                    <label for="mailboxActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeMailboxModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_mailbox_save')); ?>
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 
-<!-- Edit Alias Modal -->
-<div id="aliasModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_edit_title')); ?></h2>
-            <span class="close" onclick="closeAliasModal()">&times;</span>
+    <!-- Edit Alias Modal -->
+    <div id="aliasModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-share"></i> <?php echo htmlspecialchars(__('users_alias_edit_title')); ?></h2>
+                <span class="close" onclick="closeAliasModal()">&times;</span>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="alias_update">
+                <input type="hidden" name="address" id="aliasAddress">
+                <input type="hidden" name="domain" id="aliasDomain">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_alias_address')); ?></label>
+                        <input type="text" id="aliasAddressDisplay" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
+                        <textarea name="goto" id="aliasGoto" required></textarea>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="active" id="aliasActive">
+                        <label for="aliasActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeAliasModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_save')); ?>
+                    </button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="">
-            <input type="hidden" name="action" value="alias_update">
-            <input type="hidden" name="address" id="aliasAddress">
-            <input type="hidden" name="domain" id="aliasDomain">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_alias_address')); ?></label>
-                    <input type="text" id="aliasAddressDisplay" readonly>
-                </div>
-                <div class="form-group">
-                    <label><?php echo htmlspecialchars(__('users_alias_target')); ?> *</label>
-                    <textarea name="goto" id="aliasGoto" required></textarea>
-                </div>
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" name="active" id="aliasActive">
-                    <label for="aliasActive"><?php echo htmlspecialchars(__('users_active_account')); ?></label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="closeAliasModal()"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-save"></i> <?php echo htmlspecialchars(__('users_alias_save')); ?>
-                </button>
-            </div>
-        </form>
     </div>
-</div>
+<?php endif; ?>
 
 <!-- Delete Form (hidden) -->
 <form method="POST" action="" id="deleteForm">
