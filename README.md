@@ -51,6 +51,7 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 - Admin UI for creating, editing, and deactivating users
 - Role assignment (admin, domain admin, viewer)
 - Domain scoping for domain admins
+- Optional Postfix mailbox and alias editing in the Users section (requires Postfix DB config and `POSTFIX_ALLOW_MAILBOX_EDIT`)
 
 ### Statistics and Charts
 - **Volume statistics** for quarantine and trace data
@@ -285,6 +286,13 @@ define('SESSION_TIMEOUT', 3600); // 1 hour
 // Auto-learn settings (optional)
 define('AUTOLEARN_ENABLED', true);
 define('AUTOLEARN_SCORE', 15.0);
+
+// Postfix mailbox/alias management (optional)
+define('POSTFIX_DB_HOST', 'localhost');
+define('POSTFIX_DB_NAME', 'postfix');
+define('POSTFIX_DB_USER', 'postfix');
+define('POSTFIX_DB_PASS', 'password');
+define('POSTFIX_ALLOW_MAILBOX_EDIT', true);
 ?>
 ```
 

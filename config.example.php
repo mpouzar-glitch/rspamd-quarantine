@@ -102,6 +102,11 @@ if (!defined('POSTFIX_DB_HOST')) {
     define('POSTFIX_DB_CHARSET', 'utf8mb4');
 }
 
+// Allow mailbox and alias editing via Postfix database in Users section
+if (!defined('POSTFIX_ALLOW_MAILBOX_EDIT')) {
+    define('POSTFIX_ALLOW_MAILBOX_EDIT', false);
+}
+
 // Base path for maildir storage (used for mailbox size calculation)
 if (!defined('VMAIL_BASE_DIR')) {
     define('VMAIL_BASE_DIR', '/var/vmail/vmail1');
