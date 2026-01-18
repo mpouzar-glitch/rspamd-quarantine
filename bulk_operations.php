@@ -491,33 +491,24 @@ include 'menu.php';
         <?php endif; ?>
     </div>
 
-    <div id="senderMapModal" class="modal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="senderMapModalTitle"><i class="fas fa-paper-plane"></i> <?php echo htmlspecialchars(__('maps_add_sender')); ?></h3>
-                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="senderMapForm" method="POST" action="map_quick_add.php">
-                    <input type="hidden" name="action" value="add">
-                    <input type="hidden" name="list_type" id="senderMapListType" value="">
-                    <input type="hidden" name="entry_type" value="email">
-                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                    <div class="form-group">
-                        <label for="senderMapValue"><?php echo htmlspecialchars(__('msg_sender')); ?></label>
-                        <input type="text" id="senderMapValue" name="entry_value" class="form-control" placeholder="<?php echo htmlspecialchars(__('maps_sender_placeholder')); ?>" required>
-                        <small><?php echo htmlspecialchars(__('maps_sender_hint')); ?></small>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                        <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <?php
+    echo renderMapModal([
+        'id' => 'senderMapModal',
+        'title_id' => 'senderMapModalTitle',
+        'title_text' => __('maps_add_sender'),
+        'icon_class' => 'fas fa-paper-plane',
+        'form_id' => 'senderMapForm',
+        'list_type_id' => 'senderMapListType',
+        'entry_type' => 'email',
+        'return_url' => $returnUrl,
+        'label_text' => __('msg_sender'),
+        'value_id' => 'senderMapValue',
+        'placeholder_text' => __('maps_sender_placeholder'),
+        'hint_text' => __('maps_sender_hint'),
+        'include_action' => true,
+        'action_value' => 'add'
+    ]);
+    ?>
 
     <script>
     const bulkStrings = {
@@ -680,23 +671,18 @@ include 'menu.php';
     </script>
 
     <!-- Preview Tooltip -->
-    <div id="messagePreviewModal" class="modal preview-modal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(__('preview_message_title')); ?></h3>
-                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="previewModalContent" class="preview-modal-content">
-                    <div class="preview-loading">
-                        <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php
+    echo renderPreviewModal([
+        'id' => 'messagePreviewModal',
+        'classes' => 'preview-modal',
+        'title_text' => __('preview_message_title'),
+        'icon_class' => 'fas fa-envelope',
+        'content_id' => 'previewModalContent',
+        'content_class' => 'preview-modal-content',
+        'loading_class' => 'preview-loading',
+        'loading_text' => __('preview_loading')
+    ]);
+    ?>
 
     <script>
     let activeRequest = null;
