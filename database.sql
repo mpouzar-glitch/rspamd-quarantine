@@ -179,6 +179,20 @@ CREATE TABLE `users` (
 -- --------------------------------------------------------
 
 --
+-- Struktura tabulky `login_attempts`
+--
+
+CREATE TABLE `login_attempts` (
+  `id` int(11) NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `attempt_count` int(11) NOT NULL DEFAULT 1,
+  `last_attempt_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Struktura tabulky `user_domains`
 --
 
@@ -370,6 +384,13 @@ ALTER TABLE `users`
   ADD KEY `idx_active` (`active`);
 
 --
+-- Indexy pro tabulku `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `login_attempts_user_ip` (`username`,`ip_address`);
+
+--
 -- Indexy pro tabulku `user_domains`
 --
 ALTER TABLE `user_domains`
@@ -426,6 +447,12 @@ ALTER TABLE `trace_statistics`
 -- AUTO_INCREMENT pro tabulku `users`
 --
 ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pro tabulku `login_attempts`
+--
+ALTER TABLE `login_attempts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

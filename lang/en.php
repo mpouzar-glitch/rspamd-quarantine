@@ -98,6 +98,7 @@ return [
     'login_missing_credentials' => 'Please enter your username and password.',
     'login_timeout' => 'Your session has expired. Please sign in again.',
     'login_error' => 'Login error. Please try again later.',
+    'login_locked' => 'Too many failed login attempts. Try again in {seconds} seconds.',
     'login_required' => 'Login required',
     'logout_success' => 'You have been successfully logged out',
 
@@ -425,6 +426,7 @@ return [
     'users_invalid_email' => 'Please enter a valid email address.',
     'users_invalid_emails' => 'Please enter valid email addresses.',
     'users_username_exists' => 'Username already exists.',
+    'users_password_too_short' => 'Password must be at least {min} characters long.',
     'users_create_success' => 'User has been added successfully.',
     'users_create_error' => 'Error creating user: {error}',
     'users_update_success' => 'User has been updated successfully.',
