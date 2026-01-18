@@ -125,171 +125,185 @@ $systemInfo = getSystemInfo();
 include 'menu.php';
 ?>
 
-<div class="container">
-    <div class="page-header">
-        <h1><i class="fas fa-heartbeat"></i> <?php echo __('health_page_title'); ?></h1>
-        <p class="page-description"><?php echo __('health_page_description'); ?></p>
-    </div>
+<!DOCTYPE html>
+<html lang="<?php echo htmlspecialchars(currentLang()); ?>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($page_title); ?></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/stats-inline.css">
+    <link rel="stylesheet" href="css/bulk.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with statistics -->
+        <div class="header-with-stats">
+            <div class="header-title">
+                <h1><i class="fas fa-heartbeat"></i> <?php echo __('health_page_title'); ?></h1>
+                <p class="page-description"><?php echo __('health_page_description'); ?></p>
+            </div>
+                <!-- Statistiky systému -->
+                <div class="stats-inline system-stats-inline">
+                    <div class="stat-inline-item cpu">
+                        <span class="stat-inline-label"><i class="fas fa-microchip"></i> <?php echo __('cpu_load'); ?></span>
+                        <span class="stat-inline-value"><?php echo number_format($systemInfo['load_avg'][0], 2); ?></span>
+                        <span class="stat-inline-sub">
+                            5m: <?php echo number_format($systemInfo['load_avg'][1], 2); ?> | 
+                            15m: <?php echo number_format($systemInfo['load_avg'][2], 2); ?> | 
+                            <?php echo $systemInfo['cpu_count']; ?> cores
+                        </span>
+                    </div>
 
-    <!-- Statistiky systému -->
-    <div class="stats-inline system-stats-inline">
-        <div class="stat-inline-item cpu">
-            <span class="stat-inline-label"><i class="fas fa-microchip"></i> <?php echo __('cpu_load'); ?></span>
-            <span class="stat-inline-value"><?php echo number_format($systemInfo['load_avg'][0], 2); ?></span>
-            <span class="stat-inline-sub">
-                5m: <?php echo number_format($systemInfo['load_avg'][1], 2); ?> | 
-                15m: <?php echo number_format($systemInfo['load_avg'][2], 2); ?> | 
-                <?php echo $systemInfo['cpu_count']; ?> cores
-            </span>
+                    <div class="stat-inline-item memory <?php echo $systemInfo['memory']['used_percent'] > 80 ? 'danger' : 'success'; ?>">
+                        <span class="stat-inline-label"><i class="fas fa-memory"></i> <?php echo __('memory_usage'); ?></span>
+                        <span class="stat-inline-value"><?php echo $systemInfo['memory']['used_percent']; ?>%</span>
+                        <span class="stat-inline-sub">
+                            <?php echo formatBytes($systemInfo['memory']['used']); ?> / 
+                            <?php echo formatBytes($systemInfo['memory']['total']); ?>
+                        </span>
+                    </div>
+
+                    <?php if ($systemInfo['memory']['swap_total'] > 0): ?>
+                    <div class="stat-inline-item swap <?php echo $systemInfo['memory']['swap_used_percent'] > 50 ? 'warning' : 'success'; ?>">
+                        <span class="stat-inline-label"><i class="fas fa-exchange-alt"></i> <?php echo __('swap_usage'); ?></span>
+                        <span class="stat-inline-value"><?php echo $systemInfo['memory']['swap_used_percent']; ?>%</span>
+                        <span class="stat-inline-sub">
+                            <?php echo formatBytes($systemInfo['memory']['swap_used']); ?> / 
+                            <?php echo formatBytes($systemInfo['memory']['swap_total']); ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="stat-inline-item uptime">
+                        <span class="stat-inline-label"><i class="fas fa-clock"></i> <?php echo __('system_uptime'); ?></span>
+                        <span class="stat-inline-value"><?php echo $systemInfo['uptime']; ?></span>
+                    </div>
+
+                    <div class="stat-inline-item services <?php echo $healthyCount === count($services) ? 'success' : 'danger'; ?>">
+                        <span class="stat-inline-label"><i class="fas fa-server"></i> <?php echo __('services_status'); ?></span>
+                        <span class="stat-inline-value"><?php echo $healthyCount; ?> / <?php echo count($services); ?></span>
+                        <span class="stat-inline-sub"><?php echo __('services_healthy'); ?></span>
+                    </div>
+                </div>
+        </div>
+        <!-- Tabulka služeb -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cogs"></i> <?php echo __('services_health'); ?>
+            </div>
+
+            <div class="table-container">
+                <table class="messages-table health-services-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-server"></i> <?php echo __('service'); ?></th>
+                            <th><i class="fas fa-info-circle"></i> <?php echo __('status'); ?></th>
+                            <th><i class="fas fa-list-ol"></i> <?php echo __('processes'); ?></th>
+                            <th><i class="fas fa-memory"></i> <?php echo __('memory'); ?></th>
+                            <th><i class="fas fa-microchip"></i> <?php echo __('cpu'); ?></th>
+                            <th><i class="fas fa-clock"></i> <?php echo __('uptime'); ?></th>
+                            <th><i class="fas fa-redo"></i> <?php echo __('restarts'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($serviceRows as $row): ?>
+                        <tr class="service-row-<?php echo htmlspecialchars($row['state']); ?>">
+                            <td>
+                                <strong><?php echo htmlspecialchars($row['label']); ?></strong>
+                            </td>
+                            <td>
+                                <?php
+                                $badgeClass = 'badge-secondary';
+                                if ($row['state'] === 'running') $badgeClass = 'badge-success';
+                                elseif ($row['state'] === 'failed') $badgeClass = 'badge-danger';
+                                elseif ($row['state'] === 'starting') $badgeClass = 'badge-warning';
+                                ?>
+                                <span class="badge <?php echo $badgeClass; ?>">
+                                    <?php echo __('state_' . $row['state']); ?>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <?php echo $row['process_count'] > 0 ? '<strong>' . $row['process_count'] . '</strong>' : '<span style="color: #bdc3c7;">-</span>'; ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($row['memory_formatted']); ?></td>
+                            <td class="text-center">
+                                <?php 
+                                if ($row['cpu_usage'] > 0) {
+                                    $cpuColor = $row['cpu_usage'] > 50 ? '#e74c3c' : ($row['cpu_usage'] > 25 ? '#f39c12' : '#27ae60');
+                                    echo '<strong style="color: ' . $cpuColor . ';">' . $row['cpu_usage'] . '%</strong>';
+                                } else {
+                                    echo '<span style="color: #bdc3c7;">-</span>';
+                                }
+                                ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($row['uptime']); ?></td>
+                            <td class="text-center">
+                                <?php 
+                                if ($row['restart_count'] > 0) {
+                                    echo '<span class="badge badge-warning">' . $row['restart_count'] . '</span>';
+                                } else {
+                                    echo '<span style="color: #27ae60;">0</span>';
+                                }
+                                ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="stat-inline-item memory <?php echo $systemInfo['memory']['used_percent'] > 80 ? 'danger' : 'success'; ?>">
-            <span class="stat-inline-label"><i class="fas fa-memory"></i> <?php echo __('memory_usage'); ?></span>
-            <span class="stat-inline-value"><?php echo $systemInfo['memory']['used_percent']; ?>%</span>
-            <span class="stat-inline-sub">
-                <?php echo formatBytes($systemInfo['memory']['used']); ?> / 
-                <?php echo formatBytes($systemInfo['memory']['total']); ?>
-            </span>
-        </div>
+        <!-- Tabulka disků -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-hdd"></i> <?php echo __('disk_usage'); ?>
+            </div>
 
-        <?php if ($systemInfo['memory']['swap_total'] > 0): ?>
-        <div class="stat-inline-item swap <?php echo $systemInfo['memory']['swap_used_percent'] > 50 ? 'warning' : 'success'; ?>">
-            <span class="stat-inline-label"><i class="fas fa-exchange-alt"></i> <?php echo __('swap_usage'); ?></span>
-            <span class="stat-inline-value"><?php echo $systemInfo['memory']['swap_used_percent']; ?>%</span>
-            <span class="stat-inline-sub">
-                <?php echo formatBytes($systemInfo['memory']['swap_used']); ?> / 
-                <?php echo formatBytes($systemInfo['memory']['swap_total']); ?>
-            </span>
-        </div>
-        <?php endif; ?>
-
-        <div class="stat-inline-item uptime">
-            <span class="stat-inline-label"><i class="fas fa-clock"></i> <?php echo __('system_uptime'); ?></span>
-            <span class="stat-inline-value"><?php echo $systemInfo['uptime']; ?></span>
-        </div>
-
-        <div class="stat-inline-item services <?php echo $healthyCount === count($services) ? 'success' : 'danger'; ?>">
-            <span class="stat-inline-label"><i class="fas fa-server"></i> <?php echo __('services_status'); ?></span>
-            <span class="stat-inline-value"><?php echo $healthyCount; ?> / <?php echo count($services); ?></span>
-            <span class="stat-inline-sub"><?php echo __('services_healthy'); ?></span>
-        </div>
-    </div>
-
-    <!-- Tabulka služeb -->
-    <div class="card">
-        <div class="card-header">
-            <i class="fas fa-cogs"></i> <?php echo __('services_health'); ?>
-        </div>
-
-        <div class="table-container">
-            <table class="messages-table health-services-table">
-                <thead>
-                    <tr>
-                        <th><i class="fas fa-server"></i> <?php echo __('service'); ?></th>
-                        <th><i class="fas fa-info-circle"></i> <?php echo __('status'); ?></th>
-                        <th><i class="fas fa-list-ol"></i> <?php echo __('processes'); ?></th>
-                        <th><i class="fas fa-memory"></i> <?php echo __('memory'); ?></th>
-                        <th><i class="fas fa-microchip"></i> <?php echo __('cpu'); ?></th>
-                        <th><i class="fas fa-clock"></i> <?php echo __('uptime'); ?></th>
-                        <th><i class="fas fa-redo"></i> <?php echo __('restarts'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($serviceRows as $row): ?>
-                    <tr class="service-row-<?php echo htmlspecialchars($row['state']); ?>">
-                        <td>
-                            <strong><?php echo htmlspecialchars($row['label']); ?></strong>
-                        </td>
-                        <td>
-                            <?php
-                            $badgeClass = 'badge-secondary';
-                            if ($row['state'] === 'running') $badgeClass = 'badge-success';
-                            elseif ($row['state'] === 'failed') $badgeClass = 'badge-danger';
-                            elseif ($row['state'] === 'starting') $badgeClass = 'badge-warning';
-                            ?>
-                            <span class="badge <?php echo $badgeClass; ?>">
-                                <?php echo __('state_' . $row['state']); ?>
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <?php echo $row['process_count'] > 0 ? '<strong>' . $row['process_count'] . '</strong>' : '<span style="color: #bdc3c7;">-</span>'; ?>
-                        </td>
-                        <td><?php echo htmlspecialchars($row['memory_formatted']); ?></td>
-                        <td class="text-center">
-                            <?php 
-                            if ($row['cpu_usage'] > 0) {
-                                $cpuColor = $row['cpu_usage'] > 50 ? '#e74c3c' : ($row['cpu_usage'] > 25 ? '#f39c12' : '#27ae60');
-                                echo '<strong style="color: ' . $cpuColor . ';">' . $row['cpu_usage'] . '%</strong>';
-                            } else {
-                                echo '<span style="color: #bdc3c7;">-</span>';
-                            }
-                            ?>
-                        </td>
-                        <td><?php echo htmlspecialchars($row['uptime']); ?></td>
-                        <td class="text-center">
-                            <?php 
-                            if ($row['restart_count'] > 0) {
-                                echo '<span class="badge badge-warning">' . $row['restart_count'] . '</span>';
-                            } else {
-                                echo '<span style="color: #27ae60;">0</span>';
-                            }
-                            ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Tabulka disků -->
-    <div class="card">
-        <div class="card-header">
-            <i class="fas fa-hdd"></i> <?php echo __('disk_usage'); ?>
-        </div>
-
-        <div class="table-container">
-            <table class="messages-table">
-                <thead>
-                    <tr>
-                        <th><i class="fas fa-hdd"></i> <?php echo __('device'); ?></th>
-                        <th><i class="fas fa-folder"></i> <?php echo __('mount_point'); ?></th>
-                        <th><i class="fas fa-file-code"></i> <?php echo __('filesystem'); ?></th>
-                        <th><i class="fas fa-database"></i> <?php echo __('total'); ?></th>
-                        <th><i class="fas fa-chart-pie"></i> <?php echo __('used'); ?></th>
-                        <th><i class="fas fa-inbox"></i> <?php echo __('free'); ?></th>
-                        <th><i class="fas fa-percentage"></i> <?php echo __('usage'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($systemInfo['disks'] as $disk): ?>
-                    <tr>
-                        <td><code><?php echo htmlspecialchars($disk['device']); ?></code></td>
-                        <td><strong><?php echo htmlspecialchars($disk['mount']); ?></strong></td>
-                        <td><span class="badge badge-secondary"><?php echo htmlspecialchars($disk['fstype']); ?></span></td>
-                        <td><?php echo formatBytes($disk['total']); ?></td>
-                        <td><?php echo formatBytes($disk['used']); ?></td>
-                        <td><?php echo formatBytes($disk['free']); ?></td>
-                        <td>
-                            <?php
-                            $percent = $disk['used_percent'];
-                            $barColor = $percent > 90 ? '#e74c3c' : ($percent > 75 ? '#f39c12' : '#27ae60');
-                            ?>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="flex: 1; background: #ecf0f1; border-radius: 10px; height: 10px; overflow: hidden;">
-                                    <div style="width: <?php echo $percent; ?>%; background: <?php echo $barColor; ?>; height: 100%;"></div>
+            <div class="table-container">
+                <table class="messages-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hdd"></i> <?php echo __('device'); ?></th>
+                            <th><i class="fas fa-folder"></i> <?php echo __('mount_point'); ?></th>
+                            <th><i class="fas fa-file-code"></i> <?php echo __('filesystem'); ?></th>
+                            <th><i class="fas fa-database"></i> <?php echo __('total'); ?></th>
+                            <th><i class="fas fa-chart-pie"></i> <?php echo __('used'); ?></th>
+                            <th><i class="fas fa-inbox"></i> <?php echo __('free'); ?></th>
+                            <th><i class="fas fa-percentage"></i> <?php echo __('usage'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($systemInfo['disks'] as $disk): ?>
+                        <tr>
+                            <td><code><?php echo htmlspecialchars($disk['device']); ?></code></td>
+                            <td><strong><?php echo htmlspecialchars($disk['mount']); ?></strong></td>
+                            <td><span class="badge badge-secondary"><?php echo htmlspecialchars($disk['fstype']); ?></span></td>
+                            <td><?php echo formatBytes($disk['total']); ?></td>
+                            <td><?php echo formatBytes($disk['used']); ?></td>
+                            <td><?php echo formatBytes($disk['free']); ?></td>
+                            <td>
+                                <?php
+                                $percent = $disk['used_percent'];
+                                $barColor = $percent > 90 ? '#e74c3c' : ($percent > 75 ? '#f39c12' : '#27ae60');
+                                ?>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="flex: 1; background: #ecf0f1; border-radius: 10px; height: 10px; overflow: hidden;">
+                                        <div style="width: <?php echo $percent; ?>%; background: <?php echo $barColor; ?>; height: 100%;"></div>
+                                    </div>
+                                    <strong style="color: <?php echo $barColor; ?>; min-width: 45px; text-align: right;">
+                                        <?php echo $percent; ?>%
+                                    </strong>
                                 </div>
-                                <strong style="color: <?php echo $barColor; ?>; min-width: 45px; text-align: right;">
-                                    <?php echo $percent; ?>%
-                                </strong>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 </div>
 
 <style>

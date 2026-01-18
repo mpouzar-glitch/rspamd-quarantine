@@ -58,7 +58,7 @@ return [
     'domain_filter_info' => 'Filtrované pre domény:',
 
     // Service health
-    'health_page_title' => 'Zdravie služieb - {app}',
+    'health_page_title' => 'Zdravie služieb',
     'health_title' => 'Zdravie služieb',
     'health_subtitle' => 'Kontrola, či kritické služby bežia a sú zdravé.',
     'health_table_service' => 'Služba',

@@ -58,7 +58,7 @@ return [
     'domain_filter_info' => 'Filtered for domains:',
 
     // Service health
-    'health_page_title' => 'Service Health - {app}',
+    'health_page_title' => 'Service Health',
     'health_title' => 'Service Health',
     'health_subtitle' => 'Checks whether critical services are running and healthy.',
     'health_table_service' => 'Service',
