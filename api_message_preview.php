@@ -43,21 +43,26 @@ try {
         exit;
     }
 
+    $splitHeadersBody = function (string $raw): array {
+        $headers_end = strpos($raw, "\r\n\r\n");
+        $separator_length = 4;
+        if ($headers_end === false) {
+            $headers_end = strpos($raw, "\n\n");
+            $separator_length = 2;
+        }
+
+        if ($headers_end === false) {
+            return [$raw, ''];
+        }
+
+        return [
+            substr($raw, 0, $headers_end),
+            substr($raw, $headers_end + $separator_length),
+        ];
+    };
+
     // Parse message
-    $headers_end = strpos($message['message_content'], "\r\n\r\n");
-    if ($headers_end === false) {
-        $headers_end = strpos($message['message_content'], "\n\n");
-    }
-
-    $headers_raw = '';
-    $body_raw = '';
-
-    if ($headers_end !== false) {
-        $headers_raw = substr($message['message_content'], 0, $headers_end);
-        $body_raw = substr($message['message_content'], $headers_end + 4);
-    } else {
-        $headers_raw = $message['message_content'];
-    }
+    [$headers_raw, $body_raw] = $splitHeadersBody($message['message_content']);
 
     // Parse headers
     $headers_array = [];
@@ -86,91 +91,121 @@ try {
     $from_header = $headers_lower['from'] ?? '';
     $to_header = $headers_lower['to'] ?? '';
 
+    $parseHeaders = function (string $raw): array {
+        $headers = [];
+        $lines = explode("\n", $raw);
+        $current = '';
+
+        foreach ($lines as $line) {
+            $line = rtrim($line, "\r");
+            if ($line === '') {
+                continue;
+            }
+            if (preg_match('/^[\s\t]/', $line) && $current !== '') {
+                $headers[$current] .= ' ' . trim($line);
+                continue;
+            }
+            if (preg_match('/^([^:]+):\s*(.*)$/', $line, $matches)) {
+                $current = strtolower(trim($matches[1]));
+                $headers[$current] = $matches[2];
+            }
+        }
+
+        return $headers;
+    };
+
+    $decodeBody = function (string $body, string $encoding): string {
+        $encoding = strtolower($encoding);
+        if ($encoding === 'base64') {
+            return base64_decode($body);
+        }
+        if ($encoding === 'quoted-printable') {
+            return quoted_printable_decode($body);
+        }
+
+        return $body;
+    };
+
+    $convertCharset = function (string $body, string $charset): string {
+        $charset = strtoupper($charset);
+        if (!in_array($charset, ['UTF-8', 'US-ASCII'], true)) {
+            return @iconv($charset, 'UTF-8//IGNORE', $body) ?: $body;
+        }
+
+        return $body;
+    };
+
+    $extractCharset = function (string $contentType, string $fallback = 'UTF-8'): string {
+        if (preg_match('/charset\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $contentType, $matches)) {
+            return strtoupper($matches[1]);
+        }
+
+        return $fallback;
+    };
+
+    $parseMimePart = function (array $headers, string $body) use (&$parseMimePart, $splitHeadersBody, $parseHeaders, $decodeBody, $convertCharset, $extractCharset): array {
+        $content_type = $headers['content-type'] ?? 'text/plain';
+        $content_encoding = $headers['content-transfer-encoding'] ?? '';
+
+        if (stripos($content_type, 'multipart') !== false) {
+            if (!preg_match('/boundary\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $content_type, $matches)) {
+                return ['text' => '', 'html' => ''];
+            }
+
+            $boundary = $matches[1];
+            $parts = explode("--$boundary", $body);
+            $body_text = '';
+            $body_html = '';
+
+            foreach ($parts as $part) {
+                $part = ltrim($part);
+                if ($part === '' || $part === '--') {
+                    continue;
+                }
+
+                [$part_headers_raw, $part_body] = $splitHeadersBody($part);
+                if ($part_body === '' && trim($part_headers_raw) === '') {
+                    continue;
+                }
+
+                $part_headers = $parseHeaders($part_headers_raw);
+                $parsed = $parseMimePart($part_headers, $part_body);
+
+                if ($parsed['html'] !== '') {
+                    $body_html = $parsed['html'];
+                }
+                if ($parsed['text'] !== '' && $body_text === '') {
+                    $body_text = $parsed['text'];
+                }
+            }
+
+            return ['text' => $body_text, 'html' => $body_html];
+        }
+
+        $decoded_body = $decodeBody($body, $content_encoding);
+        $charset = $extractCharset($content_type, 'UTF-8');
+        $decoded_body = $convertCharset($decoded_body, $charset);
+
+        if (stripos($content_type, 'text/html') !== false) {
+            return ['text' => '', 'html' => $decoded_body];
+        }
+        if (stripos($content_type, 'text/plain') !== false) {
+            return ['text' => $decoded_body, 'html' => ''];
+        }
+
+        return ['text' => '', 'html' => ''];
+    };
+
     $content_type = $headers_array['Content-Type'] ?? 'text/plain';
-    $is_html = stripos($content_type, 'text/html') !== false;
-    $is_multipart = stripos($content_type, 'multipart') !== false;
-
-    // Extract charset
-    $charset = 'UTF-8';
-    if (preg_match('/charset\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $content_type, $matches)) {
-        $charset = strtoupper($matches[1]);
-    }
-
-    // Decode body
-    $content_encoding = strtolower($headers_array['Content-Transfer-Encoding'] ?? '');
-    $body_decoded = $body_raw;
-
-    if ($content_encoding === 'base64') {
-        $body_decoded = base64_decode($body_raw);
-    } elseif ($content_encoding === 'quoted-printable') {
-        $body_decoded = quoted_printable_decode($body_raw);
-    }
-
-    // Convert charset
-    if ($charset !== 'UTF-8' && $charset !== 'US-ASCII') {
-        $body_decoded = @iconv($charset, 'UTF-8//IGNORE', $body_decoded) ?: $body_decoded;
-    }
+    $decoded_top_body = $decodeBody($body_raw, $headers_array['Content-Transfer-Encoding'] ?? '');
+    $decoded_top_body = $convertCharset($decoded_top_body, $extractCharset($content_type, 'UTF-8'));
+    $parsed_body = $parseMimePart($headers_lower, $decoded_top_body);
+    $body_text = $parsed_body['text'];
+    $body_html = $parsed_body['html'];
 
     $looksLikeHtml = function (string $value): bool {
         return preg_match('/<\/?(html|body|head|table|div|span|p|br|img|a)\b/i', $value) === 1;
     };
-
-    // Handle multipart
-    $body_text = '';
-    $body_html = '';
-
-    if ($is_multipart) {
-        if (preg_match('/boundary\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $content_type, $matches)) {
-            $boundary = $matches[1];
-            $parts = explode("--$boundary", $body_decoded);
-
-            foreach ($parts as $part) {
-                if (trim($part) === '' || trim($part) === '--') continue;
-
-                $part_headers_end = strpos($part, "\r\n\r\n");
-                if ($part_headers_end === false) {
-                    $part_headers_end = strpos($part, "\n\n");
-                }
-                if ($part_headers_end === false) continue;
-
-                $part_headers = substr($part, 0, $part_headers_end);
-                $part_body = substr($part, $part_headers_end + 4);
-
-                if (preg_match('/Content-Type:\s*([^\r\n;]+)/i', $part_headers, $ct_match)) {
-                    $part_type = trim($ct_match[1]);
-                    $part_charset = 'UTF-8';
-                    if (preg_match('/charset\s*=\s*["\x27]?([^"\x27 \s;]+)/i', $part_headers, $charset_match)) {
-                        $part_charset = strtoupper($charset_match[1]);
-                    }
-
-                    if (preg_match('/Content-Transfer-Encoding:\s*(\S+)/i', $part_headers, $enc_match)) {
-                        $part_encoding = strtolower(trim($enc_match[1]));
-                        if ($part_encoding === 'base64') {
-                            $part_body = base64_decode($part_body);
-                        } elseif ($part_encoding === 'quoted-printable') {
-                            $part_body = quoted_printable_decode($part_body);
-                        }
-                    }
-
-                    if (!in_array($part_charset, ['UTF-8', 'US-ASCII'], true)) {
-                        $part_body = @iconv($part_charset, 'UTF-8//IGNORE', $part_body) ?: $part_body;
-                    }
-
-                    if (stripos($part_type, 'text/plain') !== false) {
-                        $body_text = $part_body;
-                    } elseif (stripos($part_type, 'text/html') !== false) {
-                        $body_html = $part_body;
-                    }
-                }
-            }
-        }
-    } else {
-        if ($is_html) {
-            $body_html = $body_decoded;
-        } else {
-            $body_text = $body_decoded;
-        }
-    }
 
     if (empty($body_html) && !empty($body_text) && $looksLikeHtml($body_text)) {
         $body_html = $body_text;
