@@ -9,7 +9,7 @@ class Lang {
     private $currentLang = 'cs';
     private $translations = [];
     private $fallbackLang = 'cs';
-    private $availableLangs = ['cs', 'en', 'de', 'sk'];
+    private $availableLangs = ['cs', 'en', 'de', 'sk', 'pl', 'fi', 'da', 'sv', 'fr', 'es'];
 
     private function __construct() {
         if (session_status() === PHP_SESSION_NONE) {
@@ -180,7 +180,13 @@ class Lang {
             'cs' => 'Čeština',
             'en' => 'English',
             'de' => 'Deutsch',
-            'sk' => 'Slovenčina'
+            'sk' => 'Slovenčina',
+            'pl' => 'Polski',
+            'fi' => 'Suomi',
+            'da' => 'Dansk',
+            'sv' => 'Svenska',
+            'fr' => 'Français',
+            'es' => 'Español'
         ];
     }
 }
