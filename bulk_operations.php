@@ -330,7 +330,7 @@ include 'menu.php';
                                                 <input type="hidden" name="entry_type" value="email">
                                                 <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($senderEmail); ?>">
                                                 <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                                <button type="submit" class="sender-action-btn whitelist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
+                                                <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
                                                     <i class="fas fa-xmark"></i>
                                                 </button>
                                             </form>
@@ -367,9 +367,50 @@ include 'menu.php';
                                     </a>
                                 </td>
                                 <td class="subject-field">
-                                    <button type="button" class="subject-preview-btn" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
-                                        <?php echo htmlspecialchars(truncateText($subject, 60)); ?>
+                                    <button type="button" class="subject-preview-btn email-link" data-message-id="<?php echo $msgId; ?>" aria-label="<?php echo htmlspecialchars(__('preview_message_title')); ?>">
+                                        <?php echo htmlspecialchars(truncateText($subject, 70)); ?>
                                     </button>
+                                    <?php if ($canManageMaps && !empty(trim($subject))): ?>
+                                        <?php
+                                        $subjectKey = trim($subject);
+                                        $subjectWhitelistEntry = $listedSubjectMatches['whitelist'][$subjectKey] ?? null;
+                                        $subjectBlacklistEntry = $listedSubjectMatches['blacklist'][$subjectKey] ?? null;
+                                        ?>
+                                        <span class="sender-actions subject-actions">
+                                            <?php if ($subjectWhitelistEntry !== null): ?>
+                                                <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="list_type" value="whitelist">
+                                                    <input type="hidden" name="entry_type" value="subject">
+                                                    <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($subjectWhitelistEntry); ?>">
+                                                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                    <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_subject')); ?>">
+                                                        <i class="fas fa-xmark"></i>
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
+                                                    <i class="fas fa-shield-alt"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            <?php if ($subjectBlacklistEntry !== null): ?>
+                                                <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="list_type" value="blacklist">
+                                                    <input type="hidden" name="entry_type" value="subject">
+                                                    <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($subjectBlacklistEntry); ?>">
+                                                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                                                    <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_blacklist_subject')); ?>">
+                                                        <i class="fas fa-xmark"></i>
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <button type="button" class="sender-action-btn blacklist-btn subject-map-btn" data-list-type="blacklist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($countryLink !== ''): ?>
@@ -493,6 +534,21 @@ include 'menu.php';
 
     <?php
     echo renderMapModal([
+        'id' => 'subjectMapModal',
+        'title_id' => 'subjectMapModalTitle',
+        'title_text' => __('maps_add_subject'),
+        'icon_class' => 'fas fa-tag',
+        'form_id' => 'subjectMapForm',
+        'list_type_id' => 'subjectMapListType',
+        'entry_type' => 'subject',
+        'return_url' => $returnUrl,
+        'label_text' => __('msg_subject'),
+        'value_id' => 'subjectMapValue',
+        'placeholder_text' => __('maps_subject_placeholder'),
+        'hint_text' => __('maps_subject_hint')
+    ]);
+
+    echo renderMapModal([
         'id' => 'senderMapModal',
         'title_id' => 'senderMapModalTitle',
         'title_text' => __('maps_add_sender'),
@@ -508,34 +564,78 @@ include 'menu.php';
         'include_action' => true,
         'action_value' => 'add'
     ]);
+
+    $detailHeaderActions = '
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionSpamId" value="">
+            <input type="hidden" name="operation" value="learn_spam">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn learn-spam-btn" title="' . safe_html(__('msg_learn_spam')) . '">
+                <i class="fas fa-ban"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionHamId" value="">
+            <input type="hidden" name="operation" value="learn_ham">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn learn-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
+                <i class="fas fa-check"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
+            <input type="hidden" name="operation" value="release">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn release-btn" title="' . safe_html(__('msg_release')) . '">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm(\'' . safe_html(__('confirm_delete_message')) . '\');">
+            <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
+            <input type="hidden" name="operation" value="delete">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn delete-btn" title="' . safe_html(__('msg_delete')) . '">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    ';
+
+    echo renderPreviewModal([
+        'id' => 'messageDetailModal',
+        'classes' => 'preview-modal message-detail-modal',
+        'title_id' => 'detailModalTitle',
+        'title_text' => __('view_title'),
+        'icon_class' => 'fas fa-envelope-open-text',
+        'content_id' => 'detailModalContent',
+        'content_class' => 'detail-modal-content',
+        'loading_class' => 'detail-loading',
+        'loading_text' => __('preview_loading'),
+        'header_actions' => $detailHeaderActions
+    ]);
     ?>
 
     <script>
-    const bulkStrings = {
-        selectActionAlert: <?php echo json_encode(__('bulk_select_action_alert')); ?>,
-        confirmOperations: <?php echo json_encode(__('bulk_confirm_operations')); ?>,
-        previewLoading: <?php echo json_encode(__('preview_loading')); ?>,
-        previewErrorLabel: <?php echo json_encode(__('error')); ?>,
-        previewParseError: <?php echo json_encode(__('preview_parse_error')); ?>,
-        previewLoadFailed: <?php echo json_encode(__('preview_load_failed')); ?>,
-        previewNetworkError: <?php echo json_encode(__('preview_network_error')); ?>,
-        previewTitle: <?php echo json_encode(__('preview_message_title')); ?>,
-        previewSender: <?php echo json_encode(__('msg_sender')); ?>,
-        previewSubject: <?php echo json_encode(__('msg_subject')); ?>,
-        previewTime: <?php echo json_encode(__('time')); ?>,
-        previewScore: <?php echo json_encode(__('msg_score')); ?>,
-        previewModeHtml: <?php echo json_encode(__('preview_mode_html')); ?>,
-        previewModeText: <?php echo json_encode(__('preview_mode_text')); ?>
-    };
-
     const senderModal = document.getElementById('senderMapModal');
     const senderModalTitle = document.getElementById('senderMapModalTitle');
     const senderModalValue = document.getElementById('senderMapValue');
     const senderModalListType = document.getElementById('senderMapListType');
     const senderStrings = {
-        whitelist: <?php echo json_encode(__('maps_add_whitelist_sender')); ?>,
-        blacklist: <?php echo json_encode(__('maps_add_blacklist_sender')); ?>
+        whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_sender')); ?>",
+        blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_sender')); ?>"
     };
+
+    const subjectModal = document.getElementById('subjectMapModal');
+    const subjectModalTitle = document.getElementById('subjectMapModalTitle');
+    const subjectModalValue = document.getElementById('subjectMapValue');
+    const subjectModalListType = document.getElementById('subjectMapListType');
+    const subjectStrings = {
+        whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>",
+        blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>"
+    };
+
+    function escapeRegex(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/');
+    }
 
     function openSenderModal(listType, sender) {
         senderModalListType.value = listType;
@@ -544,6 +644,21 @@ include 'menu.php';
         senderModal.classList.add('active');
         senderModal.setAttribute('aria-hidden', 'false');
         senderModalValue.focus();
+    }
+
+    function openSubjectModal(listType, subject) {
+        subjectModalListType.value = listType;
+        subjectModalTitle.innerHTML = `<i class="fas fa-tag"></i> ${subjectStrings[listType]}`;
+        const trimmedSubject = subject.trim();
+        subjectModalValue.value = trimmedSubject ? `/${escapeRegex(trimmedSubject)}/` : '';
+        subjectModal.classList.add('active');
+        subjectModal.setAttribute('aria-hidden', 'false');
+        subjectModalValue.focus();
+    }
+
+    function closeSubjectModal() {
+        subjectModal.classList.remove('active');
+        subjectModal.setAttribute('aria-hidden', 'true');
     }
 
     function closeSenderModal() {
@@ -557,8 +672,18 @@ include 'menu.php';
         });
     });
 
+    document.querySelectorAll('.subject-map-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            openSubjectModal(button.dataset.listType, button.dataset.subject || '');
+        });
+    });
+
     senderModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
         button.addEventListener('click', closeSenderModal);
+    });
+
+    subjectModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
+        button.addEventListener('click', closeSubjectModal);
     });
 
     senderModal.addEventListener('click', (event) => {
@@ -567,164 +692,101 @@ include 'menu.php';
         }
     });
 
-    // Update row visual state and count selected actions
-    function updateRowState(msgId) {
-        const row = document.getElementById('row_' + msgId);
-        const radios = document.querySelectorAll('input[name="action_' + msgId + '"]');
-        const checkbox = document.querySelector('input[name="release_' + msgId + '"]');
-
-        // Check if any action is selected
-        let hasAction = false;
-        radios.forEach(function(radio) {
-            if (radio.checked) hasAction = true;
-        });
-        if (checkbox && checkbox.checked) hasAction = true;
-
-        // Update row visual state
-        if (hasAction) {
-            row.classList.add('has-action');
-        } else {
-            row.classList.remove('has-action');
-        }
-
-        updateSelectedCount();
-    }
-
-    // Count messages with selected actions
-    function updateSelectedCount() {
-        const allRadios = document.querySelectorAll('input[type="radio"]');
-        const allCheckboxes = document.querySelectorAll('input[type="checkbox"][name^="release_"]');
-        let count = 0;
-        const processedMessages = new Set();
-
-        // Count radio selections
-        allRadios.forEach(function(radio) {
-            if (radio.checked) {
-                const msgId = radio.name.replace('action_', '');
-                processedMessages.add(msgId);
-            }
-        });
-
-        // Count checkbox selections
-        allCheckboxes.forEach(function(checkbox) {
-            if (checkbox.checked) {
-                const msgId = checkbox.name.replace('release_', '');
-                processedMessages.add(msgId);
-            }
-        });
-
-        count = processedMessages.size;
-
-        const countDisplay = document.getElementById('selectedCount');
-        const submitBtn = document.getElementById('bulkSubmitBtn');
-
-        if (countDisplay) {
-            countDisplay.textContent = count;
-        }
-
-        if (submitBtn) {
-            submitBtn.disabled = (count === 0);
-        }
-    }
-
-    // Form validation before submit
-    document.getElementById('bulkForm')?.addEventListener('submit', function(e) {
-        const allRadios = document.querySelectorAll('input[type="radio"]:checked');
-        const allCheckboxes = document.querySelectorAll('input[type="checkbox"][name^="release_"]:checked');
-
-        if (allRadios.length === 0 && allCheckboxes.length === 0) {
-            e.preventDefault();
-            alert(bulkStrings.selectActionAlert);
-            return false;
-        }
-
-        // Count total operations
-        const processedMessages = new Set();
-        allRadios.forEach(function(radio) {
-            const msgId = radio.name.replace('action_', '');
-            processedMessages.add(msgId);
-        });
-        allCheckboxes.forEach(function(checkbox) {
-            const msgId = checkbox.name.replace('release_', '');
-            processedMessages.add(msgId);
-        });
-
-        const count = processedMessages.size;
-
-        // Confirmation
-        if (!confirm(bulkStrings.confirmOperations.replace('{count}', count))) {
-            e.preventDefault();
-            return false;
+    subjectModal.addEventListener('click', (event) => {
+        if (event.target === subjectModal) {
+            closeSubjectModal();
         }
     });
 
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Update all rows including auto-learned ones
-        const allRows = document.querySelectorAll('.message-row');
-        allRows.forEach(function(row) {
-            const msgId = row.id.replace('row_', '');
-            updateRowState(msgId);
-        });
-        updateSelectedCount();
-    });
-    </script>
-
-    <!-- Preview Tooltip -->
-    <?php
-    echo renderPreviewModal([
-        'id' => 'messagePreviewModal',
-        'classes' => 'preview-modal',
-        'title_text' => __('preview_message_title'),
-        'icon_class' => 'fas fa-envelope',
-        'content_id' => 'previewModalContent',
-        'content_class' => 'preview-modal-content',
-        'loading_class' => 'preview-loading',
-        'loading_text' => __('preview_loading')
-    ]);
-    ?>
-
-    <script>
+    // Detail modal functionality
     let activeRequest = null;
-    const previewModal = document.getElementById('messagePreviewModal');
-    const previewModalContent = document.getElementById('previewModalContent');
+    const detailModal = document.getElementById('messageDetailModal');
+    const detailModalContent = document.getElementById('detailModalContent');
+    const actionIdFields = [
+        document.getElementById('detailActionSpamId'),
+        document.getElementById('detailActionHamId'),
+        document.getElementById('detailActionReleaseId'),
+        document.getElementById('detailActionDeleteId')
+    ].filter(Boolean);
+
+    const detailStrings = {
+        loading: "<?php echo htmlspecialchars(__('preview_loading')); ?>",
+        previewTitle: "<?php echo htmlspecialchars(__('preview_message_title')); ?>",
+        previewModeHtml: "<?php echo htmlspecialchars(__('preview_mode_html')); ?>",
+        previewModeText: "<?php echo htmlspecialchars(__('preview_mode_text')); ?>",
+        previewError: "<?php echo htmlspecialchars(__('preview_error')); ?>",
+        previewParseError: "<?php echo htmlspecialchars(__('preview_parse_error')); ?>",
+        previewLoadFailed: "<?php echo htmlspecialchars(__('preview_load_failed')); ?>",
+        previewNetworkError: "<?php echo htmlspecialchars(__('preview_network_error')); ?>",
+        infoTitle: "<?php echo htmlspecialchars(__('view_basic_info')); ?>",
+        subject: "<?php echo htmlspecialchars(__('msg_subject')); ?>",
+        sender: "<?php echo htmlspecialchars(__('msg_sender')); ?>",
+        recipient: "<?php echo htmlspecialchars(__('msg_recipient')); ?>",
+        fromHeader: "<?php echo htmlspecialchars(__('view_from_header')); ?>",
+        toHeader: "<?php echo htmlspecialchars(__('view_to_header')); ?>",
+        dkimDmarc: "<?php echo htmlspecialchars(__('view_dkim_dmarc')); ?>",
+        dkimLabel: "<?php echo htmlspecialchars(__('view_dkim_label')); ?>",
+        dmarcLabel: "<?php echo htmlspecialchars(__('view_dmarc_label')); ?>",
+        spamHeader: "<?php echo htmlspecialchars(__('view_spam_header')); ?>",
+        userAgent: "<?php echo htmlspecialchars(__('view_user_agent')); ?>",
+        ipAddress: "<?php echo htmlspecialchars(__('ip_address')); ?>",
+        authUser: "<?php echo htmlspecialchars(__('view_authenticated_user')); ?>",
+        action: "<?php echo htmlspecialchars(__('msg_action')); ?>",
+        score: "<?php echo htmlspecialchars(__('msg_score')); ?>",
+        status: "<?php echo htmlspecialchars(__('status')); ?>",
+        yes: "<?php echo htmlspecialchars(__('yes')); ?>",
+        no: "<?php echo htmlspecialchars(__('no')); ?>",
+        stateQuarantined: "<?php echo htmlspecialchars(__('state_quarantined')); ?>",
+        stateLearnedHam: "<?php echo htmlspecialchars(__('state_learned_ham')); ?>",
+        stateLearnedSpam: "<?php echo htmlspecialchars(__('state_learned_spam')); ?>",
+        stateReleased: "<?php echo htmlspecialchars(__('state_released')); ?>",
+        actionReject: "<?php echo htmlspecialchars(__('action_reject')); ?>",
+        actionNoAction: "<?php echo htmlspecialchars(__('action_no_action')); ?>",
+        actionAddHeader: "<?php echo htmlspecialchars(__('action_add_header')); ?>",
+        actionGreylist: "<?php echo htmlspecialchars(__('action_greylist')); ?>",
+        actionSoftReject: "<?php echo htmlspecialchars(__('action_soft_reject')); ?>"
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.subject-preview-btn').forEach((button) => {
             button.addEventListener('click', () => {
-                openPreviewModal(button.dataset.messageId);
+                openDetailModal(button.dataset.messageId);
             });
         });
 
-        previewModal.querySelectorAll('.modal-close').forEach((button) => {
-            button.addEventListener('click', closePreviewModal);
+        detailModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closeDetailModal);
         });
 
-        previewModal.addEventListener('click', (event) => {
-            if (event.target === previewModal) {
-                closePreviewModal();
+        detailModal.addEventListener('click', (event) => {
+            if (event.target === detailModal) {
+                closeDetailModal();
             }
         });
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && previewModal.classList.contains('active')) {
-                closePreviewModal();
+            if (event.key === 'Escape' && detailModal.classList.contains('active')) {
+                closeDetailModal();
             }
         });
     });
 
-    function openPreviewModal(msgId) {
+    function openDetailModal(msgId) {
         if (!msgId) {
             return;
         }
+
+        actionIdFields.forEach((field) => {
+            field.value = msgId;
+        });
 
         if (activeRequest) {
             activeRequest.abort();
         }
 
-        previewModalContent.innerHTML = '<div class="preview-loading"><i class="fas fa-spinner fa-spin"></i> ' + bulkStrings.previewLoading + '</div>';
-        previewModal.classList.add('active');
-        previewModal.setAttribute('aria-hidden', 'false');
+        detailModalContent.innerHTML = `<div class="detail-loading"><i class="fas fa-spinner fa-spin"></i> ${detailStrings.loading}</div>`;
+        detailModal.classList.add('active');
+        detailModal.setAttribute('aria-hidden', 'false');
 
         activeRequest = new XMLHttpRequest();
         activeRequest.open('GET', 'api_message_preview.php?id=' + encodeURIComponent(msgId) + '&format=auto', true);
@@ -735,73 +797,107 @@ include 'menu.php';
                     const data = JSON.parse(activeRequest.responseText);
 
                     if (data.success) {
-                        renderPreview(data);
+                        renderDetailModal(data);
                     } else {
-                        previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewErrorLabel + ': ' + escapeHtml(data.error) + '</div>';
+                        detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewError}: ${escapeHtml(data.error)}</div>`;
                     }
                 } catch (e) {
-                    previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewParseError + '</div>';
+                    detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewParseError}</div>`;
                 }
             } else {
-                previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewLoadFailed + '</div>';
+                detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewLoadFailed}</div>`;
             }
             activeRequest = null;
         };
 
         activeRequest.onerror = function() {
-            previewModalContent.innerHTML = '<div class="preview-error">' + bulkStrings.previewNetworkError + '</div>';
+            detailModalContent.innerHTML = `<div class="preview-error">${detailStrings.previewNetworkError}</div>`;
             activeRequest = null;
         };
 
         activeRequest.send();
     }
 
-    function renderPreview(data) {
-        let formatIndicator = '';
-        if (data.is_html) {
-            formatIndicator = `<span class="preview-format-indicator">
-                <i class="fas fa-code"></i> ${bulkStrings.previewModeHtml}
-            </span>`;
-        } else if (data.has_html) {
-            formatIndicator = `<span class="preview-format-indicator muted">
-                <i class="fas fa-align-left"></i> ${bulkStrings.previewModeText}
-            </span>`;
-        }
+    function renderDetailModal(data) {
+        const senderValue = data.sender_decoded || data.sender || '';
+        const subjectValue = data.subject_decoded || data.subject || '';
 
-        const metaHtml = `
-            <div class="preview-meta"><strong>${bulkStrings.previewSender}:</strong> ${escapeHtml(data.sender)}</div>
-            <div class="preview-meta"><strong>${bulkStrings.previewSubject}:</strong> ${escapeHtml(data.subject)}</div>
-            <div class="preview-meta"><strong>${bulkStrings.previewTime}:</strong> ${escapeHtml(data.timestamp)} | <strong>${bulkStrings.previewScore}:</strong> ${data.score}</div>
+        const formatIndicator = data.is_html
+            ? `<span class="preview-format-indicator"><i class="fas fa-code"></i> ${detailStrings.previewModeHtml}</span>`
+            : (data.has_html ? `<span class="preview-format-indicator muted"><i class="fas fa-align-left"></i> ${detailStrings.previewModeText}</span>` : '');
+
+        const previewHeader = `
+            <div class="detail-preview-header">
+                <h4><i class="fas fa-envelope"></i> ${detailStrings.previewTitle} ${formatIndicator}</h4>
+                <div class="preview-meta"><strong>${detailStrings.sender}:</strong> ${escapeHtml(senderValue)}</div>
+                <div class="preview-meta"><strong>${detailStrings.subject}:</strong> ${escapeHtml(subjectValue)}</div>
+                <div class="preview-meta"><strong><?php echo htmlspecialchars(__('time')); ?>:</strong> ${escapeHtml(data.timestamp)} | <strong>${detailStrings.score}:</strong> ${escapeHtml(String(data.score))}</div>
+            </div>
+        `;
+
+        const previewBody = data.is_html
+            ? `<div class="detail-preview-body"><iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe></div>`
+            : `<div class="detail-preview-body"><pre>${escapeHtml(data.preview)}</pre></div>`;
+
+        detailModalContent.innerHTML = `
+            <div class="detail-modal-grid">
+                <div class="detail-preview-panel">
+                    ${previewHeader}
+                    ${previewBody}
+                </div>
+            </div>
         `;
 
         if (data.is_html) {
-            previewModalContent.innerHTML = `
-                <div class="preview-header">
-                    <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
-                    ${metaHtml}
-                </div>
-                <div class="preview-message-body">
-                    <iframe class="preview-iframe" sandbox="" referrerpolicy="no-referrer"></iframe>
-                </div>
-            `;
-            const iframe = previewModalContent.querySelector('.preview-iframe');
+            const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
-        } else {
-            previewModalContent.innerHTML = `
-                <div class="preview-header">
-                    <h4><i class="fas fa-envelope"></i> ${bulkStrings.previewTitle} ${formatIndicator}</h4>
-                    ${metaHtml}
-                </div>
-                <div class="preview-message-body">
-                    <pre>${escapeHtml(data.preview)}</pre>
-                </div>
-            `;
         }
     }
 
-    function closePreviewModal() {
-        previewModal.classList.remove('active');
-        previewModal.setAttribute('aria-hidden', 'true');
+    function buildActionBadge(action) {
+        const actionKey = (action || '').toLowerCase();
+        const actionMap = {
+            'reject': { label: detailStrings.actionReject, className: 'badge badge-reject', icon: 'fa-ban' },
+            'no action': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'pass': { label: detailStrings.actionNoAction, className: 'badge badge-pass', icon: 'fa-check-circle' },
+            'add header': { label: detailStrings.actionAddHeader, className: 'badge badge-header', icon: 'fa-tag' },
+            'greylist': { label: detailStrings.actionGreylist, className: 'badge badge-pass', icon: 'fa-clock' },
+            'soft reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' },
+            'soft_reject': { label: detailStrings.actionSoftReject, className: 'badge badge-soft-reject', icon: 'fa-exclamation-triangle' }
+        };
+
+        const actionData = actionMap[actionKey] || { label: action || '-', className: 'badge badge-pass', icon: 'fa-question-circle' };
+        return `<span class="${actionData.className}"><i class="fas ${actionData.icon}"></i> ${escapeHtml(actionData.label)}</span>`;
+    }
+
+    function getStateLabel(state, stateBy, stateAt) {
+        let label = detailStrings.stateQuarantined;
+        switch (parseInt(state, 10)) {
+            case 1:
+                label = detailStrings.stateLearnedHam;
+                break;
+            case 2:
+                label = detailStrings.stateLearnedSpam;
+                break;
+            case 3:
+                label = detailStrings.stateReleased;
+                break;
+            default:
+                label = detailStrings.stateQuarantined;
+        }
+        const parts = [label];
+        if (stateBy) {
+            parts.push(escapeHtml(stateBy));
+        }
+        if (stateAt) {
+            parts.push(escapeHtml(stateAt));
+        }
+        return parts.join(' · ');
+    }
+
+    function closeDetailModal() {
+        detailModal.classList.remove('active');
+        detailModal.setAttribute('aria-hidden', 'true');
 
         if (activeRequest) {
             activeRequest.abort();
@@ -811,7 +907,7 @@ include 'menu.php';
 
     function escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text ?? '';
         return div.innerHTML;
     }
     </script>

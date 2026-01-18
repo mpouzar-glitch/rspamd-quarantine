@@ -310,7 +310,7 @@ include 'menu.php';
                                                 <input type="hidden" name="entry_type" value="email">
                                                 <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($whitelistEntryValue); ?>">
                                                 <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                                <button type="submit" class="sender-action-btn whitelist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
+                                                <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
                                                     <i class="fas fa-xmark"></i>
                                                 </button>
                                             </form>
@@ -364,7 +364,7 @@ include 'menu.php';
                                                 <input type="hidden" name="entry_type" value="subject">
                                                 <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($subjectWhitelistEntry); ?>">
                                                 <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                                                <button type="submit" class="sender-action-btn whitelist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_subject')); ?>">
+                                                <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_subject')); ?>">
                                                     <i class="fas fa-xmark"></i>
                                                 </button>
                                             </form>
