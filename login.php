@@ -55,6 +55,68 @@ function attemptImapLogin(string $email, string $password): bool {
     return true;
 }
 
+function getLoginSecuritySettings(): array {
+    $maxLoginAttempts = defined('MAX_LOGIN_ATTEMPTS') ? (int) MAX_LOGIN_ATTEMPTS : 5;
+    $loginTimeout = defined('LOGIN_TIMEOUT') ? (int) LOGIN_TIMEOUT : 300;
+
+    return [
+        'max_login_attempts' => max(0, $maxLoginAttempts),
+        'login_timeout' => max(0, $loginTimeout),
+    ];
+}
+
+function fetchLoginAttempt(PDO $db, string $username, string $ipAddress): ?array {
+    $stmt = $db->prepare('
+        SELECT id, attempt_count, last_attempt_at
+        FROM login_attempts
+        WHERE username = ? AND ip_address = ?
+    ');
+    $stmt->execute([$username, $ipAddress]);
+    $attempt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $attempt ?: null;
+}
+
+function clearLoginAttempts(PDO $db, string $username, string $ipAddress): void {
+    $stmt = $db->prepare('DELETE FROM login_attempts WHERE username = ? AND ip_address = ?');
+    $stmt->execute([$username, $ipAddress]);
+}
+
+function recordLoginFailure(PDO $db, string $username, string $ipAddress): void {
+    $stmt = $db->prepare('
+        INSERT INTO login_attempts (username, ip_address, attempt_count, last_attempt_at)
+        VALUES (?, ?, 1, NOW())
+        ON DUPLICATE KEY UPDATE attempt_count = attempt_count + 1, last_attempt_at = NOW()
+    ');
+    $stmt->execute([$username, $ipAddress]);
+}
+
+function getLoginLockStatus(PDO $db, string $username, string $ipAddress, int $maxLoginAttempts, int $loginTimeout): array {
+    if ($maxLoginAttempts === 0 || $loginTimeout === 0) {
+        return ['locked' => false, 'remaining' => 0];
+    }
+
+    $attempt = fetchLoginAttempt($db, $username, $ipAddress);
+    if (!$attempt) {
+        return ['locked' => false, 'remaining' => 0];
+    }
+
+    $lastAttempt = strtotime((string) $attempt['last_attempt_at']);
+    $lastAttempt = $lastAttempt !== false ? $lastAttempt : 0;
+    $elapsed = time() - $lastAttempt;
+
+    if ($elapsed >= $loginTimeout) {
+        clearLoginAttempts($db, $username, $ipAddress);
+        return ['locked' => false, 'remaining' => 0];
+    }
+
+    if ((int) $attempt['attempt_count'] >= $maxLoginAttempts) {
+        return ['locked' => true, 'remaining' => max(1, $loginTimeout - $elapsed)];
+    }
+
+    return ['locked' => false, 'remaining' => 0];
+}
+
 // Handle logout
 if (isset($_GET['logout'])) {
     if (isAuthenticated()) {
@@ -93,125 +155,166 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     } else {
         $username = trim($_POST['username']);
         $password = $_POST['password'];
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
         try {
             $db = Database::getInstance()->getConnection();
-
-            // Get user from database
-            $stmt = $db->prepare("
-                SELECT id, username, password_hash, email, role, active 
-                FROM users 
-                WHERE username = ? AND active = 1
-            ");
-            $stmt->execute([$username]);
-            $user = $stmt->fetch();
-
-            if ($user && password_verify($password, $user['password_hash'])) {
-                // Successful login
-                $_SESSION['authenticated'] = true;
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_email'] = $user['email'];
-                $_SESSION['user_role'] = $user['role'];
-                $_SESSION['last_activity'] = time();
-
-                $invalidEmails = [];
-                $parsedEmails = parseEmailList((string) $user['email'], $invalidEmails);
-                if (empty($parsedEmails) && $user['email'] !== '') {
-                    $parsedEmails = [$user['email']];
-                }
-
-                if ($user['role'] === 'quarantine_user') {
-                    $_SESSION['user_emails'] = $parsedEmails;
-                } else {
-                    $_SESSION['user_emails'] = $parsedEmails ? [$parsedEmails[0]] : [];
-                }
-
-                // Load user domains if domain_admin
-                if ($user['role'] === 'domain_admin') {
-                    $stmt = $db->prepare("
-                        SELECT domain 
-                        FROM user_domains 
-                        WHERE user_id = ?
-                        ORDER BY domain
-                    ");
-                    $stmt->execute([$user['id']]);
-
-                    // Fixed: Load as array and trim each domain
-                    $domains = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                    $_SESSION['user_domains'] = array_map('trim', $domains);
-
-                    // Debug log
-                    error_log("User {$user['username']} logged in with domains: " . implode(', ', $_SESSION['user_domains']));
-                } else {
-                    $_SESSION['user_domains'] = [];
-                }
-
-                // Update last login
-                $stmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-                $stmt->execute([$user['id']]);
-
-                // Log successful login
-                logAudit(
-                    $user['id'], 
-                    $user['username'], 
-                    'login_success', 
-                    'session', 
-                    $user['id'], 
-                    'User logged in successfully'
+            $loginSecurity = getLoginSecuritySettings();
+            $loginAttemptsAvailable = true;
+            try {
+                $lockStatus = getLoginLockStatus(
+                    $db,
+                    $username,
+                    $clientIp,
+                    $loginSecurity['max_login_attempts'],
+                    $loginSecurity['login_timeout']
                 );
+            } catch (PDOException $e) {
+                $loginAttemptsAvailable = false;
+                $lockStatus = ['locked' => false, 'remaining' => 0];
+                error_log('Login attempt tracking unavailable: ' . $e->getMessage());
+            }
 
-                // Redirect to index
-                header('Location: index.php');
-                exit;
-
-            } elseif (!$user && isEmailUsername($username) && isImapAuthEnabled()) {
-                if (attemptImapLogin($username, $password)) {
-                    $_SESSION['authenticated'] = true;
-                    $_SESSION['user_id'] = null;
-                    $_SESSION['username'] = $username;
-                    $_SESSION['user_email'] = $username;
-                    $_SESSION['user_role'] = 'quarantine_user';
-                    $_SESSION['user_emails'] = [$username];
-                    $_SESSION['user_domains'] = [];
-                    $_SESSION['last_activity'] = time();
-
-                    logAudit(
-                        null,
-                        $username,
-                        'login_success',
-                        'session',
-                        null,
-                        'User logged in successfully via IMAP'
-                    );
-
-                    header('Location: index.php');
-                    exit;
-                }
-
-                $error_message = __('login_failed');
-
+            if ($lockStatus['locked']) {
+                $error_message = __('login_locked', ['seconds' => $lockStatus['remaining']]);
                 logAudit(
                     null,
                     $username,
                     'login_failed',
                     'session',
                     null,
-                    'Failed IMAP login attempt for username: ' . $username
+                    'Login locked due to too many failed attempts for username: ' . $username
                 );
             } else {
-                // Failed login
-                $error_message = __('login_failed');
 
-                // Log failed login attempt
-                logAudit(
-                    null, 
-                    $username, 
-                    'login_failed', 
-                    'session', 
-                    null, 
-                    'Failed login attempt for username: ' . $username
-                );
+                // Get user from database
+                $stmt = $db->prepare("
+                    SELECT id, username, password_hash, email, role, active 
+                    FROM users 
+                    WHERE username = ? AND active = 1
+                ");
+                $stmt->execute([$username]);
+                $user = $stmt->fetch();
+
+                if ($user && password_verify($password, $user['password_hash'])) {
+                    // Successful login
+                    $_SESSION['authenticated'] = true;
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['user_email'] = $user['email'];
+                    $_SESSION['user_role'] = $user['role'];
+                    $_SESSION['last_activity'] = time();
+
+                    $invalidEmails = [];
+                    $parsedEmails = parseEmailList((string) $user['email'], $invalidEmails);
+                    if (empty($parsedEmails) && $user['email'] !== '') {
+                        $parsedEmails = [$user['email']];
+                    }
+
+                    if ($user['role'] === 'quarantine_user') {
+                        $_SESSION['user_emails'] = $parsedEmails;
+                    } else {
+                        $_SESSION['user_emails'] = $parsedEmails ? [$parsedEmails[0]] : [];
+                    }
+
+                    // Load user domains if domain_admin
+                    if ($user['role'] === 'domain_admin') {
+                        $stmt = $db->prepare("
+                            SELECT domain 
+                            FROM user_domains 
+                            WHERE user_id = ?
+                            ORDER BY domain
+                        ");
+                        $stmt->execute([$user['id']]);
+
+                        // Fixed: Load as array and trim each domain
+                        $domains = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                        $_SESSION['user_domains'] = array_map('trim', $domains);
+
+                        // Debug log
+                        error_log("User {$user['username']} logged in with domains: " . implode(', ', $_SESSION['user_domains']));
+                    } else {
+                        $_SESSION['user_domains'] = [];
+                    }
+
+                    // Update last login
+                    $stmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                    $stmt->execute([$user['id']]);
+
+                    // Log successful login
+                    logAudit(
+                        $user['id'], 
+                        $user['username'], 
+                        'login_success', 
+                        'session', 
+                        $user['id'], 
+                        'User logged in successfully'
+                    );
+                    if ($loginAttemptsAvailable) {
+                        clearLoginAttempts($db, $username, $clientIp);
+                    }
+
+                    // Redirect to index
+                    header('Location: index.php');
+                    exit;
+
+                } elseif (!$user && isEmailUsername($username) && isImapAuthEnabled()) {
+                    if (attemptImapLogin($username, $password)) {
+                        $_SESSION['authenticated'] = true;
+                        $_SESSION['user_id'] = null;
+                        $_SESSION['username'] = $username;
+                        $_SESSION['user_email'] = $username;
+                        $_SESSION['user_role'] = 'quarantine_user';
+                        $_SESSION['user_emails'] = [$username];
+                        $_SESSION['user_domains'] = [];
+                        $_SESSION['last_activity'] = time();
+
+                        logAudit(
+                            null,
+                            $username,
+                            'login_success',
+                            'session',
+                            null,
+                            'User logged in successfully via IMAP'
+                        );
+                        if ($loginAttemptsAvailable) {
+                            clearLoginAttempts($db, $username, $clientIp);
+                        }
+
+                        header('Location: index.php');
+                        exit;
+                    }
+
+                    $error_message = __('login_failed');
+                    if ($loginAttemptsAvailable) {
+                        recordLoginFailure($db, $username, $clientIp);
+                    }
+
+                    logAudit(
+                        null,
+                        $username,
+                        'login_failed',
+                        'session',
+                        null,
+                        'Failed IMAP login attempt for username: ' . $username
+                    );
+                } else {
+                    // Failed login
+                    $error_message = __('login_failed');
+                    if ($loginAttemptsAvailable) {
+                        recordLoginFailure($db, $username, $clientIp);
+                    }
+
+                    // Log failed login attempt
+                    logAudit(
+                        null, 
+                        $username, 
+                        'login_failed', 
+                        'session', 
+                        null, 
+                        'Failed login attempt for username: ' . $username
+                    );
+                }
             }
 
         } catch (Exception $e) {

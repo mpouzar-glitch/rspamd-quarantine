@@ -19,6 +19,7 @@ $db = Database::getInstance()->getConnection();
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $isAdmin = $userRole === 'admin';
 $canEditQuota = $isAdmin;
+$passwordMinLength = defined('PASSWORD_MIN_LENGTH') ? (int) PASSWORD_MIN_LENGTH : 8;
 $postfixError = null;
 $postfixDb = getPostfixConnection($postfixError);
 
@@ -42,6 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validate
             if (empty($username) || empty($password) || empty($emailInput) || empty($role)) {
                 $_SESSION['error_msg'] = __('users_required_fields');
+                break;
+            }
+
+            $passwordLength = function_exists('mb_strlen') ? mb_strlen($password) : strlen($password);
+            if ($passwordLength < $passwordMinLength) {
+                $_SESSION['error_msg'] = __('users_password_too_short', ['min' => $passwordMinLength]);
                 break;
             }
 
@@ -121,6 +128,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($username) || empty($emailInput) || empty($role)) {
                 $_SESSION['error_msg'] = __('users_required_fields');
                 break;
+            }
+
+            if ($password !== '') {
+                $passwordLength = function_exists('mb_strlen') ? mb_strlen($password) : strlen($password);
+                if ($passwordLength < $passwordMinLength) {
+                    $_SESSION['error_msg'] = __('users_password_too_short', ['min' => $passwordMinLength]);
+                    break;
+                }
             }
 
             $invalidEmails = [];
