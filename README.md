@@ -211,7 +211,7 @@ Complete MariaDB/MySQL schema with:
 ![Audit log](docs/audit_log.jpg)
 
 ### Service Health
-![Service health](docs/service_health.jpg)
+![Service health](docs/service_helth.jpg)
 
 ### User Management
 ![User management](docs/users_management.jpg)
@@ -365,6 +365,47 @@ chown -R www-data:www-data /var/www/rspamd-quarantine-webui
 chmod 755 /var/www/rspamd-quarantine-webui
 chmod 600 config.php
 ```
+
+---
+
+## Rspamd and Postfix Configuration
+
+Below is a configuration overview for the Rspamd exporter, multimaps, antivirus, and MIME detector. Prepared configurations live in `service_configuration/rspamd` and should be used as the starting point.
+
+### Rspamd Exporter
+
+The exporter forwards data to `receiver.php` and `trace_receiver.php`. Use the prepared configuration from `service_configuration/rspamd` and tailor it to your environment (URLs, timeouts, headers, filters).
+
+### Multimap + map files and permissions for the _rspamd user
+
+Multimap definitions are in `service_configuration/rspamd/multimap.conf`, with map files in `service_configuration/rspamd/maps/`.
+
+1. Copy the map files to your Rspamd data directory (for example `/var/lib/rspamd`).
+2. Set permissions for the `_rspamd` user:
+
+```bash
+sudo install -d -m 750 -o _rspamd -g _rspamd /var/lib/rspamd
+sudo install -m 640 -o _rspamd -g _rspamd service_configuration/rspamd/maps/*.map /var/lib/rspamd/
+```
+
+3. Add the multimap configuration to Rspamd (for example in `local.d/multimap.conf`).
+
+### Antivirus and MIME detector
+
+Example antivirus (ClamAV) and MIME detector configuration is in `service_configuration/rspamd`. Copy these files into `local.d/` and adjust them to match your infrastructure (socket/port, exclusions, type lists).
+
+### Postfix milter settings
+
+To connect Rspamd via milter to Postfix, add the following to `main.cf`:
+
+```conf
+smtpd_milters = inet:127.0.0.1:11332
+non_smtpd_milters = $smtpd_milters
+milter_default_action = accept
+milter_protocol = 6
+```
+
+After changing the configuration, reload both Postfix and Rspamd.
 
 ---
 
