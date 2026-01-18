@@ -98,6 +98,7 @@ return [
     'login_missing_credentials' => 'Vyplňte používateľské meno a heslo.',
     'login_timeout' => 'Vaša relácia vypršala. Prihláste sa prosím znova.',
     'login_error' => 'Chyba pri prihlasovaní. Skúste to prosím neskôr.',
+    'login_locked' => 'Príliš veľa neúspešných pokusov o prihlásenie. Skúste to znova o {seconds} sekúnd.',
     'login_required' => 'Vyžaduje sa prihlásenie',
     'logout_success' => 'Boli ste úspešne odhlásení',
 
@@ -425,6 +426,7 @@ return [
     'users_invalid_email' => 'Zadajte platnú e-mailovú adresu.',
     'users_invalid_emails' => 'Zadajte platné e-mailové adresy.',
     'users_username_exists' => 'Používateľské meno už existuje.',
+    'users_password_too_short' => 'Heslo musí mať aspoň {min} znakov.',
     'users_create_success' => 'Používateľ bol úspešne pridaný.',
     'users_create_error' => 'Chyba pri vytváraní používateľa: {error}',
     'users_update_success' => 'Používateľ bol úspešne aktualizovaný.',

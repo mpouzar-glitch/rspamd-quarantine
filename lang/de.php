@@ -98,6 +98,7 @@ return [
     'login_missing_credentials' => 'Bitte Benutzername und Passwort eingeben.',
     'login_timeout' => 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
     'login_error' => 'Anmeldefehler. Bitte versuchen Sie es später erneut.',
+    'login_locked' => 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte in {seconds} Sekunden erneut versuchen.',
     'login_required' => 'Anmeldung erforderlich',
     'logout_success' => 'Sie wurden erfolgreich abgemeldet',
 
@@ -425,6 +426,7 @@ return [
     'users_invalid_email' => 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
     'users_invalid_emails' => 'Bitte geben Sie gültige E-Mail-Adressen ein.',
     'users_username_exists' => 'Benutzername existiert bereits.',
+    'users_password_too_short' => 'Das Passwort muss mindestens {min} Zeichen lang sein.',
     'users_create_success' => 'Benutzer wurde erfolgreich hinzugefügt.',
     'users_create_error' => 'Fehler beim Erstellen des Benutzers: {error}',
     'users_update_success' => 'Benutzer wurde erfolgreich aktualisiert.',
