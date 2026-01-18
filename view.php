@@ -638,26 +638,29 @@ switch (strtolower($action)) {
             <h2><i class="fas fa-tools"></i> <?= htmlspecialchars(__('actions')) ?></h2>
             <div class="actions">
                 <?php if (!$released): ?>
-                    <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
-                        <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                        <input type="hidden" name="action" value="release">
+                    <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="operation" value="release">
+                        <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-check"></i> <?= htmlspecialchars(__('msg_release')) ?>
                         </button>
                     </form>
                 <?php endif; ?>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="action" value="learn_ham">
+                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="operation" value="learn_ham">
+                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
                     </button>
                 </form>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="action" value="learn_spam">
+                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="operation" value="learn_spam">
+                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-thumbs-down"></i> <?= htmlspecialchars(__('msg_learn_spam')) ?>
                     </button>

@@ -638,6 +638,8 @@ tr.selected {
     width: min(1200px, 96vw);
     max-height: 90vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .message-detail-modal .modal-header {
@@ -668,9 +670,16 @@ tr.selected {
     margin: 0;
 }
 
-.message-detail-modal .detail-modal-content {
-    min-height: 320px;
+.message-detail-modal .modal-body {
     overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.message-detail-modal .detail-modal-content {
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .message-detail-modal .detail-loading {
