@@ -522,114 +522,87 @@ include 'menu.php';
         <?php endif; ?>
     </div>
 
-    <div id="subjectMapModal" class="modal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="subjectMapModalTitle"><i class="fas fa-tag"></i> <?php echo htmlspecialchars(__('maps_add_subject')); ?></h3>
-                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="subjectMapForm" method="POST" action="map_quick_add.php">
-                    <input type="hidden" name="list_type" id="subjectMapListType" value="">
-                    <input type="hidden" name="entry_type" value="subject">
-                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                    <div class="form-group">
-                        <label for="subjectMapValue"><?php echo htmlspecialchars(__('msg_subject')); ?></label>
-                        <input type="text" id="subjectMapValue" name="entry_value" class="form-control" placeholder="<?php echo htmlspecialchars(__('maps_subject_placeholder')); ?>" required>
-                        <small><?php echo htmlspecialchars(__('maps_subject_hint')); ?></small>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                        <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <?php
+    echo renderMapModal([
+        'id' => 'subjectMapModal',
+        'title_id' => 'subjectMapModalTitle',
+        'title_text' => __('maps_add_subject'),
+        'icon_class' => 'fas fa-tag',
+        'form_id' => 'subjectMapForm',
+        'list_type_id' => 'subjectMapListType',
+        'entry_type' => 'subject',
+        'return_url' => $returnUrl,
+        'label_text' => __('msg_subject'),
+        'value_id' => 'subjectMapValue',
+        'placeholder_text' => __('maps_subject_placeholder'),
+        'hint_text' => __('maps_subject_hint')
+    ]);
 
-    <div id="senderMapModal" class="modal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="senderMapModalTitle"><i class="fas fa-paper-plane"></i> <?php echo htmlspecialchars(__('maps_add_sender')); ?></h3>
-                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="senderMapForm" method="POST" action="map_quick_add.php">
-                    <input type="hidden" name="action" value="add">
-                    <input type="hidden" name="list_type" id="senderMapListType" value="">
-                    <input type="hidden" name="entry_type" value="email">
-                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
-                    <div class="form-group">
-                        <label for="senderMapValue"><?php echo htmlspecialchars(__('msg_sender')); ?></label>
-                        <input type="text" id="senderMapValue" name="entry_value" class="form-control" placeholder="<?php echo htmlspecialchars(__('maps_sender_placeholder')); ?>" required>
-                        <small><?php echo htmlspecialchars(__('maps_sender_hint')); ?></small>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
-                        <button type="submit" class="btn btn-primary"><?php echo htmlspecialchars(__('maps_add_entry')); ?></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    echo renderMapModal([
+        'id' => 'senderMapModal',
+        'title_id' => 'senderMapModalTitle',
+        'title_text' => __('maps_add_sender'),
+        'icon_class' => 'fas fa-paper-plane',
+        'form_id' => 'senderMapForm',
+        'list_type_id' => 'senderMapListType',
+        'entry_type' => 'email',
+        'return_url' => $returnUrl,
+        'label_text' => __('msg_sender'),
+        'value_id' => 'senderMapValue',
+        'placeholder_text' => __('maps_sender_placeholder'),
+        'hint_text' => __('maps_sender_hint'),
+        'include_action' => true,
+        'action_value' => 'add'
+    ]);
 
-    <div id="messageDetailModal" class="modal preview-modal message-detail-modal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-header-title">
-                    <h3 id="detailModalTitle"><i class="fas fa-envelope-open-text"></i> <?php echo htmlspecialchars(__('view_title')); ?></h3>
-                </div>
-                <div class="modal-header-actions">
-                    <form method="POST" action="operations.php" class="modal-action-form">
-                        <input type="hidden" name="message_ids" id="detailActionSpamId" value="">
-                        <input type="hidden" name="operation" value="learn_spam">
-                        <input type="hidden" name="return_url" value="index.php">
-                        <button type="submit" class="action-btn learn-spam-btn" title="<?php echo htmlspecialchars(__('msg_learn_spam')); ?>">
-                            <i class="fas fa-ban"></i>
-                        </button>
-                    </form>
-                    <form method="POST" action="operations.php" class="modal-action-form">
-                        <input type="hidden" name="message_ids" id="detailActionHamId" value="">
-                        <input type="hidden" name="operation" value="learn_ham">
-                        <input type="hidden" name="return_url" value="index.php">
-                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </form>
-                    <form method="POST" action="operations.php" class="modal-action-form">
-                        <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
-                        <input type="hidden" name="operation" value="release">
-                        <input type="hidden" name="return_url" value="index.php">
-                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </form>
-                    <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
-                        <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
-                        <input type="hidden" name="operation" value="delete">
-                        <input type="hidden" name="return_url" value="index.php">
-                        <button type="submit" class="action-btn delete-btn" title="<?php echo htmlspecialchars(__('msg_delete')); ?>">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </div>
-                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="detailModalContent" class="detail-modal-content">
-                    <div class="detail-loading">
-                        <i class="fas fa-spinner fa-spin"></i> <?php echo htmlspecialchars(__('preview_loading')); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    $detailHeaderActions = '
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionSpamId" value="">
+            <input type="hidden" name="operation" value="learn_spam">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn learn-spam-btn" title="' . safe_html(__('msg_learn_spam')) . '">
+                <i class="fas fa-ban"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionHamId" value="">
+            <input type="hidden" name="operation" value="learn_ham">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn learn-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
+                <i class="fas fa-check"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form">
+            <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
+            <input type="hidden" name="operation" value="release">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn release-btn" title="' . safe_html(__('msg_release')) . '">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+        <form method="POST" action="operations.php" class="modal-action-form" onsubmit="return confirm(\'' . safe_html(__('confirm_delete_message')) . '\');">
+            <input type="hidden" name="message_ids" id="detailActionDeleteId" value="">
+            <input type="hidden" name="operation" value="delete">
+            <input type="hidden" name="return_url" value="index.php">
+            <button type="submit" class="action-btn delete-btn" title="' . safe_html(__('msg_delete')) . '">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    ';
+
+    echo renderPreviewModal([
+        'id' => 'messageDetailModal',
+        'classes' => 'preview-modal message-detail-modal',
+        'title_id' => 'detailModalTitle',
+        'title_text' => __('view_title'),
+        'icon_class' => 'fas fa-envelope-open-text',
+        'content_id' => 'detailModalContent',
+        'content_class' => 'detail-modal-content',
+        'loading_class' => 'detail-loading',
+        'loading_text' => __('preview_loading'),
+        'header_actions' => $detailHeaderActions
+    ]);
+    ?>
 
     <script>
     const senderModal = document.getElementById('senderMapModal');

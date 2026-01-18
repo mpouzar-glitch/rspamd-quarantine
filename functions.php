@@ -134,6 +134,108 @@ if (!function_exists('safe_html')) {
     }
 }
 
+if (!function_exists('renderMapModal')) {
+    function renderMapModal(array $config): string {
+        $modalId = safe_html($config['id'] ?? '');
+        $titleId = safe_html($config['title_id'] ?? '');
+        $titleText = safe_html($config['title_text'] ?? '');
+        $iconClass = safe_html($config['icon_class'] ?? '');
+        $formId = safe_html($config['form_id'] ?? '');
+        $listTypeId = safe_html($config['list_type_id'] ?? '');
+        $entryType = safe_html($config['entry_type'] ?? '');
+        $returnUrl = safe_html($config['return_url'] ?? '');
+        $labelText = safe_html($config['label_text'] ?? '');
+        $valueId = safe_html($config['value_id'] ?? '');
+        $placeholderText = safe_html($config['placeholder_text'] ?? '');
+        $hintText = safe_html($config['hint_text'] ?? '');
+        $cancelText = safe_html($config['cancel_text'] ?? __('cancel'));
+        $submitText = safe_html($config['submit_text'] ?? __('maps_add_entry'));
+        $closeLabel = safe_html($config['close_text'] ?? __('close'));
+
+        $actionInput = '';
+        if (!empty($config['include_action'])) {
+            $actionValue = safe_html($config['action_value'] ?? 'add');
+            $actionInput = "<input type=\"hidden\" name=\"action\" value=\"{$actionValue}\">";
+        }
+
+        return <<<HTML
+    <div id="{$modalId}" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="{$titleId}"><i class="{$iconClass}"></i> {$titleText}</h3>
+                <button type="button" class="modal-close" aria-label="{$closeLabel}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="{$formId}" method="POST" action="map_quick_add.php">
+                    {$actionInput}
+                    <input type="hidden" name="list_type" id="{$listTypeId}" value="">
+                    <input type="hidden" name="entry_type" value="{$entryType}">
+                    <input type="hidden" name="return_url" value="{$returnUrl}">
+                    <div class="form-group">
+                        <label for="{$valueId}">{$labelText}</label>
+                        <input type="text" id="{$valueId}" name="entry_value" class="form-control" placeholder="{$placeholderText}" required>
+                        <small>{$hintText}</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-dismiss">{$cancelText}</button>
+                        <button type="submit" class="btn btn-primary">{$submitText}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+HTML;
+    }
+}
+
+if (!function_exists('renderPreviewModal')) {
+    function renderPreviewModal(array $config): string {
+        $modalId = safe_html($config['id'] ?? '');
+        $modalClasses = trim('modal ' . ($config['classes'] ?? ''));
+        $titleText = safe_html($config['title_text'] ?? '');
+        $titleId = safe_html($config['title_id'] ?? '');
+        $iconClass = safe_html($config['icon_class'] ?? '');
+        $contentId = safe_html($config['content_id'] ?? '');
+        $contentClass = safe_html($config['content_class'] ?? '');
+        $loadingClass = safe_html($config['loading_class'] ?? '');
+        $loadingText = safe_html($config['loading_text'] ?? '');
+        $closeLabel = safe_html($config['close_text'] ?? __('close'));
+        $headerActions = $config['header_actions'] ?? '';
+
+        $titleIdAttr = $titleId !== '' ? " id=\"{$titleId}\"" : '';
+        $headerTitle = "<h3{$titleIdAttr}><i class=\"{$iconClass}\"></i> {$titleText}</h3>";
+        $actionsHtml = '';
+
+        if ($headerActions !== '') {
+            $headerTitle = "<div class=\"modal-header-title\">{$headerTitle}</div>";
+            $actionsHtml = "<div class=\"modal-header-actions\">{$headerActions}</div>";
+        }
+
+        return <<<HTML
+    <div id="{$modalId}" class="{$modalClasses}" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                {$headerTitle}
+                {$actionsHtml}
+                <button type="button" class="modal-close" aria-label="{$closeLabel}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="{$contentId}" class="{$contentClass}">
+                    <div class="{$loadingClass}">
+                        <i class="fas fa-spinner fa-spin"></i> {$loadingText}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+HTML;
+    }
+}
+
 // ============================================
 // Service Health Functions
 // ============================================
