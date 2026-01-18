@@ -49,7 +49,7 @@ Rspamd Quarantine Web UI is a lightweight web application for browsing, managing
 
 ### User Management
 - Admin UI for creating, editing, and deactivating users
-- Role assignment (admin, domain admin, viewer)
+- Role assignment (admin, domain admin, viewer, quarantine user)
 - Domain scoping for domain admins
 - Optional Postfix mailbox and alias editing in the Users section (requires Postfix DB config and `POSTFIX_ALLOW_MAILBOX_EDIT`)
 
@@ -89,7 +89,7 @@ Three access levels:
 - **admin** – full access to all data and domains
 - **domainadmin** – restricted to configured domains only
 - **viewer** – read‑only access as configured
-- **quarantine users** – restricted to mailbox or manualy added email address of recipient
+- **quarantine users** – restricted to mailbox or manualy added email address of recipient (IMAP login via email account detected automatically, no need to create user if user has mailbox)
 
 Domain filters are automatically applied in all SQL queries (quarantine, trace, stats, audit).
 
