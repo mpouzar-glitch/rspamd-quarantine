@@ -450,6 +450,7 @@ define('DB_HOST', 'localhost');
 define('DB_NAME', 'rspamd_quarantine');
 define('DB_USER', 'rspamd_user');
 define('DB_PASS', 'password');
+define('DB_CHARSET', 'utf8mb4');
 
 // Pagination
 define('ITEMS_PER_PAGE', 50);
@@ -464,6 +465,76 @@ define('AUTOLEARN_SCORE', 15.0);
 // Debug mode (development only)
 define('DEBUG_MODE', false);
 ```
+
+Below is a complete overview of all options present in `config.example.php`, grouped by purpose.
+
+#### Error Reporting & Logging
+- `error_reporting(E_ALL)` – enables full PHP error reporting for logging.
+- `ini_set('display_errors', 0)` – disable error output in production (set to `1` for development).
+- `ini_set('log_errors', 1)` – enables PHP error logging.
+- `ini_set('error_log', '/var/log/rspamd_quarantine_errors.log')` – error log file path.
+
+#### Session Configuration
+- `session.cookie_httponly` – prevents JavaScript access to cookies.
+- `session.cookie_secure` – set to `1` to send cookies only over HTTPS.
+- `session.use_strict_mode` – rejects uninitialized session IDs.
+- `session.gc_maxlifetime` – session lifetime (seconds).
+- `session.cookie_samesite` – cookie SameSite policy (`Strict` by default).
+
+#### Receiver IP Allowlist
+- `RECEIVER_ALLOWED_IPS` – list of IPs allowed to submit to `receiver.php` and `trace_receiver.php`.
+
+#### Debug Mode
+- `DEBUG_MODE` – enables domain filter debugging output when `?debug_domain=1` is used.
+
+#### Auto-learn Configuration
+- `AUTOLEARN_ENABLED` – enables auto-selection for spam learning in bulk operations.
+- `AUTOLEARN_SCORE` – score threshold for auto-learn selection.
+
+#### Database Configuration
+- `DB_HOST` – database host.
+- `DB_NAME` – database name.
+- `DB_USER` – database user.
+- `DB_PASS` – database password.
+- `DB_CHARSET` – connection charset (default `utf8mb4`).
+
+#### Authentication Settings
+- `AUTH_ENABLED` – enables authentication for the UI.
+- `USE_DATABASE_AUTH` – use users from DB instead of static credentials.
+
+#### IMAP Authentication (optional fallback)
+- `IMAP_AUTH_ENABLED` – enable IMAP auth for email-style usernames.
+- `IMAP_SERVER` – IMAP server hostname.
+- `IMAP_PORT` – IMAP port (default 993).
+- `IMAP_SECURITY` – `ssl`, `tls`, or `none`.
+- `IMAP_VALIDATE_CERT` – validate IMAP TLS certificate.
+
+#### Application Settings
+- `APP_NAME` – UI application name.
+- `APP_VERSION` – app version string displayed in UI.
+- `ITEMS_PER_PAGE` – pagination size in lists.
+- `APP_TIMEZONE` – default timezone (applied via `date_default_timezone_set`).
+
+#### Rspamd API Configuration
+- `RSPAMD_API_URL` – base URL for Rspamd HTTP API.
+- `RSPAMD_API_PASSWORD` – password for Rspamd API (empty if none).
+
+#### Service Health Monitoring
+- `SERVICE_HEALTH_SERVICES` – list of service labels and systemd units checked in the service health view.
+
+#### Message Release
+- `RELEASE_COMMAND` – path to the release script executed when releasing messages.
+
+#### Security Settings
+- `SESSION_TIMEOUT` – inactivity timeout before forcing re-login (seconds).
+- `PASSWORD_MIN_LENGTH` – minimum password length enforced in user management.
+- `MAX_LOGIN_ATTEMPTS` – number of failed logins before lockout.
+- `LOGIN_TIMEOUT` – lockout duration in seconds.
+
+#### Data Retention (used by maintenance)
+- `QUARANTINE_RETENTION_DAYS` – retention window for `quarantine_messages`.
+- `TRACE_RETENTION_DAYS` – retention window for `message_trace`, `trace_log`, and `trace_statistics`.
+- `AUDIT_RETENTION_DAYS` – retention window for `audit_log`.
 
 ---
 
@@ -496,6 +567,31 @@ sudo chmod 777 /var/lib/php/sessions
 ### Chart.js Not Loading
 
 Check browser console for JavaScript errors and ensure CDN is accessible.
+
+---
+
+## Maintenance (CLI)
+
+The `maintenance.php` script cleans up old records based on the retention values defined in `config.php`. It is CLI-only and intended to be run by cron.
+
+### Run manually
+
+```bash
+php maintenance.php
+```
+
+### Schedule via cron (daily at 02:30)
+
+```cron
+30 2 * * * /usr/bin/php /var/www/rspamd-quarantine-webui/maintenance.php >> /var/log/rspamd-quarantine-maintenance.log 2>&1
+```
+
+### What it does
+
+The script deletes rows older than the configured cutoffs:
+- `quarantine_messages` older than `QUARANTINE_RETENTION_DAYS`
+- `message_trace`, `trace_log`, and `trace_statistics` older than `TRACE_RETENTION_DAYS`
+- `audit_log` older than `AUDIT_RETENTION_DAYS`
 
 ---
 
