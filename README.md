@@ -125,6 +125,53 @@ Complete MariaDB/MySQL schema with:
 
 ---
 
+## Architecture
+
+![Architecture diagram](docs/architecture.png)
+
+### Components
+
+- **Rspamd**  
+  Spam filtering system processing incoming email messages.
+- **Rspamd Exporter**  
+  Component that exports data from Rspamd to external receivers.
+- **SQL Database**  
+  Database used to store metadata and quarantined messages.
+- **Data Streams**  
+  - **trace_receiver**  
+    - All messages  
+    - Headers only  
+    - Lightweight data stream  
+    - Used for tracing, statistics, and audit logs  
+    - Contains:
+      - Message ID
+      - Sender
+      - Recipients
+      - Score
+      - Symbols
+      - Action
+  - **receiver**  
+    - Full message  
+    - Including body and attachments  
+    - Used for quarantine storage and detailed analysis  
+    - Contains:
+      - Complete raw email (headers + body)
+      - Attachments
+      - Full metadata
+
+### Data Flow Description
+
+1. Rspamd processes an email.
+2. Two parallel data streams are generated:
+   - `trace_receiver` → sends header-only metadata for all messages.
+   - `receiver` → sends the complete message (including body and attachments) for quarantined or selected messages.
+3. Rspamd Exporter forwards both streams.
+4. Data are stored in the SQL Database:
+   - Metadata in trace/log tables.
+   - Full messages in quarantine tables.
+
+---
+
 ## Screenshots
 
 ### Login
