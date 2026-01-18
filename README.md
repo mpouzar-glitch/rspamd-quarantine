@@ -89,6 +89,7 @@ Three access levels:
 - **admin** – full access to all data and domains
 - **domainadmin** – restricted to configured domains only
 - **viewer** – read‑only access as configured
+- **quarantine users** – restricted to mailbox or manualy added email address of recipient
 
 Domain filters are automatically applied in all SQL queries (quarantine, trace, stats, audit).
 
@@ -430,6 +431,7 @@ After changing the configuration, reload both Postfix and Rspamd.
 
 3. Use the top navigation menu:
    - **Quarantine** – Quarantined messages browser
+   - **Bulk operation** – Quarantined messages bulk operation
    - **Message Trace** – Complete message history
    - **Statistics** – Statistics and charts
    - **Audit Log** – User action history (admin/domain admin only)
@@ -469,8 +471,8 @@ rspamd-quarantine-webui/
 ├── stats.php              # Statistics and charts
 ├── audit.php              # Audit log view
 ├── maps.php               # Whitelist/blacklist map manager
-├── map_quick_add.php       # Quick add/remove map entries
-├── bulk_operations.php     # Bulk action handler
+├── map_quick_add.php      # Quick add/remove map entries
+├── bulk_operations.php    # Bulk action handler
 ├── users.php              # User management
 ├── view.php               # Single message detail view
 ├── operations.php         # Message operations handler
@@ -482,11 +484,10 @@ rspamd-quarantine-webui/
 ├── config.example.php     # Configuration template
 ├── database.php           # Database connection class
 ├── menu.php               # Top navigation menu
-├── style.css              # Main stylesheet
-├── stats-inline.css       # Inline statistics styling
+├── css/style.css          # Main stylesheet
+├── css/stats-inline.css   # Inline statistics styling
 ├── database.sql           # Database schema
-├── api/
-│   └── message_preview.php # AJAX message preview endpoint
+├── api_message_preview.php # AJAX message preview endpoint
 └── README.md              # This file
 ```
 
@@ -562,7 +563,6 @@ Below is a complete overview of all options present in `config.example.php`, gro
 - `IMAP_VALIDATE_CERT` – validate IMAP TLS certificate.
 
 #### Application Settings
-- `APP_NAME` – UI application name.
 - `APP_VERSION` – app version string displayed in UI.
 - `ITEMS_PER_PAGE` – pagination size in lists.
 - `APP_TIMEZONE` – default timezone (applied via `date_default_timezone_set`).
@@ -675,7 +675,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## Security
 
-If you discover a security vulnerability, please email security@example.com instead of using the issue tracker.
+If you discover a security vulnerability, please email noc@milnet.cz instead of using the issue tracker.
 
 ---
 
