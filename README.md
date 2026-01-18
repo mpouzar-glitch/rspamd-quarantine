@@ -211,7 +211,7 @@ Complete MariaDB/MySQL schema with:
 ![Audit log](docs/audit_log.jpg)
 
 ### Service Health
-![Service health](docs/service_health.svg)
+![Service health](docs/service_health.jpg)
 
 ### User Management
 ![User management](docs/users_management.jpg)
