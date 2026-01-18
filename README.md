@@ -210,6 +210,9 @@ Complete MariaDB/MySQL schema with:
 ### Audit Log
 ![Audit log](docs/audit_log.jpg)
 
+### Service Health
+![Service health](docs/service_health.svg)
+
 ### User Management
 ![User management](docs/users_management.jpg)
 
@@ -521,9 +524,6 @@ Below is a complete overview of all options present in `config.example.php`, gro
 
 #### Service Health Monitoring
 - `SERVICE_HEALTH_SERVICES` – list of service labels and systemd units checked in the service health view.
-
-#### Message Release
-- `RELEASE_COMMAND` – path to the release script executed when releasing messages.
 
 #### Security Settings
 - `SESSION_TIMEOUT` – inactivity timeout before forcing re-login (seconds).
