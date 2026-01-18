@@ -114,6 +114,12 @@ Complete MariaDB/MySQL schema with:
 - Audit triggers for login tracking
 - Password hashing with PHP's `password_hash()`
 
+### Multi-language Support
+- Automatic language detection based on the browser `Accept-Language` header
+- Manual language override via the language switcher endpoint
+- Fallback to Czech when a translation key is missing
+- Supported languages: Czech, English, German, Slovak, Polish, Finnish, Danish, Swedish, French, Spanish
+
 ---
 
 ## Technology Stack
@@ -758,7 +764,7 @@ Under the following terms:
 - [ ] Email notifications for quarantined messages
 - [ ] Advanced reporting with PDF export
 - [ ] Dark mode theme
-- [ ] Multi-language support (i18n)
+- [x] Multi-language support (i18n)
 - [ ] Docker container support
 - [ ] Rspamd WebUI integration
 
