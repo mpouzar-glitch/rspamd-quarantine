@@ -103,6 +103,38 @@ if (!defined('RSPAMD_API_URL')) {
 }
 
 // ============================================
+// Service Health Monitoring
+// ============================================
+if (!defined('SERVICE_HEALTH_SERVICES')) {
+    define('SERVICE_HEALTH_SERVICES', [
+        [
+            'label' => 'service_postfix',
+            'units' => ['postfix.service', 'postfix'],
+        ],
+        [
+            'label' => 'service_dovecot',
+            'units' => ['dovecot.service', 'dovecot'],
+        ],
+        [
+            'label' => 'service_nginx',
+            'units' => ['nginx.service', 'nginx'],
+        ],
+        [
+            'label' => 'service_rspamd',
+            'units' => ['rspamd.service', 'rspamd'],
+        ],
+        [
+            'label' => 'service_eset_efs',
+            'units' => ['efs.service', 'eset-efs.service', 'esets.service', 'efs', 'eset-efs', 'esets'],
+        ],
+        [
+            'label' => 'service_clamav',
+            'units' => ['clamav-daemon.service', 'clamd.service', 'clamav-daemon', 'clamd'],
+        ],
+    ]);
+}
+
+// ============================================
 // Message Release Configuration
 // ============================================
 if (!defined('RELEASE_COMMAND')) {
