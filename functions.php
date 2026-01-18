@@ -295,6 +295,38 @@ function getServiceStatus(string $unit, bool $systemctlAvailable): array {
 }
 
 function getServiceHealthServices(): array {
+    if (defined('SERVICE_HEALTH_SERVICES') && is_array(SERVICE_HEALTH_SERVICES)) {
+        $configured = [];
+        foreach (SERVICE_HEALTH_SERVICES as $service) {
+            if (!is_array($service)) {
+                continue;
+            }
+
+            $label = $service['label'] ?? $service['label_key'] ?? '';
+            $units = $service['units'] ?? [];
+            if ($label === '' || !is_array($units) || empty($units)) {
+                continue;
+            }
+
+            $filteredUnits = array_values(array_filter($units, static function ($unit) {
+                return is_string($unit) && $unit !== '';
+            }));
+
+            if (empty($filteredUnits)) {
+                continue;
+            }
+
+            $configured[] = [
+                'label' => __($label),
+                'units' => $filteredUnits,
+            ];
+        }
+
+        if (!empty($configured)) {
+            return $configured;
+        }
+    }
+
     return [
         [
             'label' => __('service_postfix'),

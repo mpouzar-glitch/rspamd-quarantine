@@ -132,46 +132,46 @@ include 'menu.php';
     </div>
 
     <!-- Statistiky systému -->
-    <div class="stats-row">
-        <div class="stat-box">
-            <div class="stat-label"><i class="fas fa-microchip"></i> <?php echo __('cpu_load'); ?></div>
-            <div class="stat-value"><?php echo number_format($systemInfo['load_avg'][0], 2); ?></div>
-            <small style="color: #7f8c8d; font-size: 11px;">
+    <div class="stats-inline system-stats-inline">
+        <div class="stat-inline-item cpu">
+            <span class="stat-inline-label"><i class="fas fa-microchip"></i> <?php echo __('cpu_load'); ?></span>
+            <span class="stat-inline-value"><?php echo number_format($systemInfo['load_avg'][0], 2); ?></span>
+            <span class="stat-inline-sub">
                 5m: <?php echo number_format($systemInfo['load_avg'][1], 2); ?> | 
                 15m: <?php echo number_format($systemInfo['load_avg'][2], 2); ?> | 
                 <?php echo $systemInfo['cpu_count']; ?> cores
-            </small>
+            </span>
         </div>
 
-        <div class="stat-box <?php echo $systemInfo['memory']['used_percent'] > 80 ? 'danger' : 'success'; ?>">
-            <div class="stat-label"><i class="fas fa-memory"></i> <?php echo __('memory_usage'); ?></div>
-            <div class="stat-value"><?php echo $systemInfo['memory']['used_percent']; ?>%</div>
-            <small style="color: #7f8c8d; font-size: 11px;">
+        <div class="stat-inline-item memory <?php echo $systemInfo['memory']['used_percent'] > 80 ? 'danger' : 'success'; ?>">
+            <span class="stat-inline-label"><i class="fas fa-memory"></i> <?php echo __('memory_usage'); ?></span>
+            <span class="stat-inline-value"><?php echo $systemInfo['memory']['used_percent']; ?>%</span>
+            <span class="stat-inline-sub">
                 <?php echo formatBytes($systemInfo['memory']['used']); ?> / 
                 <?php echo formatBytes($systemInfo['memory']['total']); ?>
-            </small>
+            </span>
         </div>
 
         <?php if ($systemInfo['memory']['swap_total'] > 0): ?>
-        <div class="stat-box <?php echo $systemInfo['memory']['swap_used_percent'] > 50 ? 'warning' : 'success'; ?>">
-            <div class="stat-label"><i class="fas fa-exchange-alt"></i> <?php echo __('swap_usage'); ?></div>
-            <div class="stat-value"><?php echo $systemInfo['memory']['swap_used_percent']; ?>%</div>
-            <small style="color: #7f8c8d; font-size: 11px;">
+        <div class="stat-inline-item swap <?php echo $systemInfo['memory']['swap_used_percent'] > 50 ? 'warning' : 'success'; ?>">
+            <span class="stat-inline-label"><i class="fas fa-exchange-alt"></i> <?php echo __('swap_usage'); ?></span>
+            <span class="stat-inline-value"><?php echo $systemInfo['memory']['swap_used_percent']; ?>%</span>
+            <span class="stat-inline-sub">
                 <?php echo formatBytes($systemInfo['memory']['swap_used']); ?> / 
                 <?php echo formatBytes($systemInfo['memory']['swap_total']); ?>
-            </small>
+            </span>
         </div>
         <?php endif; ?>
 
-        <div class="stat-box">
-            <div class="stat-label"><i class="fas fa-clock"></i> <?php echo __('system_uptime'); ?></div>
-            <div class="stat-value" style="font-size: 18px;"><?php echo $systemInfo['uptime']; ?></div>
+        <div class="stat-inline-item uptime">
+            <span class="stat-inline-label"><i class="fas fa-clock"></i> <?php echo __('system_uptime'); ?></span>
+            <span class="stat-inline-value"><?php echo $systemInfo['uptime']; ?></span>
         </div>
 
-        <div class="stat-box <?php echo $healthyCount === count($services) ? 'success' : 'danger'; ?>">
-            <div class="stat-label"><i class="fas fa-server"></i> <?php echo __('services_status'); ?></div>
-            <div class="stat-value"><?php echo $healthyCount; ?> / <?php echo count($services); ?></div>
-            <small style="color: #7f8c8d; font-size: 11px;"><?php echo __('services_healthy'); ?></small>
+        <div class="stat-inline-item services <?php echo $healthyCount === count($services) ? 'success' : 'danger'; ?>">
+            <span class="stat-inline-label"><i class="fas fa-server"></i> <?php echo __('services_status'); ?></span>
+            <span class="stat-inline-value"><?php echo $healthyCount; ?> / <?php echo count($services); ?></span>
+            <span class="stat-inline-sub"><?php echo __('services_healthy'); ?></span>
         </div>
     </div>
 
@@ -182,7 +182,7 @@ include 'menu.php';
         </div>
 
         <div class="table-container">
-            <table class="messages-table">
+            <table class="messages-table health-services-table">
                 <thead>
                     <tr>
                         <th><i class="fas fa-server"></i> <?php echo __('service'); ?></th>
@@ -198,8 +198,7 @@ include 'menu.php';
                     <?php foreach ($serviceRows as $row): ?>
                     <tr class="service-row-<?php echo htmlspecialchars($row['state']); ?>">
                         <td>
-                            <strong><?php echo htmlspecialchars($row['label']); ?></strong><br>
-                            <small style="color: #7f8c8d;"><?php echo htmlspecialchars($row['unit']); ?></small>
+                            <strong><?php echo htmlspecialchars($row['label']); ?></strong>
                         </td>
                         <td>
                             <?php
@@ -210,8 +209,7 @@ include 'menu.php';
                             ?>
                             <span class="badge <?php echo $badgeClass; ?>">
                                 <?php echo __('state_' . $row['state']); ?>
-                            </span><br>
-                            <small style="color: #7f8c8d;"><?php echo htmlspecialchars($row['detail']); ?></small>
+                            </span>
                         </td>
                         <td class="text-center">
                             <?php echo $row['process_count'] > 0 ? '<strong>' . $row['process_count'] . '</strong>' : '<span style="color: #bdc3c7;">-</span>'; ?>
@@ -310,6 +308,47 @@ include 'menu.php';
 
 .service-row-starting {
     background-color: rgba(243, 156, 18, 0.05);
+}
+
+.system-stats-inline {
+    margin-bottom: 20px;
+    gap: 12px;
+}
+
+.system-stats-inline .stat-inline-item {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 6px 10px;
+}
+
+.system-stats-inline .stat-inline-sub {
+    color: #7f8c8d;
+    font-size: 11px;
+    width: 100%;
+}
+
+.system-stats-inline .stat-inline-item.success {
+    border-left-color: #27ae60;
+}
+
+.system-stats-inline .stat-inline-item.warning {
+    border-left-color: #f39c12;
+}
+
+.system-stats-inline .stat-inline-item.danger {
+    border-left-color: #e74c3c;
+}
+
+.health-services-table th,
+.health-services-table td {
+    padding: 6px 10px;
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.health-services-table .badge {
+    font-size: 11px;
+    padding: 3px 6px;
 }
 
 code {
