@@ -241,8 +241,8 @@ Complete MariaDB/MySQL schema with:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-org/rspamd-quarantine-webui.git
-cd rspamd-quarantine-webui
+git clone https://github.com/mpouzar-glitch/rspamd-quarantine.git
+cd rspamd-quarantine
 ```
 
 ### 2. Create Database
