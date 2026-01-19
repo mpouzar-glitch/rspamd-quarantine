@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/functions.php';
 
 /**
  * Check if remote IP address is allowed to access receiver endpoints
@@ -109,6 +110,7 @@ try {
     
     $subject = $data['subject'] ?? '';
     $ip_address = $data['ip'] ?? '';
+    $country = getCountryCodeForIp($ip_address);
     $authenticated_user = $data['user'] ?? $data['authenticated_user'] ?? null;
     $action = $data['action'] ?? 'unknown';
     $score = floatval($data['score'] ?? 0);
@@ -187,6 +189,7 @@ try {
         $recipients,  // Nyní je to string, ne pole
         $subject,
         $ip_address,
+        $country,
         $authenticated_user,
         $action,
         $score,
@@ -200,10 +203,10 @@ try {
     
     // Insert into message_trace (všechny zprávy)
     $stmt = $db->prepare("
-        INSERT INTO message_trace (message_id, queue_id, sender, recipients, subject, ip_address, 
-                                  authenticated_user, action, score, symbols, size_bytes,
+        INSERT INTO message_trace (message_id, queue_id, sender, recipients, subject, ip_address,
+                                  country, authenticated_user, action, score, symbols, size_bytes,
                                   headers_from, headers_to, hostname, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     
     $result = $stmt->execute($params);

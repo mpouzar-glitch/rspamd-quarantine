@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/functions.php';
 
 /**
  * Check if remote IP address is allowed to access receiver endpoints
@@ -260,16 +261,17 @@ try {
 
     $hostname = getPayloadValue($payload, $payload_meta, ['rspamd_server'])
     ?? ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '');
+    $country = getCountryCodeForIp((string)($metadata['ip'] ?? ''));
 
     $stmt = $db->prepare("
         INSERT INTO quarantine_messages (
             message_id, queue_id, sender, recipients, subject,
-            ip_address, authenticated_user, action, score, symbols,
+            ip_address, country, authenticated_user, action, score, symbols,
             headers_from, headers_to, headers_date, hostname,
             message_content, metadata
         ) VALUES (
             :message_id, :queue_id, :sender, :recipients, :subject,
-            :ip, :user, :action, :score, :symbols,
+            :ip, :country, :user, :action, :score, :symbols,
             :headers_from, :headers_to, :headers_date, :hostname,
             :message_content, :metadata
         )
@@ -282,6 +284,7 @@ try {
         ':recipients' => $recipients, // OPRAVENO: bez JSON formátu
         ':subject' => $headers['subject'],
         ':ip' => $metadata['ip'],
+        ':country' => $country,
         ':user' => $metadata['user'],
         ':action' => $metadata['action'],
         ':score' => $metadata['score'],

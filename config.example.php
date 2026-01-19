@@ -73,7 +73,7 @@ define('AUTH_ENABLED', true);
 define('USE_DATABASE_AUTH', true); // Nové: použít DB auth místo statického
 
 // ============================================
-// IMAP Authentication (fallback for email usernames)
+// IMAP Authentication - quarantine users (fallback for email usernames)
 // ============================================
 define('IMAP_AUTH_ENABLED', false);
 define('IMAP_SERVER', 'mail.example.com');
@@ -84,11 +84,32 @@ define('IMAP_VALIDATE_CERT', true);
 // ============================================
 // Application Settings
 // ============================================
-if (!defined('APP_NAME')) {
-    define('APP_NAME', 'Rspamd Quarantine');
-    define('APP_VERSION', '2.0.2');
-    define('ITEMS_PER_PAGE', 50);
-    define('APP_TIMEZONE', 'Europe/Prague');
+define('APP_VERSION', '2.0.2');
+define('ITEMS_PER_PAGE', 50);
+define('APP_TIMEZONE', 'Europe/Prague');
+
+// Set timezone
+date_default_timezone_set(APP_TIMEZONE);
+
+// ============================================
+// Postfix Admin Database Configuration
+// ============================================
+if (!defined('POSTFIX_DB_HOST')) {
+    define('POSTFIX_DB_HOST', 'localhost');
+    define('POSTFIX_DB_NAME', 'postfix');
+    define('POSTFIX_DB_USER', 'postfix');
+    define('POSTFIX_DB_PASS', 'password');
+    define('POSTFIX_DB_CHARSET', 'utf8mb4');
+}
+
+// Allow mailbox and alias editing via Postfix database in Users section
+if (!defined('POSTFIX_ALLOW_MAILBOX_EDIT')) {
+    define('POSTFIX_ALLOW_MAILBOX_EDIT', false);
+}
+
+// Base path for maildir storage (used for mailbox size calculation)
+if (!defined('VMAIL_BASE_DIR')) {
+    define('VMAIL_BASE_DIR', '/var/vmail/vmail1');
 }
 
 // Set timezone
@@ -102,11 +123,62 @@ if (!defined('RSPAMD_API_URL')) {
     define('RSPAMD_API_PASSWORD', '');  // Empty if no password
 }
 
+// Optional: group of Rspamd API servers for map sync
+if (!defined('RSPAMD_API_SERVERS')) {
+    define('RSPAMD_API_SERVERS', [
+        'http://127.0.0.1:11334',
+        'http://192.168.0.20:11334',
+    ]);
+}
+
+// Map names configured in Rspamd for whitelist/blacklist entries
+if (!defined('RSPAMD_MAPS')) {
+    define('RSPAMD_MAPS', [
+        'whitelist' => [
+            'ip' => 'whitelist_ip',
+            'email' => 'whitelist_email',
+            'email_regex' => 'whitelist_email_regex',
+            'subject' => 'wl_subject_regex',
+        ],
+        'blacklist' => [
+            'ip' => 'blacklist_ip',
+            'email' => 'blacklist_email',
+            'email_regex' => 'blacklist_email_regex',
+            'subject' => 'bl_subject_regex',
+        ],
+    ]);
+}
+
 // ============================================
-// Message Release Configuration
+// Service Health Monitoring
 // ============================================
-if (!defined('RELEASE_COMMAND')) {
-    define('RELEASE_COMMAND', '/usr/local/bin/rspamd_release.sh');
+if (!defined('SERVICE_HEALTH_SERVICES')) {
+    define('SERVICE_HEALTH_SERVICES', [
+        [
+            'label' => 'service_postfix',
+            'units' => ['postfix.service', 'postfix'],
+        ],
+        [
+            'label' => 'service_dovecot',
+            'units' => ['dovecot.service', 'dovecot'],
+        ],
+        [
+            'label' => 'service_nginx',
+            'units' => ['nginx.service', 'nginx'],
+        ],
+        [
+            'label' => 'service_rspamd',
+            'units' => ['rspamd.service', 'rspamd'],
+        ],
+        [
+            'label' => 'service_eset_efs',
+            'units' => ['efs.service', 'eset-efs.service', 'esets.service', 'efs', 'eset-efs', 'esets'],
+        ],
+        [
+            'label' => 'service_clamav',
+            'units' => ['clamav-daemon.service', 'clamd.service', 'clamav-daemon', 'clamd'],
+        ],
+    ]);
 }
 
 // ============================================

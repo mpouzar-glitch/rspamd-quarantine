@@ -29,21 +29,26 @@ if (!$message) {
     die(__('msg_not_found'));
 }
 
+$splitHeadersBody = function (string $raw): array {
+    $headers_end = strpos($raw, "\r\n\r\n");
+    $separator_length = 4;
+    if ($headers_end === false) {
+        $headers_end = strpos($raw, "\n\n");
+        $separator_length = 2;
+    }
+
+    if ($headers_end === false) {
+        return [$raw, ''];
+    }
+
+    return [
+        substr($raw, 0, $headers_end),
+        substr($raw, $headers_end + $separator_length),
+    ];
+};
+
 // Parse message headers
-$headers_end = strpos($message['message_content'], "\r\n\r\n");
-if ($headers_end === false) {
-    $headers_end = strpos($message['message_content'], "\n\n");
-}
-
-$headers_raw = '';
-$body_raw = '';
-
-if ($headers_end !== false) {
-    $headers_raw = substr($message['message_content'], 0, $headers_end);
-    $body_raw = substr($message['message_content'], $headers_end + 4);
-} else {
-    $headers_raw = $message['message_content'];
-}
+[$headers_raw, $body_raw] = $splitHeadersBody($message['message_content']);
 
 // Parse individual headers
 $headers_array = [];
@@ -80,55 +85,62 @@ $from_decoded = decodeMimeHeader($headers_array['From'] ?? $message['sender'] ??
 $to_decoded = decodeMimeHeader($headers_array['To'] ?? $message['recipients'] ?? '');
 
 // Parse body - detect content type and charset
-$content_type = $headers_array['Content-Type'] ?? 'text/plain';
-$is_html = stripos($content_type, 'text/html') !== false;
-$is_multipart = stripos($content_type, 'multipart') !== false;
+$parseHeaders = function (string $raw): array {
+    $headers = [];
+    $lines = explode("\n", $raw);
+    $current = '';
 
-// Extract charset
-$charset = 'UTF-8';
-if (preg_match('/charset\s*=\s*["\']?([^"\'\s;]+)/i', $content_type, $matches)) {
-    $charset = strtoupper($matches[1]);
-}
+    foreach ($lines as $line) {
+        $line = rtrim($line, "\r");
+        if ($line === '') {
+            continue;
+        }
+        if (preg_match('/^[\s\t]/', $line) && $current !== '') {
+            $headers[$current] .= ' ' . trim($line);
+            continue;
+        }
+        if (preg_match('/^([^:]+):\s*(.*)$/', $line, $matches)) {
+            $current = strtolower(trim($matches[1]));
+            $headers[$current] = $matches[2];
+        }
+    }
 
-// Decode body if base64 or quoted-printable
-$content_encoding = strtolower($headers_array['Content-Transfer-Encoding'] ?? '');
-$body_decoded = $body_raw;
+    return $headers;
+};
 
-if ($content_encoding === 'base64') {
-    $body_decoded = base64_decode($body_raw);
-} elseif ($content_encoding === 'quoted-printable') {
-    $body_decoded = quoted_printable_decode($body_raw);
-}
+$decodeBody = function (string $body, string $encoding): string {
+    $encoding = strtolower($encoding);
+    if ($encoding === 'base64') {
+        return base64_decode($body);
+    }
+    if ($encoding === 'quoted-printable') {
+        return quoted_printable_decode($body);
+    }
 
-// Convert charset to UTF-8
-if ($charset !== 'UTF-8' && $charset !== 'US-ASCII') {
-    $body_decoded = @iconv($charset, 'UTF-8//IGNORE', $body_decoded) ?: $body_decoded;
-}
+    return $body;
+};
+
+$convertCharset = function (string $body, string $charset): string {
+    $charset = strtoupper($charset);
+    if (!in_array($charset, ['UTF-8', 'US-ASCII'], true)) {
+        return @iconv($charset, 'UTF-8//IGNORE', $body) ?: $body;
+    }
+
+    return $body;
+};
+
+$extractCharset = function (string $contentType, string $fallback = 'UTF-8'): string {
+    if (preg_match('/charset\s*=\s*["\']?([^"\'\s;]+)/i', $contentType, $matches)) {
+        return strtoupper($matches[1]);
+    }
+
+    return $fallback;
+};
 
 // Handle multipart messages
 $body_text = '';
 $body_html = '';
 $attachments = [];
-
-function parsePartHeaders($raw_headers) {
-    $headers = [];
-    $lines = explode("\n", $raw_headers);
-    $current_header = '';
-
-    foreach ($lines as $line) {
-        $line = rtrim($line, "\r");
-        if (preg_match('/^[\s\t]/', $line) && $current_header) {
-            $headers[$current_header] .= ' ' . trim($line);
-        } else {
-            if (preg_match('/^([^:]+):\s*(.*)$/', $line, $matches)) {
-                $current_header = $matches[1];
-                $headers[$current_header] = $matches[2];
-            }
-        }
-    }
-
-    return $headers;
-}
 
 function decodeAttachmentFilename($value) {
     $value = trim($value);
@@ -146,72 +158,97 @@ function decodeAttachmentFilename($value) {
     return decodeMimeHeader($value);
 }
 
-if ($is_multipart) {
-    // Extract boundary
-    if (preg_match('/boundary\s*=\s*["\']?([^"\'\s;]+)/i', $content_type, $matches)) {
+$parseMimePart = function (array $headers, string $body) use (&$parseMimePart, $splitHeadersBody, $parseHeaders, $decodeBody, $convertCharset, $extractCharset): array {
+    $content_type = $headers['content-type'] ?? 'text/plain';
+    $content_encoding = $headers['content-transfer-encoding'] ?? '';
+    $content_disposition = $headers['content-disposition'] ?? '';
+
+    if (stripos($content_type, 'multipart') !== false) {
+        if (!preg_match('/boundary\s*=\s*["\']?([^"\'\s;]+)/i', $content_type, $matches)) {
+            return ['text' => '', 'html' => '', 'attachments' => []];
+        }
+
         $boundary = $matches[1];
-        $parts = explode("--$boundary", $body_decoded);
-        
+        $parts = explode("--$boundary", $body);
+        $body_text = '';
+        $body_html = '';
+        $attachments = [];
+
         foreach ($parts as $part) {
-            if (trim($part) === '' || trim($part) === '--') continue;
-            
-            // Split part headers and body
-            $part_headers_end = strpos($part, "\r\n\r\n");
-            if ($part_headers_end === false) {
-                $part_headers_end = strpos($part, "\n\n");
-            }
-            
-            if ($part_headers_end === false) continue;
-            
-            $part_headers = substr($part, 0, $part_headers_end);
-            $part_body = substr($part, $part_headers_end + 4);
-            
-            $part_headers_array = parsePartHeaders($part_headers);
-            $part_content_type = $part_headers_array['Content-Type'] ?? 'text/plain';
-            $part_disposition = $part_headers_array['Content-Disposition'] ?? '';
-            $part_type = trim(preg_split('/\s*;/', $part_content_type)[0]);
-
-            // Decode part body
-            if (preg_match('/Content-Transfer-Encoding:\s*(\S+)/i', $part_headers, $enc_match)) {
-                $part_encoding = strtolower(trim($enc_match[1]));
-                if ($part_encoding === 'base64') {
-                    $part_body = base64_decode($part_body);
-                } elseif ($part_encoding === 'quoted-printable') {
-                    $part_body = quoted_printable_decode($part_body);
-                }
-            }
-
-            $filename = '';
-            if (preg_match('/filename\*?=\s*([^;\r\n]+)/i', $part_disposition, $filename_match)) {
-                $filename = decodeAttachmentFilename($filename_match[1]);
-            } elseif (preg_match('/name\*?=\s*([^;\r\n]+)/i', $part_content_type, $name_match)) {
-                $filename = decodeAttachmentFilename($name_match[1]);
-            }
-
-            $is_attachment = !empty($filename) || stripos($part_disposition, 'attachment') !== false;
-
-            if ($is_attachment) {
-                $attachments[] = [
-                    'filename' => $filename ?: 'attachment-' . (count($attachments) + 1),
-                    'content_type' => $part_type ?: 'application/octet-stream',
-                    'content' => $part_body,
-                    'size' => strlen($part_body),
-                ];
+            $part = ltrim($part);
+            if ($part === '' || $part === '--') {
                 continue;
             }
-            
-            if (stripos($part_type, 'text/plain') !== false) {
-                $body_text = $part_body;
-            } elseif (stripos($part_type, 'text/html') !== false) {
-                $body_html = $part_body;
+
+            [$part_headers_raw, $part_body] = $splitHeadersBody($part);
+            if ($part_body === '' && trim($part_headers_raw) === '') {
+                continue;
+            }
+
+            $part_headers = $parseHeaders($part_headers_raw);
+            $parsed = $parseMimePart($part_headers, $part_body);
+
+            if ($parsed['html'] !== '' && $body_html === '') {
+                $body_html = $parsed['html'];
+            }
+            if ($parsed['text'] !== '' && $body_text === '') {
+                $body_text = $parsed['text'];
+            }
+            if (!empty($parsed['attachments'])) {
+                $attachments = array_merge($attachments, $parsed['attachments']);
             }
         }
+
+        return ['text' => $body_text, 'html' => $body_html, 'attachments' => $attachments];
     }
-} else {
-    if ($is_html) {
-        $body_html = $body_decoded;
-    } else {
-        $body_text = $body_decoded;
+
+    $decoded_body = $decodeBody($body, $content_encoding);
+    $part_type = strtolower(trim(preg_split('/\s*;/', $content_type)[0]));
+
+    $filename = '';
+    if (preg_match('/filename\*?=\s*([^;\r\n]+)/i', $content_disposition, $filename_match)) {
+        $filename = decodeAttachmentFilename($filename_match[1]);
+    } elseif (preg_match('/name\*?=\s*([^;\r\n]+)/i', $content_type, $name_match)) {
+        $filename = decodeAttachmentFilename($name_match[1]);
+    }
+
+    $is_attachment = !empty($filename) || stripos($content_disposition, 'attachment') !== false;
+    if ($is_attachment) {
+        return [
+            'text' => '',
+            'html' => '',
+            'attachments' => [[
+                'filename' => $filename,
+                'content_type' => $part_type ?: 'application/octet-stream',
+                'content' => $decoded_body,
+                'size' => strlen($decoded_body),
+            ]],
+        ];
+    }
+
+    $charset = $extractCharset($content_type, 'UTF-8');
+    $decoded_body = $convertCharset($decoded_body, $charset);
+
+    if (stripos($part_type, 'text/html') !== false) {
+        return ['text' => '', 'html' => $decoded_body, 'attachments' => []];
+    }
+    if (stripos($part_type, 'text/plain') !== false) {
+        return ['text' => $decoded_body, 'html' => '', 'attachments' => []];
+    }
+
+    return ['text' => '', 'html' => '', 'attachments' => []];
+};
+
+$content_type = $headers_array['Content-Type'] ?? 'text/plain';
+$decoded_top_body = $decodeBody($body_raw, $headers_array['Content-Transfer-Encoding'] ?? '');
+$decoded_top_body = $convertCharset($decoded_top_body, $extractCharset($content_type, 'UTF-8'));
+$parsed_body = $parseMimePart($headers_lower, $decoded_top_body);
+$body_text = $parsed_body['text'];
+$body_html = $parsed_body['html'];
+$attachments = $parsed_body['attachments'];
+foreach ($attachments as $index => $attachment) {
+    if (empty($attachment['filename'])) {
+        $attachments[$index]['filename'] = 'attachment-' . ($index + 1);
     }
 }
 
@@ -638,26 +675,29 @@ switch (strtolower($action)) {
             <h2><i class="fas fa-tools"></i> <?= htmlspecialchars(__('actions')) ?></h2>
             <div class="actions">
                 <?php if (!$released): ?>
-                    <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
-                        <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                        <input type="hidden" name="action" value="release">
+                    <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="operation" value="release">
+                        <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-check"></i> <?= htmlspecialchars(__('msg_release')) ?>
                         </button>
                     </form>
                 <?php endif; ?>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="action" value="learn_ham">
+                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="operation" value="learn_ham">
+                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
                     </button>
                 </form>
                 
-                <form method="post" action="index.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="id" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="action" value="learn_spam">
+                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
+                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                    <input type="hidden" name="operation" value="learn_spam">
+                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-thumbs-down"></i> <?= htmlspecialchars(__('msg_learn_spam')) ?>
                     </button>

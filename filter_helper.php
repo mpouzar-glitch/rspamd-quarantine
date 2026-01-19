@@ -65,6 +65,7 @@ function getFiltersFromRequest(string $sessionKey = 'search_filters'): array {
         'sender',
         'recipient',
         'ip',
+        'country',
         'auth_user',
         'virus',
         'bad_extension',
@@ -97,6 +98,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
         'show_recipient' => true,
         'show_state' => true,
         'show_ip' => true,
+        'show_country' => false,
         'show_auth_user' => true,
         'show_virus' => false,
         'show_bad_extension' => false,
@@ -117,6 +119,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 280,
         ];
     }
 
@@ -128,6 +131,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 160,
             'options' => [
                 '' => __('filter_all_actions'),
                 'reject' => __('action_reject'),
@@ -148,6 +152,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_min_placeholder'),
             'value' => getFilterValue('score_min', $sessionKey),
             'class' => 'filter-group score-min',
+            'max_width' => 100,
         ];
     }
 
@@ -161,6 +166,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_score_max_placeholder'),
             'value' => getFilterValue('score_max', $sessionKey),
             'class' => 'filter-group score-max',
+            'max_width' => 100,
         ];
     }
 
@@ -172,6 +178,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-flag',
             'value' => getFilterValue('statefilter', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 160,
             'options' => [
                 '' => __('state_all'),
                 '0' => __('state_quarantined'),
@@ -190,6 +197,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-calendar',
             'value' => getFilterValue('date', $sessionKey),
             'class' => 'filter-group date-filter',
+            'max_width' => 160,
         ];
     }
 
@@ -202,6 +210,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_sender_placeholder'),
             'value' => getFilterValue('sender', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 200,
         ];
     }
 
@@ -214,6 +223,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_recipient_placeholder'),
             'value' => getFilterValue('recipient', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 200,
         ];
     }
 
@@ -226,6 +236,20 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_ip_placeholder'),
             'value' => getFilterValue('ip', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 100,
+        ];
+    }
+
+    if ($opts['show_country']) {
+        $filters['country'] = [
+            'key' => 'country',
+            'type' => 'text',
+            'label' => __('filter_country'),
+            'icon' => 'fas fa-flag',
+            'placeholder' => __('filter_country_placeholder'),
+            'value' => getFilterValue('country', $sessionKey),
+            'class' => 'filter-group',
+            'max_width' => 80,
         ];
     }
 
@@ -238,6 +262,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'placeholder' => __('filter_auth_user_placeholder'),
             'value' => getFilterValue('auth_user', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 100,
         ];
     }
 
@@ -249,6 +274,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-virus',
             'value' => getFilterValue('virus', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 60,
         ];
     }
 
@@ -260,6 +286,7 @@ function defineSearchFilters(array $options = [], string $sessionKey = 'search_f
             'icon' => 'fas fa-file-circle-xmark',
             'value' => getFilterValue('bad_extension', $sessionKey),
             'class' => 'filter-group',
+            'max_width' => 60,
         ];
     }
 
@@ -301,9 +328,8 @@ function renderSearchFilters(array $filters_def): string {
 
     .compact-filter-item {
         flex: 1 1 auto;
-        min-width: 150px;
-        max-width: 250px;
-        position: relative;
+        min-width: 50px;
+        position: relative
     }
 
     .compact-filter-item label {
@@ -409,7 +435,7 @@ function renderSearchFilters(array $filters_def): string {
 
     @media (max-width: 768px) {
         .compact-filter-item {
-            min-width: 120px;
+            min-width: 50px;
         }
         .compact-filter-submit {
             width: 100%;
@@ -422,7 +448,17 @@ function renderSearchFilters(array $filters_def): string {
         <div class="compact-filter-row">
             <?php foreach ($filters_def as $filter): ?>
                 <?php $isChecked = ($filter['type'] === 'checkbox' && !empty($filter['value'])); ?>
-                <div class="compact-filter-item <?php echo (!empty($filter['value']) && $filter['value'] !== '') ? 'has-value' : ''; ?>">
+                <?php
+                $maxWidthStyle = '';
+                if (!empty($filter['max_width'])) {
+                    $maxWidthValue = is_numeric($filter['max_width'])
+                        ? $filter['max_width'] . 'px'
+                        : (string)$filter['max_width'];
+                    $maxWidthStyle = ' style="flex: 0 0 ' . htmlspecialchars($maxWidthValue) . '; max-width: '
+                        . htmlspecialchars($maxWidthValue) . ';"';
+                }
+                ?>
+                <div class="compact-filter-item <?php echo (!empty($filter['value']) && $filter['value'] !== '') ? 'has-value' : ''; ?>"<?php echo $maxWidthStyle; ?>>
                     <label for="<?php echo htmlspecialchars($filter['key']); ?>">
                         <?php if (!empty($filter['icon'])): ?>
                             <i class="<?php echo htmlspecialchars($filter['icon']); ?>"></i>
@@ -832,9 +868,9 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['search'] = [
             'key' => 'search',
             'type' => 'text',
-            'label' => 'Hledat',
+            'label' => __('audit_filter_search_label'),
             'icon' => 'fas fa-search',
-            'placeholder' => 'Uživatel, akce, IP, detail...',
+            'placeholder' => __('audit_filter_search_placeholder'),
             'value' => getFilterValue('search', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -844,21 +880,21 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['action'] = [
             'key' => 'action',
             'type' => 'select',
-            'label' => 'Akce',
+            'label' => __('audit_filter_action_label'),
             'icon' => 'fas fa-bolt',
             'value' => getFilterValue('action', $sessionKey),
             'class' => 'filter-group',
             'options' => [
-                '' => 'Všechny akce',
-                'release_message' => 'Uvolnění zprávy',
-                'learn_spam' => 'Naučit SPAM',
-                'learn_ham' => 'Naučit HAM',
-                'delete_message' => 'Smazání zprávy',
-                'user_updated' => 'Úprava systémového uživatele',
-                'mailbox_updated' => 'Úprava doménového uživatele',
-                'alias_updated' => 'Úprava doménového aliasu',
-                'login_success' => 'Úspěšné přihlášení',
-                'login_failed' => 'Neúspěšné přihlášení',
+                '' => __('audit_filter_action_all'),
+                'release_message' => __('audit_filter_action_release'),
+                'learn_spam' => __('audit_filter_action_learn_spam'),
+                'learn_ham' => __('audit_filter_action_learn_ham'),
+                'delete_message' => __('audit_filter_action_delete'),
+                'user_updated' => __('audit_filter_action_user_updated'),
+                'mailbox_updated' => __('audit_filter_action_mailbox_updated'),
+                'alias_updated' => __('audit_filter_action_alias_updated'),
+                'login_success' => __('audit_filter_action_login_success'),
+                'login_failed' => __('audit_filter_action_login_failed'),
             ],
         ];
     }
@@ -867,9 +903,9 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['username'] = [
             'key' => 'username',
             'type' => 'text',
-            'label' => 'Uživatel',
+            'label' => __('audit_filter_username_label'),
             'icon' => 'fas fa-user',
-            'placeholder' => 'Uživatelské jméno',
+            'placeholder' => __('audit_filter_username_placeholder'),
             'value' => getFilterValue('username', $sessionKey),
             'class' => 'filter-group',
         ];
@@ -879,7 +915,7 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['date_from'] = [
             'key' => 'date_from',
             'type' => 'date',
-            'label' => 'Datum od',
+            'label' => __('audit_filter_date_from_label'),
             'icon' => 'far fa-calendar-alt',
             'value' => getFilterValue('date_from', $sessionKey),
             'class' => 'filter-group',
@@ -890,7 +926,7 @@ function defineAuditFilters(array $options = [], string $sessionKey = 'audit_fil
         $filters['date_to'] = [
             'key' => 'date_to',
             'type' => 'date',
-            'label' => 'Datum do',
+            'label' => __('audit_filter_date_to_label'),
             'icon' => 'far fa-calendar-alt',
             'value' => getFilterValue('date_to', $sessionKey),
             'class' => 'filter-group',
@@ -1082,6 +1118,7 @@ function getTraceFiltersFromRequest(string $sessionKey = 'search_filters') {
         'sender',
         'recipient',
         'ip',
+        'country',
         'auth_user'
     ];
 

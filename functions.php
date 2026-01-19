@@ -134,6 +134,394 @@ if (!function_exists('safe_html')) {
     }
 }
 
+if (!function_exists('renderMapModal')) {
+    function renderMapModal(array $config): string {
+        $modalId = safe_html($config['id'] ?? '');
+        $titleId = safe_html($config['title_id'] ?? '');
+        $titleText = safe_html($config['title_text'] ?? '');
+        $iconClass = safe_html($config['icon_class'] ?? '');
+        $formId = safe_html($config['form_id'] ?? '');
+        $listTypeId = safe_html($config['list_type_id'] ?? '');
+        $entryType = safe_html($config['entry_type'] ?? '');
+        $returnUrl = safe_html($config['return_url'] ?? '');
+        $labelText = safe_html($config['label_text'] ?? '');
+        $valueId = safe_html($config['value_id'] ?? '');
+        $placeholderText = safe_html($config['placeholder_text'] ?? '');
+        $hintText = safe_html($config['hint_text'] ?? '');
+        $cancelText = safe_html($config['cancel_text'] ?? __('cancel'));
+        $submitText = safe_html($config['submit_text'] ?? __('maps_add_entry'));
+        $closeLabel = safe_html($config['close_text'] ?? __('close'));
+
+        $actionInput = '';
+        if (!empty($config['include_action'])) {
+            $actionValue = safe_html($config['action_value'] ?? 'add');
+            $actionInput = "<input type=\"hidden\" name=\"action\" value=\"{$actionValue}\">";
+        }
+
+        return <<<HTML
+    <div id="{$modalId}" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="{$titleId}"><i class="{$iconClass}"></i> {$titleText}</h3>
+                <button type="button" class="modal-close" aria-label="{$closeLabel}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="{$formId}" method="POST" action="map_quick_add.php">
+                    {$actionInput}
+                    <input type="hidden" name="list_type" id="{$listTypeId}" value="">
+                    <input type="hidden" name="entry_type" value="{$entryType}">
+                    <input type="hidden" name="return_url" value="{$returnUrl}">
+                    <div class="form-group">
+                        <label for="{$valueId}">{$labelText}</label>
+                        <input type="text" id="{$valueId}" name="entry_value" class="form-control" placeholder="{$placeholderText}" required>
+                        <small>{$hintText}</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-dismiss">{$cancelText}</button>
+                        <button type="submit" class="btn btn-primary">{$submitText}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+HTML;
+    }
+}
+
+if (!function_exists('renderPreviewModal')) {
+    function renderPreviewModal(array $config): string {
+        $modalId = safe_html($config['id'] ?? '');
+        $modalClasses = trim('modal ' . ($config['classes'] ?? ''));
+        $titleText = safe_html($config['title_text'] ?? '');
+        $titleId = safe_html($config['title_id'] ?? '');
+        $iconClass = safe_html($config['icon_class'] ?? '');
+        $contentId = safe_html($config['content_id'] ?? '');
+        $contentClass = safe_html($config['content_class'] ?? '');
+        $loadingClass = safe_html($config['loading_class'] ?? '');
+        $loadingText = safe_html($config['loading_text'] ?? '');
+        $closeLabel = safe_html($config['close_text'] ?? __('close'));
+        $headerActions = $config['header_actions'] ?? '';
+
+        $titleIdAttr = $titleId !== '' ? " id=\"{$titleId}\"" : '';
+        $headerTitle = "<h3{$titleIdAttr}><i class=\"{$iconClass}\"></i> {$titleText}</h3>";
+        $actionsHtml = '';
+
+        if ($headerActions !== '') {
+            $headerTitle = "<div class=\"modal-header-title\">{$headerTitle}</div>";
+            $actionsHtml = "<div class=\"modal-header-actions\">{$headerActions}</div>";
+        }
+
+        return <<<HTML
+    <div id="{$modalId}" class="{$modalClasses}" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                {$headerTitle}
+                {$actionsHtml}
+                <button type="button" class="modal-close" aria-label="{$closeLabel}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="{$contentId}" class="{$contentClass}">
+                    <div class="{$loadingClass}">
+                        <i class="fas fa-spinner fa-spin"></i> {$loadingText}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+HTML;
+    }
+}
+
+// ============================================
+// Service Health Functions
+// ============================================
+
+function isSystemctlAvailable(): bool {
+    return !empty(trim((string)shell_exec('command -v systemctl 2>/dev/null')));
+}
+
+function getSystemctlValue(string $property, string $unit): string {
+    $command = sprintf(
+        'systemctl show -p %s --value %s 2>/dev/null',
+        escapeshellarg($property),
+        escapeshellarg($unit)
+    );
+    return trim((string)shell_exec($command));
+}
+
+function resolveServiceUnit(array $units, bool $systemctlAvailable): string {
+    if (!$systemctlAvailable) {
+        return $units[0];
+    }
+    foreach ($units as $unit) {
+        $loadState = getSystemctlValue('LoadState', $unit);
+        if ($loadState === 'loaded') {
+            return $unit;
+        }
+    }
+    return $units[0];
+}
+
+function formatBytes(int $bytes): string {
+    if ($bytes === 0) {
+        return '0 B';
+    }
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $power = floor(log($bytes, 1024));
+    return round($bytes / pow(1024, $power), 2) . ' ' . $units[$power];
+}
+
+function formatUptime(int $seconds): string {
+    $days = floor($seconds / 86400);
+    $hours = floor(($seconds % 86400) / 3600);
+    $minutes = floor(($seconds % 3600) / 60);
+
+    $parts = [];
+    if ($days > 0) {
+        $parts[] = $days . 'd';
+    }
+    if ($hours > 0) {
+        $parts[] = $hours . 'h';
+    }
+    if ($minutes > 0) {
+        $parts[] = $minutes . 'm';
+    }
+
+    return !empty($parts) ? implode(' ', $parts) : '< 1m';
+}
+
+function getServiceStatus(string $unit, bool $systemctlAvailable): array {
+    if (!$systemctlAvailable) {
+        return [
+            'state' => 'unknown',
+            'active' => '',
+            'sub' => '',
+            'detail' => __('health_systemctl_missing'),
+            'memory' => 0,
+            'memory_formatted' => 'N/A',
+            'process_count' => 0,
+            'cpu_usage' => 0,
+            'uptime' => 'N/A',
+            'restart_count' => 0,
+        ];
+    }
+
+    $loadState = getSystemctlValue('LoadState', $unit);
+    if ($loadState !== 'loaded') {
+        return [
+            'state' => 'missing',
+            'active' => '',
+            'sub' => '',
+            'detail' => __('health_detail_missing'),
+            'memory' => 0,
+            'memory_formatted' => 'N/A',
+            'process_count' => 0,
+            'cpu_usage' => 0,
+            'uptime' => 'N/A',
+            'restart_count' => 0,
+        ];
+    }
+
+    $activeState = getSystemctlValue('ActiveState', $unit);
+    $subState = getSystemctlValue('SubState', $unit);
+
+    if ($activeState === 'active') {
+        $state = 'running';
+    } elseif ($activeState === 'activating') {
+        $state = 'starting';
+    } elseif ($activeState === 'inactive') {
+        $state = 'stopped';
+    } elseif ($activeState === 'failed') {
+        $state = 'failed';
+    } else {
+        $state = 'unknown';
+    }
+
+    $memoryCurrent = getSystemctlValue('MemoryCurrent', $unit);
+    $memory = $memoryCurrent !== '' && $memoryCurrent !== '[not set]' ? (int)$memoryCurrent : 0;
+    $memoryFormatted = formatBytes($memory);
+
+    $mainPID = getSystemctlValue('MainPID', $unit);
+    $processCount = 0;
+
+    if ($mainPID !== '' && $mainPID !== '0' && $mainPID !== '[not set]') {
+        $processName = trim((string)shell_exec("ps -p " . escapeshellarg($mainPID) . " -o comm= 2>/dev/null"));
+        if ($processName !== '') {
+            $processCount = (int)trim((string)shell_exec("pgrep -c '^" . escapeshellarg($processName) . "$' 2>/dev/null || echo 0"));
+        }
+    }
+
+    $cpuUsage = 0;
+    if ($mainPID !== '' && $mainPID !== '0' && $mainPID !== '[not set]') {
+        $processName = trim((string)shell_exec("ps -p " . escapeshellarg($mainPID) . " -o comm= 2>/dev/null"));
+        if ($processName !== '') {
+            $cpuOutput = trim((string)shell_exec("ps -C " . escapeshellarg($processName) . " -o %cpu= 2>/dev/null | awk '{s+=\\$1} END {print s}'"));
+            $cpuUsage = $cpuOutput !== '' ? round((float)$cpuOutput, 1) : 0;
+        }
+    }
+
+    $activeEnterTimestamp = getSystemctlValue('ActiveEnterTimestamp', $unit);
+    $uptime = 'N/A';
+    if ($activeEnterTimestamp !== '' && $activeEnterTimestamp !== '[not set]' && $state === 'running') {
+        $startTime = strtotime($activeEnterTimestamp);
+        if ($startTime !== false) {
+            $uptimeSeconds = time() - $startTime;
+            $uptime = formatUptime($uptimeSeconds);
+        }
+    }
+
+    $restartCount = getSystemctlValue('NRestarts', $unit);
+    $restartCount = $restartCount !== '' && $restartCount !== '[not set]' ? (int)$restartCount : 0;
+
+    $detail = __('health_detail_state', [
+        'active' => $activeState !== '' ? $activeState : __('health_value_unknown'),
+        'sub' => $subState !== '' ? $subState : __('health_value_unknown'),
+    ]);
+
+    return [
+        'state' => $state,
+        'active' => $activeState,
+        'sub' => $subState,
+        'detail' => $detail,
+        'memory' => $memory,
+        'memory_formatted' => $memoryFormatted,
+        'process_count' => $processCount,
+        'cpu_usage' => $cpuUsage,
+        'uptime' => $uptime,
+        'restart_count' => $restartCount,
+    ];
+}
+
+function getServiceHealthServices(): array {
+    if (defined('SERVICE_HEALTH_SERVICES') && is_array(SERVICE_HEALTH_SERVICES)) {
+        $configured = [];
+        foreach (SERVICE_HEALTH_SERVICES as $service) {
+            if (!is_array($service)) {
+                continue;
+            }
+
+            $label = $service['label'] ?? $service['label_key'] ?? '';
+            $units = $service['units'] ?? [];
+            if ($label === '' || !is_array($units) || empty($units)) {
+                continue;
+            }
+
+            $filteredUnits = array_values(array_filter($units, static function ($unit) {
+                return is_string($unit) && $unit !== '';
+            }));
+
+            if (empty($filteredUnits)) {
+                continue;
+            }
+
+            $configured[] = [
+                'label' => __($label),
+                'units' => $filteredUnits,
+            ];
+        }
+
+        if (!empty($configured)) {
+            return $configured;
+        }
+    }
+
+    return [
+        [
+            'label' => __('service_postfix'),
+            'units' => ['postfix.service', 'postfix'],
+        ],
+        [
+            'label' => __('service_dovecot'),
+            'units' => ['dovecot.service', 'dovecot'],
+        ],
+        [
+            'label' => __('service_nginx'),
+            'units' => ['nginx.service', 'nginx'],
+        ],
+        [
+            'label' => __('service_rspamd'),
+            'units' => ['rspamd.service', 'rspamd'],
+        ],
+        [
+            'label' => __('service_eset_efs'),
+            'units' => ['efs.service', 'eset-efs.service', 'esets.service', 'efs', 'eset-efs', 'esets'],
+        ],
+        [
+            'label' => __('service_clamav'),
+            'units' => ['clamav-daemon.service', 'clamd.service', 'clamav-daemon', 'clamd'],
+        ],
+    ];
+}
+
+function getServiceHealthData(): array {
+    $services = getServiceHealthServices();
+    $systemctlAvailable = isSystemctlAvailable();
+
+    $serviceRows = [];
+    $healthyCount = 0;
+    $hasWarning = !$systemctlAvailable;
+    $hasCritical = false;
+
+    foreach ($services as $service) {
+        $unit = resolveServiceUnit($service['units'], $systemctlAvailable);
+        $status = getServiceStatus($unit, $systemctlAvailable);
+        $isHealthy = $status['state'] === 'running';
+
+        if ($isHealthy) {
+            $healthyCount++;
+        }
+
+        if (in_array($status['state'], ['failed', 'stopped', 'missing'], true)) {
+            $hasCritical = true;
+        } elseif (in_array($status['state'], ['starting', 'unknown'], true)) {
+            $hasWarning = true;
+        }
+
+        $serviceRows[] = [
+            'label' => $service['label'],
+            'unit' => $unit,
+            'state' => $status['state'],
+            'detail' => $status['detail'],
+            'healthy' => $status['state'] === 'unknown' ? 'unknown' : ($isHealthy ? 'healthy' : 'unhealthy'),
+            'memory' => $status['memory'],
+            'memory_formatted' => $status['memory_formatted'],
+            'process_count' => $status['process_count'],
+            'cpu_usage' => $status['cpu_usage'],
+            'uptime' => $status['uptime'],
+            'restart_count' => $status['restart_count'],
+        ];
+    }
+
+    $overallStatus = 'healthy';
+    if ($hasCritical) {
+        $overallStatus = 'critical';
+    } elseif ($hasWarning) {
+        $overallStatus = 'warning';
+    }
+
+    return [
+        'services' => $services,
+        'rows' => $serviceRows,
+        'healthy_count' => $healthyCount,
+        'total' => count($services),
+        'overall_status' => $overallStatus,
+    ];
+}
+
+function getServiceHealthSummary(): array {
+    $healthData = getServiceHealthData();
+
+    return [
+        'status' => $healthData['overall_status'],
+        'healthy' => $healthData['healthy_count'],
+        'total' => $healthData['total'],
+    ];
+}
+
 // Prevent direct access
 if (!defined('DB_HOST')) {
     die('Configuration not loaded. Include config.php first.');
@@ -518,10 +906,33 @@ function decodeMimeHeader($header) {
     }
 
     $original = $header;
+    $header = preg_replace("/\r\n[ \t]+/", ' ', $header);
     // Remove quotes
     $header = trim($header, '"\'');
+    $decoded = '';
 
-    $decoded = mb_decode_mimeheader($header);
+    if (function_exists('imap_mime_header_decode')) {
+        $parts = @imap_mime_header_decode($header);
+        if (is_array($parts)) {
+            $decodedParts = [];
+            foreach ($parts as $part) {
+                $text = (string)($part->text ?? '');
+                $charset = strtoupper((string)($part->charset ?? 'UTF-8'));
+                if ($charset !== 'DEFAULT' && $charset !== 'UTF-8') {
+                    $converted = @iconv($charset, 'UTF-8//IGNORE', $text);
+                    if ($converted !== false) {
+                        $text = $converted;
+                    }
+                }
+                $decodedParts[] = $text;
+            }
+            $decoded = implode('', $decodedParts);
+        }
+    }
+
+    if ($decoded === '') {
+        $decoded = mb_decode_mimeheader($header);
+    }
 
     $hasEncodedWords = preg_match('/=\?[^?]+\?[BQ]\?[^?]+\?=/i', $header);
     $needsRecode = $hasEncodedWords || !mb_check_encoding($decoded, 'UTF-8');
@@ -559,6 +970,38 @@ function formatMessageSize($bytes) {
     $bytes /= pow(1024, $pow);
 
     return round($bytes, 2) . ' ' . $units[$pow];
+}
+
+function getCountryCodeForIp(?string $ip): string {
+    $ip = trim((string)$ip);
+    if ($ip === '' || !filter_var($ip, FILTER_VALIDATE_IP)) {
+        return '';
+    }
+
+    $code = '';
+    $geoDbPath = '/usr/local/share/GeoIP/GeoLite2-City.mmdb';
+    $geoAutoload = __DIR__ . '/vendor/autoload.php';
+    if (!class_exists('GeoIp2\\Database\\Reader') && is_readable($geoAutoload)) {
+        require_once $geoAutoload;
+    }
+
+    if (class_exists('GeoIp2\\Database\\Reader') && is_readable($geoDbPath)) {
+        try {
+            $reader = new GeoIp2\Database\Reader($geoDbPath);
+            $record = $reader->city($ip);
+            $code = $record->country->isoCode ?? '';
+        } catch (Throwable $exception) {
+            $code = '';
+        }
+    }
+
+    $code = strtolower((string)$code);
+    $code = preg_replace('/[^a-z]/', '', $code);
+    if (strlen($code) !== 2) {
+        return '';
+    }
+
+    return $code;
 }
 
 function getScoreBadgeClass(float $score, string $action = ''): string {
@@ -1041,6 +1484,15 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
         $params[] = '%' . $filters['recipient'] . '%';
     }
 
+    if (!empty($filters['country'])) {
+        $country = strtolower(trim($filters['country']));
+        $country = preg_replace('/[^a-z]/', '', $country);
+        if ($country !== '') {
+            $where[] = "country = ?";
+            $params[] = $country;
+        }
+    }
+
     // Symbol filters
     $symbolFilters = [];
     if (!empty($filters['virus'])) {
@@ -1071,7 +1523,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, country, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1639,6 +2091,7 @@ function renderMessagesTableHeader(array $options = []): string {
         'sender',
         'recipients',
         'subject',
+        'country',
         'action',
         'score',
         'size_bytes',
@@ -1690,7 +2143,7 @@ function renderMessagesTableHeader(array $options = []): string {
         ],
         'status' => [
             'label' => 'STATUS',
-            'style' => 'width: 180px;',
+            'style' => 'width: 80px;',
         ],
         'ip_address' => [
             'label' => __('ip_address'),
@@ -1701,6 +2154,11 @@ function renderMessagesTableHeader(array $options = []): string {
             'label' => __('hostname'),
             'class' => 'col-hostname',
             'sort' => 'hostname',
+        ],
+        'country' => [
+            'label' => __('msg_country'),
+            'class' => 'col-country',
+            'sort' => 'country',
         ],
         'actions' => [
             'label' => __('actions'),
@@ -1814,6 +2272,7 @@ function buildTraceQuery($filters = [], &$params = [], $options = []) {
             recipients,
             subject,
             ip_address,
+            country,
             authenticated_user,
             action,
             score,
@@ -1875,6 +2334,15 @@ function applyTraceFilters($filters, &$where, &$params) {
     if (!empty($filters['ip'])) {
         $where[] = "ip_address = ?";
         $params[] = $filters['ip'];
+    }
+
+    if (!empty($filters['country'])) {
+        $country = strtolower(trim($filters['country']));
+        $country = preg_replace('/[^a-z]/', '', $country);
+        if ($country !== '') {
+            $where[] = "country = ?";
+            $params[] = $country;
+        }
     }
 
     // Authenticated user filter
@@ -2294,17 +2762,20 @@ function buildMessageSymbolData($symbols) {
     });
 
     $virusSymbols = ['ESET_VIRUS', 'CLAM_VIRUS'];
-    $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'ARCHIVE_WITH_EXECUTABLE'];
+    $badAttachmentSymbols = ['BAD_ATTACHMENT_EXT', 'ARCHIVE_WITH_EXECUTABLE', 'MIME_BAD_ATTACHMENT'];
+    $policyRejectSymbols = ['DMARC_POLICY_REJECT', 'R_DKIM_REJECT', 'ARC_REJECT'];
     $statusSymbolGroups = [
         'virus' => $virusSymbols,
         'bad-extension' => $badAttachmentSymbols,
-        'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME'],
+        'policy-reject' => $policyRejectSymbols,
+        'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME','BAD_SUBJECT'],
         'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
     ];
 
     $statusSymbolMatches = [
         'virus' => [],
         'bad-extension' => [],
+        'policy-reject' => [],
         'blacklist' => [],
         'whitelist' => [],
     ];
@@ -2340,7 +2811,7 @@ function buildMessageSymbolData($symbols) {
 }
 
 function getStatusRowClass(array $statusSymbolMatches): string {
-    $priority = ['virus', 'bad-extension', 'blacklist', 'whitelist'];
+    $priority = ['virus', 'policy-reject', 'bad-extension', 'blacklist', 'whitelist'];
     foreach ($priority as $statusKey) {
         if (!empty($statusSymbolMatches[$statusKey])) {
             return 'status-row-' . $statusKey;
@@ -2957,6 +3428,52 @@ function getEmailMapStatus($db, array $emails): array {
     }
 
     return ['whitelist' => $whitelist, 'blacklist' => $blacklist];
+}
+
+/**
+ * Match values against regex-based map entries.
+ *
+ * @param PDO $db
+ * @param array $values
+ * @param string $entryType
+ * @return array ['whitelist' => [value => entry_value], 'blacklist' => [value => entry_value]]
+ */
+function getRegexMapMatches($db, array $values, string $entryType): array {
+    $normalized = array_values(array_unique(array_filter(array_map(function ($value) {
+        return trim((string)$value);
+    }, $values))));
+
+    if (empty($normalized)) {
+        return ['whitelist' => [], 'blacklist' => []];
+    }
+
+    $stmt = $db->prepare("SELECT list_type, entry_value FROM rspamd_map_entries WHERE entry_type = ? ORDER BY entry_value ASC");
+    $stmt->execute([$entryType]);
+    $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $matches = ['whitelist' => [], 'blacklist' => []];
+
+    foreach ($entries as $entry) {
+        $regex = trim((string)$entry['entry_value']);
+        if (!isRegexMapEntry($regex)) {
+            continue;
+        }
+
+        foreach ($normalized as $value) {
+            $valueKey = $entryType === 'email' ? strtolower($value) : $value;
+            $valueMatch = $entryType === 'email' ? strtolower($value) : $value;
+
+            if (isset($matches[$entry['list_type']][$valueKey])) {
+                continue;
+            }
+
+            if (@preg_match($regex, $valueMatch) === 1) {
+                $matches[$entry['list_type']][$valueKey] = $regex;
+            }
+        }
+    }
+
+    return $matches;
 }
 
 if (!function_exists('uploadRspamdMap')) {

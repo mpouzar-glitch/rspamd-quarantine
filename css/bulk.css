@@ -144,8 +144,8 @@
 }
 
 .preview-modal .modal-content {
-    max-width: 560px;
-    max-height: 85vh;
+    max-width: 700px;
+    max-height: 88vh;
 }
 
 .preview-modal-content {
@@ -310,63 +310,68 @@
 }
 
 /* Hover effect for state rows */
-.messages-table tbody tr.state-quarantined:hover {
+.state-quarantined:hover {
     background-color: #e9ecef;
 }
 
-.messages-table tbody tr.state-learned-ham:hover {
+.state-learned-ham:hover {
     background-color: #d4edda;
 }
 
-.messages-table tbody tr.state-learned-spam:hover {
+.state-learned-spam:hover {
     background-color: #f8d7da;
 }
 
-.messages-table tbody tr.state-released:hover {
+.state-released:hover {
     background-color: #d1ecf1;
 }
 
-/* Status-based row highlights */
-.messages-table tbody tr.status-row-virus {
+tbody tr.status-row-virus {
     background-color: #fdecea;
-    border-left: 3px solid #c1121f;
+    box-shadow: inset 3px 0 0 #c1121f !important;
 }
 
-.messages-table tbody tr.status-row-virus:hover {
+.status-row-virus:hover {
     background-color: #fbd7d4;
 }
 
-.messages-table tbody tr.status-row-bad-extension {
+tbody tr.status-row-bad-extension {
     background-color: #fff4e5;
-    border-left: 3px solid #f07700;
+    box-shadow: inset 3px 0 0 #f07700 !important;
 }
 
-.messages-table tbody tr.status-row-bad-extension:hover {
+.status-row-bad-extension:hover {
     background-color: #ffe4bf;
 }
 
-.messages-table tbody tr.status-row-blacklist {
-    background-color: #f3e8f6;
-    border-left: 3px solid #6a1b9a;
+tbody tr.status-row-policy-reject {
+    box-shadow: inset 3px 0 0 #333333 !important;
 }
 
-.messages-table tbody tr.status-row-blacklist:hover {
+.status-row-policy-reject:hover {
+    background-color: #999999;
+}
+
+tbody tr.status-row-blacklist {
+    box-shadow: inset 3px 0 0 #6a1b9a !important;
+}
+
+.status-row-blacklist:hover {
     background-color: #e7d4ee;
 }
 
-.messages-table tbody tr.status-row-whitelist {
-    background-color: #e9f8ef;
-    border-left: 3px solid #5ad76a;
+tbody tr.status-row-whitelist {
+    box-shadow: inset 3px 0 0 #5ad76a !important;
 }
 
-.messages-table tbody tr.status-row-whitelist:hover {
+.status-row-whitelist:hover {
     background-color: #d4f0df;
 }
 
 /* Auto-learned spam highlight (Rspamd already learned) */
-.auto-learn-spam {
+tbody tr.auto-learn-spam {
     background-color: #fff3cd;
-    border-left: 3px solid #ff6b6b;
+    box-shadow: inset 3px 0 0 #ff6b6b !important;
 }
 
 .auto-learn-spam:hover {
@@ -555,12 +560,13 @@ tr.has-action:hover {
     }
 }
 
-
-/* Allow popup to overflow table boundaries */
 .table-container {
-    overflow: visible !important;
+    overflow-x: auto;
+    overflow-y: visible; /* Umožnit zobrazení border-left */
 }
 
+/* Změnit border-collapse na tabulce */
 .messages-table {
-    position: relative;
+    border-collapse: separate !important;
+    border-spacing: 0;
 }

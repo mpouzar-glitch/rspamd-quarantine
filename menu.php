@@ -45,7 +45,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css">    <link rel="stylesheet" href="css/stats-inline.css">
+    <link rel="stylesheet" href="css/stats-inline.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -122,6 +123,23 @@ try {
 
         .nav-item i {
             font-size: 16px;
+        }
+
+        .health-status-icon {
+            color: #bdc3c7;
+            transition: color 0.3s ease-in-out;
+        }
+
+        .health-status-icon.health-healthy {
+            color: #27ae60;
+        }
+
+        .health-status-icon.health-warning {
+            color: #f39c12;
+        }
+
+        .health-status-icon.health-critical {
+            color: #e74c3c;
         }
 
         .badge-count {
@@ -388,9 +406,14 @@ try {
                 </a>
             <?php endif; ?>
 
+            <?php if (checkPermission('admin')): ?>
+                <a href="service_health.php" class="nav-item <?= $current_page === 'service_health.php' ? 'active' : '' ?>">
+                    <i class="fas fa-heart-pulse health-status-icon" id="healthStatusIcon"></i>
+                </a>
+            <?php endif; ?>
+
             <a href="logout.php" class="nav-item">
                 <i class="fas fa-sign-out-alt"></i>
-                <span><?php echo htmlspecialchars(__('nav_logout')); ?></span>
             </a>
 
             <div class="nav-user">
@@ -463,5 +486,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    const healthIcon = document.getElementById('healthStatusIcon');
+    if (healthIcon) {
+        fetch('service_health.php?action=health_status', { credentials: 'same-origin' })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                if (!data || !data.status) {
+                    return;
+                }
+                healthIcon.classList.remove('health-healthy', 'health-warning', 'health-critical');
+                if (data.status === 'healthy') {
+                    healthIcon.classList.add('health-healthy');
+                } else if (data.status === 'critical') {
+                    healthIcon.classList.add('health-critical');
+                } else {
+                    healthIcon.classList.add('health-warning');
+                }
+            })
+            .catch(() => {
+                healthIcon.classList.remove('health-healthy', 'health-warning', 'health-critical');
+            });
+    }
 });
 </script>
