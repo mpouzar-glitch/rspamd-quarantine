@@ -313,10 +313,10 @@ Country detection from IP addresses uses the MaxMind GeoLite2 City database and 
 composer require geoip2/geoip2
 ```
 
-2. Download the **GeoLite2 City** database from MaxMind (requires a free MaxMind account) and place it at:
+2. Download the **GeoLite2 Country** database from MaxMind (requires a free MaxMind account) and place it at:
 
 ```
-/usr/local/share/GeoIP/GeoLite2-City.mmdb
+ wget "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=YOUR_LICENCE=tar.gz" -O GeoLite2-Country.tar.gz
 ```
 
 3. Ensure the web server user can read the database file (for example `www-data`).
