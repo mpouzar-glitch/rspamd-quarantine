@@ -116,7 +116,7 @@ if ($canManageMaps && !empty($messages)) {
         }
     }
     $listedEmails = getEmailMapStatus($db, $senderEmails);
-    $listedEmailRegexMatches = getRegexMapMatches($db, $senderEmails, 'email');
+    $listedEmailRegexMatches = getRegexMapMatches($db, $senderEmails, 'email_regex');
     $listedSubjectMatches = getRegexMapMatches($db, $subjectValues, 'subject');
 }
 
@@ -287,17 +287,17 @@ include 'menu.php';
                                 </a>
                                 <?php if ($canManageMaps && $senderEmail && !$isRandomSender): ?>
                                     <?php
-                                    $whitelistEntryValue = null;
-                                    if (isset($listedEmails['whitelist'][$senderEmailKey])) {
-                                        $whitelistEntryValue = $senderEmail;
-                                    } elseif (isset($listedEmailRegexMatches['whitelist'][$senderEmailKey])) {
+                                    $whitelistEntryValue = $listedEmails['whitelist'][$senderEmailKey] ?? null;
+                                    $whitelistEntryType = $whitelistEntryValue !== null ? 'email' : null;
+                                    if ($whitelistEntryValue === null && isset($listedEmailRegexMatches['whitelist'][$senderEmailKey])) {
                                         $whitelistEntryValue = $listedEmailRegexMatches['whitelist'][$senderEmailKey];
+                                        $whitelistEntryType = 'email_regex';
                                     }
-                                    $blacklistEntryValue = null;
-                                    if (isset($listedEmails['blacklist'][$senderEmailKey])) {
-                                        $blacklistEntryValue = $senderEmail;
-                                    } elseif (isset($listedEmailRegexMatches['blacklist'][$senderEmailKey])) {
+                                    $blacklistEntryValue = $listedEmails['blacklist'][$senderEmailKey] ?? null;
+                                    $blacklistEntryType = $blacklistEntryValue !== null ? 'email' : null;
+                                    if ($blacklistEntryValue === null && isset($listedEmailRegexMatches['blacklist'][$senderEmailKey])) {
                                         $blacklistEntryValue = $listedEmailRegexMatches['blacklist'][$senderEmailKey];
+                                        $blacklistEntryType = 'email_regex';
                                     }
                                     $isWhitelisted = $whitelistEntryValue !== null;
                                     $isBlacklisted = $blacklistEntryValue !== null;
@@ -307,7 +307,7 @@ include 'menu.php';
                                             <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="list_type" value="whitelist">
-                                                <input type="hidden" name="entry_type" value="email">
+                                                <input type="hidden" name="entry_type" value="<?php echo htmlspecialchars($whitelistEntryType); ?>">
                                                 <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($whitelistEntryValue); ?>">
                                                 <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
                                                 <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_whitelist_sender')); ?>">
@@ -323,7 +323,7 @@ include 'menu.php';
                                             <form method="POST" action="map_quick_add.php" class="sender-action-form" onsubmit="return confirm('<?php echo htmlspecialchars(__('maps_confirm_delete')); ?>');">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="list_type" value="blacklist">
-                                                <input type="hidden" name="entry_type" value="email">
+                                                <input type="hidden" name="entry_type" value="<?php echo htmlspecialchars($blacklistEntryType); ?>">
                                                 <input type="hidden" name="entry_value" value="<?php echo htmlspecialchars($blacklistEntryValue); ?>">
                                                 <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
                                                 <button type="submit" class="sender-action-btn blacklist-btn is-listed" title="<?php echo htmlspecialchars(__('maps_remove_blacklist_sender')); ?>">

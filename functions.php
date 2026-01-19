@@ -3396,7 +3396,7 @@ if (!function_exists('canManageEmailMapEntry')) {
  *
  * @param PDO $db Database connection
  * @param array $emails List of email addresses
- * @return array ['whitelist' => [email => true], 'blacklist' => [email => true]]
+ * @return array ['whitelist' => [email => entry_value], 'blacklist' => [email => entry_value]]
  */
 function getEmailMapStatus($db, array $emails): array {
     $normalized = array_values(array_unique(array_filter(array_map(function ($email) {
@@ -3407,7 +3407,20 @@ function getEmailMapStatus($db, array $emails): array {
         return ['whitelist' => [], 'blacklist' => []];
     }
 
-    $placeholders = implode(',', array_fill(0, count($normalized), '?'));
+    $domains = [];
+    foreach ($normalized as $email) {
+        $parts = explode('@', $email, 2);
+        if (count($parts) === 2 && $parts[1] !== '') {
+            $domains[] = '@' . $parts[1];
+        }
+    }
+
+    $lookup = array_values(array_unique(array_merge($normalized, $domains)));
+    if (empty($lookup)) {
+        return ['whitelist' => [], 'blacklist' => []];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($lookup), '?'));
     $sql = "
         SELECT list_type, LOWER(entry_value) AS entry_value
         FROM rspamd_map_entries
@@ -3415,19 +3428,37 @@ function getEmailMapStatus($db, array $emails): array {
           AND LOWER(entry_value) IN ($placeholders)
     ";
     $stmt = $db->prepare($sql);
-    $stmt->execute($normalized);
+    $stmt->execute($lookup);
 
-    $whitelist = [];
-    $blacklist = [];
+    $entries = ['whitelist' => [], 'blacklist' => []];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        if ($row['list_type'] === 'whitelist') {
-            $whitelist[$row['entry_value']] = true;
-        } elseif ($row['list_type'] === 'blacklist') {
-            $blacklist[$row['entry_value']] = true;
+        if (!isset($entries[$row['list_type']])) {
+            continue;
+        }
+        $entries[$row['list_type']][$row['entry_value']] = $row['entry_value'];
+    }
+
+    $matches = ['whitelist' => [], 'blacklist' => []];
+    foreach ($normalized as $email) {
+        $domainEntry = null;
+        $parts = explode('@', $email, 2);
+        if (count($parts) === 2 && $parts[1] !== '') {
+            $domainEntry = '@' . $parts[1];
+        }
+
+        foreach (['whitelist', 'blacklist'] as $listType) {
+            if (isset($entries[$listType][$email])) {
+                $matches[$listType][$email] = $entries[$listType][$email];
+                continue;
+            }
+
+            if ($domainEntry !== null && isset($entries[$listType][$domainEntry])) {
+                $matches[$listType][$email] = $entries[$listType][$domainEntry];
+            }
         }
     }
 
-    return ['whitelist' => $whitelist, 'blacklist' => $blacklist];
+    return $matches;
 }
 
 /**
