@@ -641,7 +641,7 @@ tr.selected {
     padding: 20px;
 }
 
-.metadata-json-content {
+.metadata-symbols-content {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
@@ -649,37 +649,133 @@ tr.selected {
     font-family: "Courier New", Courier, monospace;
     font-size: 12px;
     padding: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
     max-height: 60vh;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.metadata-json-content .json-key {
+.metadata-symbol-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.metadata-symbol-row.is-positive {
+    border-left: 4px solid #16a34a;
+    background: #f0fdf4;
+}
+
+.metadata-symbol-row.is-negative {
+    border-left: 4px solid #dc2626;
+    background: #fef2f2;
+}
+
+.metadata-symbol-row.is-neutral {
+    border-left: 4px solid #0ea5e9;
+    background: #f0f9ff;
+}
+
+.metadata-symbol-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.metadata-symbol-score {
     color: #1d4ed8;
+}
+
+.metadata-symbol-name {
+    color: #0f172a;
+}
+
+.metadata-symbol-options {
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.metadata-symbol-group {
+    color: #6b21a8;
+}
+
+.ip-actions {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 6px;
+}
+
+.ip-actions .sender-action-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+}
+
+.ip-map-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ip-lookup-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ip-lookup-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ip-lookup-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.ip-lookup-label {
     font-weight: 600;
+    color: #1f2937;
 }
 
-.metadata-json-content .json-string {
-    color: #15803d;
+.ip-lookup-value {
+    color: #374151;
+    text-align: right;
+    flex: 1;
 }
 
-.metadata-json-content .json-number {
-    color: #b45309;
+.ip-lookup-dns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
 }
 
-.metadata-json-content .json-boolean {
-    color: #7c3aed;
-    font-weight: 600;
+.ip-lookup-chip {
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: #0369a1;
 }
 
-.metadata-json-content .json-null {
+.ip-lookup-loading,
+.ip-lookup-error {
+    font-size: 13px;
     color: #6b7280;
-    font-style: italic;
-}
-
-.metadata-json-content .json-unknown {
-    color: #9f1239;
 }
 
 .modal-footer {

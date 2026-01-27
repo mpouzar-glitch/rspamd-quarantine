@@ -435,6 +435,18 @@ include 'menu.php';
                                        title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
                                         <?php echo htmlspecialchars($ipAddress); ?>
                                     </a>
+                                    <?php if (filter_var($ipAddress, FILTER_VALIDATE_IP)): ?>
+                                        <span class="ip-actions">
+                                            <?php if ($canManageMaps): ?>
+                                                <button type="button" class="sender-action-btn ip-map-btn" data-ip="<?php echo htmlspecialchars($ipAddress, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_ip')); ?>">
+                                                    <i class="fas fa-list-check"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            <button type="button" class="sender-action-btn ip-lookup-btn" data-ip="<?php echo htmlspecialchars($ipAddress, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('trace_ip_lookup_trigger')); ?>">
+                                                <i class="fas fa-globe"></i>
+                                            </button>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="hostname-field">
                                     <?php echo htmlspecialchars($hostname); ?>
@@ -533,7 +545,55 @@ include 'menu.php';
             </div>
             <div class="modal-body">
                 <p id="metadataModalEmpty" class="text-muted" hidden><?php echo htmlspecialchars(__('trace_metadata_empty')); ?></p>
-                <pre id="metadataModalContent" class="metadata-json-content"></pre>
+                <div id="metadataModalContent" class="metadata-symbols-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ipMapModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ipMapModalTitle"><i class="fas fa-network-wired"></i> <?php echo htmlspecialchars(__('maps_add_ip')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="ipMapForm" method="POST" action="map_quick_add.php">
+                    <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="list_type" id="ipMapListType" value="">
+                    <input type="hidden" name="entry_type" value="ip">
+                    <input type="hidden" name="return_url" value="<?php echo htmlspecialchars($returnUrl); ?>">
+                    <div class="form-group">
+                        <label for="ipMapValue"><?php echo htmlspecialchars(__('ip_address')); ?></label>
+                        <input type="text" id="ipMapValue" name="entry_value" class="form-control" required>
+                        <small><?php echo htmlspecialchars(__('maps_ip_hint')); ?></small>
+                    </div>
+                    <div class="modal-footer ip-map-footer">
+                        <button type="button" class="btn btn-secondary modal-dismiss"><?php echo htmlspecialchars(__('cancel')); ?></button>
+                        <button type="button" class="btn btn-success ip-map-submit" data-list-type="whitelist">
+                            <i class="fas fa-shield-alt"></i> <?php echo htmlspecialchars(__('maps_add_whitelist_ip')); ?>
+                        </button>
+                        <button type="button" class="btn btn-danger ip-map-submit" data-list-type="blacklist">
+                            <i class="fas fa-ban"></i> <?php echo htmlspecialchars(__('maps_add_blacklist_ip')); ?>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="ipLookupModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ipLookupModalTitle"><i class="fas fa-globe"></i> <?php echo htmlspecialchars(__('trace_ip_lookup_title')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="ipLookupModalEmpty" class="text-muted" hidden><?php echo htmlspecialchars(__('trace_ip_lookup_empty')); ?></p>
+                <div id="ipLookupModalContent" class="ip-lookup-content"></div>
             </div>
         </div>
     </div>
@@ -560,6 +620,16 @@ include 'menu.php';
         const metadataModal = document.getElementById('metadataModal');
         const metadataModalContent = document.getElementById('metadataModalContent');
         const metadataModalEmpty = document.getElementById('metadataModalEmpty');
+        const ipModal = document.getElementById('ipMapModal');
+        const ipMapValue = document.getElementById('ipMapValue');
+        const ipMapListType = document.getElementById('ipMapListType');
+        const ipLookupModal = document.getElementById('ipLookupModal');
+        const ipLookupModalContent = document.getElementById('ipLookupModalContent');
+        const ipLookupModalEmpty = document.getElementById('ipLookupModalEmpty');
+        const ipLookupStrings = {
+            loading: "<?php echo htmlspecialchars(__('trace_ip_lookup_loading')); ?>",
+            error: "<?php echo htmlspecialchars(__('trace_ip_lookup_error')); ?>",
+        };
 
         function escapeRegex(value) {
             return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/');
@@ -601,9 +671,9 @@ include 'menu.php';
             if (trimmedMetadata) {
                 try {
                     const parsed = JSON.parse(trimmedMetadata);
-                    content = formatJsonValue(parsed, 0);
+                    content = formatSymbolDetails(parsed);
                 } catch (error) {
-                    content = escapeHtml(trimmedMetadata);
+                    content = '';
                 }
             }
 
@@ -624,48 +694,134 @@ include 'menu.php';
             return div.innerHTML;
         }
 
-        function formatJsonValue(value, indentLevel) {
-            const indent = '  '.repeat(indentLevel);
-            const nextIndent = '  '.repeat(indentLevel + 1);
-
-            if (value === null) {
-                return '<span class="json-null">null</span>';
+        function normalizeSymbols(symbols) {
+            if (!symbols) {
+                return [];
             }
 
-            if (Array.isArray(value)) {
-                if (value.length === 0) {
-                    return '[]';
+            if (Array.isArray(symbols)) {
+                return symbols.map((symbol) => ({
+                    name: symbol.name ?? symbol.symbol ?? '',
+                    score: symbol.score ?? 0,
+                    options: symbol.options ?? [],
+                    group: symbol.group ?? symbol.groupname ?? '',
+                }));
+            }
+
+            if (typeof symbols === 'object') {
+                return Object.entries(symbols).map(([name, data]) => ({
+                    name,
+                    score: data?.score ?? 0,
+                    options: data?.options ?? [],
+                    group: data?.group ?? data?.groupname ?? '',
+                }));
+            }
+
+            return [];
+        }
+
+        function formatSymbolLine(symbol) {
+            const score = Number(symbol.score ?? 0);
+            const scoreClass = score > 0.1 ? 'is-positive' : (score < -0.1 ? 'is-negative' : 'is-neutral');
+            const options = Array.isArray(symbol.options) ? symbol.options : [];
+            const formattedOptions = options.length
+                ? `[ ${options.map((option) => `"${escapeHtml(String(option))}"`).join(', ')}, ]`
+                : '[ ]';
+            const name = escapeHtml(symbol.name ?? '');
+            const group = escapeHtml(symbol.group ?? '');
+            return `
+                <div class="metadata-symbol-row ${scoreClass}">
+                    <span class="metadata-symbol-field metadata-symbol-score">"score": ${score.toFixed(1)},</span>
+                    <span class="metadata-symbol-field metadata-symbol-name">"name": "${name}",</span>
+                    <span class="metadata-symbol-field metadata-symbol-options">"options": ${formattedOptions},</span>
+                    <span class="metadata-symbol-field metadata-symbol-group">"group": "${group}",</span>
+                </div>
+            `;
+        }
+
+        function formatSymbolDetails(metadata) {
+            const symbols = normalizeSymbols(metadata?.symbols ?? metadata?.symbol ?? metadata?.symbols_list);
+            if (!symbols.length) {
+                return '';
+            }
+
+            const sorted = symbols.filter((symbol) => symbol.name).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+            return sorted.map(formatSymbolLine).join('');
+        }
+
+        function openIpModal(ipAddress) {
+            ipMapValue.value = ipAddress.trim();
+            ipModal.classList.add('active');
+            ipModal.setAttribute('aria-hidden', 'false');
+            ipMapValue.focus();
+        }
+
+        function closeIpModal() {
+            ipModal.classList.remove('active');
+            ipModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function closeIpLookupModal() {
+            ipLookupModal.classList.remove('active');
+            ipLookupModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function renderLookupRow(label, value) {
+            const safeLabel = escapeHtml(label);
+            const safeValue = escapeHtml(value || '-');
+            return `
+                <div class="ip-lookup-row">
+                    <span class="ip-lookup-label">${safeLabel}</span>
+                    <span class="ip-lookup-value">${safeValue}</span>
+                </div>
+            `;
+        }
+
+        async function openIpLookupModal(ipAddress) {
+            const ip = ipAddress.trim();
+            ipLookupModalContent.innerHTML = `<div class="ip-lookup-loading">${ipLookupStrings.loading}</div>`;
+            ipLookupModalEmpty.hidden = true;
+            ipLookupModal.classList.add('active');
+            ipLookupModal.setAttribute('aria-hidden', 'false');
+
+            try {
+                const response = await fetch(`ip_lookup.php?ip=${encodeURIComponent(ip)}`);
+                if (!response.ok) {
+                    throw new Error('Lookup failed');
+                }
+                const data = await response.json();
+                if (!data || data.error) {
+                    throw new Error(data?.error || 'Lookup failed');
                 }
 
-                const items = value.map((item) => `${nextIndent}${formatJsonValue(item, indentLevel + 1)}`);
-                return `[\n${items.join(',\n')}\n${indent}]`;
-            }
+                const rows = [
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_ip')); ?>', data.ip),
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_reverse')); ?>', data.reverse_dns),
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_asn')); ?>', data.asn),
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_org')); ?>', data.org),
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_country')); ?>', data.country),
+                    renderLookupRow('<?php echo htmlspecialchars(__('trace_ip_lookup_range')); ?>', data.range),
+                ];
 
-            if (typeof value === 'object') {
-                const keys = Object.keys(value);
-                if (keys.length === 0) {
-                    return '{}';
-                }
-                const entries = keys.map((key) => {
-                    const safeKey = escapeHtml(key);
-                    return `${nextIndent}<span class="json-key">"${safeKey}"</span>: ${formatJsonValue(value[key], indentLevel + 1)}`;
-                });
-                return `{\n${entries.join(',\n')}\n${indent}}`;
-            }
+                const dnsList = Array.isArray(data.dns) && data.dns.length
+                    ? data.dns.map((entry) => `<span class="ip-lookup-chip">${escapeHtml(entry)}</span>`).join('')
+                    : `<span class="text-muted">-</span>`;
 
-            if (typeof value === 'string') {
-                return `<span class="json-string">"${escapeHtml(value)}"</span>`;
+                ipLookupModalContent.innerHTML = `
+                    <div class="ip-lookup-block">
+                        ${rows.join('')}
+                    </div>
+                    <div class="ip-lookup-block">
+                        <div class="ip-lookup-row">
+                            <span class="ip-lookup-label"><?php echo htmlspecialchars(__('trace_ip_lookup_dns')); ?></span>
+                            <span class="ip-lookup-value ip-lookup-dns">${dnsList}</span>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                ipLookupModalContent.innerHTML = `<div class="ip-lookup-error">${ipLookupStrings.error}</div>`;
+                ipLookupModalEmpty.hidden = false;
             }
-
-            if (typeof value === 'number') {
-                return `<span class="json-number">${value}</span>`;
-            }
-
-            if (typeof value === 'boolean') {
-                return `<span class="json-boolean">${value}</span>`;
-            }
-
-            return `<span class="json-unknown">${escapeHtml(String(value))}</span>`;
         }
 
         document.querySelectorAll('.sender-map-btn').forEach((button) => {
@@ -686,6 +842,18 @@ include 'menu.php';
             });
         });
 
+        document.querySelectorAll('.ip-map-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openIpModal(button.dataset.ip || '');
+            });
+        });
+
+        document.querySelectorAll('.ip-lookup-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openIpLookupModal(button.dataset.ip || '');
+            });
+        });
+
         senderModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
             button.addEventListener('click', closeSenderModal);
         });
@@ -696,6 +864,14 @@ include 'menu.php';
 
         metadataModal.querySelectorAll('.modal-close').forEach((button) => {
             button.addEventListener('click', closeMetadataModal);
+        });
+
+        ipModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
+            button.addEventListener('click', closeIpModal);
+        });
+
+        ipLookupModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closeIpLookupModal);
         });
 
         senderModal.addEventListener('click', (event) => {
@@ -714,6 +890,25 @@ include 'menu.php';
             if (event.target === metadataModal) {
                 closeMetadataModal();
             }
+        });
+
+        ipModal.addEventListener('click', (event) => {
+            if (event.target === ipModal) {
+                closeIpModal();
+            }
+        });
+
+        ipLookupModal.addEventListener('click', (event) => {
+            if (event.target === ipLookupModal) {
+                closeIpLookupModal();
+            }
+        });
+
+        document.querySelectorAll('.ip-map-submit').forEach((button) => {
+            button.addEventListener('click', () => {
+                ipMapListType.value = button.dataset.listType || '';
+                document.getElementById('ipMapForm').submit();
+            });
         });
 
         function toggleFilters() {
