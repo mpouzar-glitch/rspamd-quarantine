@@ -406,6 +406,9 @@ return [
     'trace_filtered' => 'filtrerad',
     'trace_no_messages_title' => 'Inga meddelanden',
     'trace_no_messages_desc' => 'Justera filter eller tidsintervall',
+    'trace_metadata_title' => 'Metadata JSON',
+    'trace_metadata_empty' => 'No metadata available for this message.',
+    'trace_metadata_trigger' => 'Show metadata JSON',
 
     // Audit
     'audit_page_title' => 'Granskningslogg - {app}',

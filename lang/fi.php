@@ -406,6 +406,9 @@ return [
     'trace_filtered' => 'suodatettu',
     'trace_no_messages_title' => 'Ei viestejä',
     'trace_no_messages_desc' => 'Kokeile muuttaa suodattimia tai aikaväliä',
+    'trace_metadata_title' => 'Metadata JSON',
+    'trace_metadata_empty' => 'No metadata available for this message.',
+    'trace_metadata_trigger' => 'Show metadata JSON',
 
     // Audit
     'audit_page_title' => 'Audit-loki - {app}',

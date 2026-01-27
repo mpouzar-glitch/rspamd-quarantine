@@ -406,6 +406,9 @@ return [
     'trace_filtered' => 'filtrado',
     'trace_no_messages_title' => 'Sin mensajes',
     'trace_no_messages_desc' => 'Prueba a ajustar filtros o el rango de tiempo',
+    'trace_metadata_title' => 'Metadata JSON',
+    'trace_metadata_empty' => 'No metadata available for this message.',
+    'trace_metadata_trigger' => 'Show metadata JSON',
 
     // Audit
     'audit_page_title' => 'Registro de auditoría - {app}',

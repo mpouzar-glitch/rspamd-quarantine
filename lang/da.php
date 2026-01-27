@@ -406,6 +406,9 @@ return [
     'trace_filtered' => 'filtreret',
     'trace_no_messages_title' => 'Ingen beskeder',
     'trace_no_messages_desc' => 'Prøv at justere filtre eller tidsinterval',
+    'trace_metadata_title' => 'Metadata JSON',
+    'trace_metadata_empty' => 'No metadata available for this message.',
+    'trace_metadata_trigger' => 'Show metadata JSON',
 
     // Audit
     'audit_page_title' => 'Auditlog - {app}',
