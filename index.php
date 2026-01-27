@@ -234,7 +234,7 @@ include 'menu.php';
                         ['key' => 'country', 'style' => 'width: 20px;'],
                         ['key' => 'size', 'style' => 'width: 90px;'],
                         ['key' => 'score', 'style' => 'width: 60px;'],
-                        ['key' => 'status', 'style' => 'col-status'],
+                        ['key' => 'status', 'style' => 'width: 60px;'],
                         ['key' => 'actions', 'style' => 'width: 150px;'],
                     ],
                 ]);
@@ -480,22 +480,26 @@ include 'menu.php';
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
-                                    <form method="POST" action="operations.php" style="display: inline;">
-                                        <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
-                                        <input type="hidden" name="operation" value="learn_ham">
-                                        <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
-                                            <i class="fas fa-check"></i>
-                                        </button>
+                                    <?php if (!$isReleaseRestricted): ?>
+                                        <form method="POST" action="operations.php" style="display: inline;">
+                                            <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
+                                            <input type="hidden" name="operation" value="learn_ham">
+                                            <input type="hidden" name="return_url" value="index.php">
+                                            <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>                                        
+                                    <?php if (!$isReleaseRestricted): ?>
+                                        <form method="POST" action="operations.php" style="display: inline;">
+                                            <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
+                                            <input type="hidden" name="operation" value="release">
+                                            <input type="hidden" name="return_url" value="index.php">
+                                            <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
                                     </form>
-                                    <form method="POST" action="operations.php" style="display: inline;">
-                                        <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
-                                        <input type="hidden" name="operation" value="release">
-                                        <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>" <?php echo $isReleaseRestricted ? 'disabled' : ''; ?>>
-                                            <i class="fas fa-paper-plane"></i>
-                                        </button>
-                                    </form>
+                                    <?php endif; ?>                                        
                                     <form method="POST" action="operations.php" style="display: inline;" onsubmit="return confirm('<?php echo htmlspecialchars(__('confirm_delete_message')); ?>');">
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="delete">
@@ -846,13 +850,6 @@ include 'menu.php';
         if (data.is_html) {
             const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
-        }
-
-        if (!isAdmin && releaseActionButton) {
-            const releaseBlocked = Boolean(data.has_virus_symbol || data.has_bad_attachment_symbol);
-            releaseActionButton.disabled = releaseBlocked;
-        } else if (releaseActionButton) {
-            releaseActionButton.disabled = false;
         }
     }
 

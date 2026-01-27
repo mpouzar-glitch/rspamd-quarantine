@@ -700,16 +700,16 @@ switch (strtolower($action)) {
                             <i class="fas fa-check"></i> <?= htmlspecialchars(__('msg_release')) ?>
                         </button>
                     </form>
-                <?php endif; ?>
                 
-                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="operation" value="learn_ham">
-                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
-                    </button>
-                </form>
+                    <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="operation" value="learn_ham">
+                        <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
                 
                 <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
