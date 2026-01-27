@@ -655,6 +655,33 @@ tr.selected {
     overflow: auto;
 }
 
+.metadata-json-content .json-key {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.metadata-json-content .json-string {
+    color: #15803d;
+}
+
+.metadata-json-content .json-number {
+    color: #b45309;
+}
+
+.metadata-json-content .json-boolean {
+    color: #7c3aed;
+    font-weight: 600;
+}
+
+.metadata-json-content .json-null {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.metadata-json-content .json-unknown {
+    color: #9f1239;
+}
+
 .modal-footer {
     padding: 15px 20px;
     border-top: 1px solid #ecf0f1;
