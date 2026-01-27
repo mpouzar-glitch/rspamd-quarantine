@@ -395,6 +395,23 @@ td {
     font-size: 13px;
 }
 
+.subject-text {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #2c3e50;
+    cursor: pointer;
+    text-align: left;
+}
+
+.subject-text:hover,
+.subject-text:focus {
+    color: #3498db;
+    text-decoration: underline;
+}
+
 tbody tr:nth-child(even):not(.selected):not(.state-learned-ham):not(.state-learned-spam):not(.state-released):not(.status-row-virus):not(.status-row-bad-extension) {
     background: #e2e1e4;
 }
@@ -622,6 +639,20 @@ tr.selected {
 
 .modal-body {
     padding: 20px;
+}
+
+.metadata-json-content {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #1f2933;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow: auto;
 }
 
 .modal-footer {

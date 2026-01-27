@@ -204,6 +204,7 @@ include 'menu.php';
                             $recipients = decodeMimeHeader($msg['recipients']);
                             $subject = decodeMimeHeader($msg['subject']);
                             $subject = $subject ?: __('msg_no_subject');
+                            $metadataJson = $msg['metadata_json'] ?? '';
                             $score = round($msg['score'], 2);
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
                             $action = $msg['action'] ?? 'unknown';
@@ -332,7 +333,14 @@ include 'menu.php';
                                     </a>
                                 </td>
                                 <td class="subject-field" title="<?php echo htmlspecialchars($subject); ?>">
-                                    <span class="subject-text"><?php echo htmlspecialchars(truncateText($subject, 50)); ?></span>
+                                    <button
+                                        type="button"
+                                        class="subject-text subject-metadata-trigger"
+                                        data-metadata="<?php echo htmlspecialchars($metadataJson, ENT_QUOTES | ENT_SUBSTITUTE); ?>"
+                                        title="<?php echo htmlspecialchars(__('trace_metadata_trigger')); ?>"
+                                    >
+                                        <?php echo htmlspecialchars(truncateText($subject, 50)); ?>
+                                    </button>
                                     <?php if ($canManageMaps && !empty(trim($subject))): ?>
                                         <span class="sender-actions subject-actions">
                                             <button type="button" class="sender-action-btn whitelist-btn subject-map-btn" data-list-type="whitelist" data-subject="<?php echo htmlspecialchars($subject, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>">
@@ -515,6 +523,21 @@ include 'menu.php';
         </div>
     </div>
 
+    <div id="metadataModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="metadataModalTitle"><i class="fas fa-circle-info"></i> <?php echo htmlspecialchars(__('trace_metadata_title')); ?></h3>
+                <button type="button" class="modal-close" aria-label="<?php echo htmlspecialchars(__('close')); ?>">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="metadataModalEmpty" class="text-muted" hidden><?php echo htmlspecialchars(__('trace_metadata_empty')); ?></p>
+                <pre id="metadataModalContent" class="metadata-json-content"></pre>
+            </div>
+        </div>
+    </div>
+
     <script>
         const senderModal = document.getElementById('senderMapModal');
         const senderModalTitle = document.getElementById('senderMapModalTitle');
@@ -533,6 +556,10 @@ include 'menu.php';
             whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>",
             blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>"
         };
+
+        const metadataModal = document.getElementById('metadataModal');
+        const metadataModalContent = document.getElementById('metadataModalContent');
+        const metadataModalEmpty = document.getElementById('metadataModalEmpty');
 
         function escapeRegex(value) {
             return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/');
@@ -567,6 +594,30 @@ include 'menu.php';
             senderModal.setAttribute('aria-hidden', 'true');
         }
 
+        function openMetadataModal(metadataJson) {
+            const trimmedMetadata = (metadataJson || '').trim();
+            let content = '';
+
+            if (trimmedMetadata) {
+                try {
+                    const parsed = JSON.parse(trimmedMetadata);
+                    content = JSON.stringify(parsed, null, 2);
+                } catch (error) {
+                    content = trimmedMetadata;
+                }
+            }
+
+            metadataModalContent.textContent = content;
+            metadataModalEmpty.hidden = Boolean(content);
+            metadataModal.classList.add('active');
+            metadataModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeMetadataModal() {
+            metadataModal.classList.remove('active');
+            metadataModal.setAttribute('aria-hidden', 'true');
+        }
+
         document.querySelectorAll('.sender-map-btn').forEach((button) => {
             button.addEventListener('click', () => {
                 openSenderModal(button.dataset.listType, button.dataset.sender || '');
@@ -579,12 +630,22 @@ include 'menu.php';
             });
         });
 
+        document.querySelectorAll('.subject-metadata-trigger').forEach((button) => {
+            button.addEventListener('click', () => {
+                openMetadataModal(button.dataset.metadata || '');
+            });
+        });
+
         senderModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
             button.addEventListener('click', closeSenderModal);
         });
 
         subjectModal.querySelectorAll('.modal-close, .modal-dismiss').forEach((button) => {
             button.addEventListener('click', closeSubjectModal);
+        });
+
+        metadataModal.querySelectorAll('.modal-close').forEach((button) => {
+            button.addEventListener('click', closeMetadataModal);
         });
 
         senderModal.addEventListener('click', (event) => {
@@ -596,6 +657,12 @@ include 'menu.php';
         subjectModal.addEventListener('click', (event) => {
             if (event.target === subjectModal) {
                 closeSubjectModal();
+            }
+        });
+
+        metadataModal.addEventListener('click', (event) => {
+            if (event.target === metadataModal) {
+                closeMetadataModal();
             }
         });
 

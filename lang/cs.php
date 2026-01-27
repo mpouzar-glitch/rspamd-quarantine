@@ -407,6 +407,9 @@ return [
     'trace_filtered' => 'filtrováno',
     'trace_no_messages_title' => 'Žádné zprávy',
     'trace_no_messages_desc' => 'Zkuste upravit filtry nebo změnit časové období',
+    'trace_metadata_title' => 'Metadata JSON',
+    'trace_metadata_empty' => 'Pro tuto zprávu nejsou dostupná metadata.',
+    'trace_metadata_trigger' => 'Zobrazit metadata JSON',
 
     // Audit
     'audit_page_title' => 'Audit Log - {app}',
