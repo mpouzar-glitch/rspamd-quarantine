@@ -433,13 +433,13 @@ include 'menu.php';
                                     <a href="?ip=<?php echo urlencode($ipAddress); ?>" 
                                        class="ip-link" 
                                        title="<?php echo htmlspecialchars(__('filter_by_ip', ['ip' => $ipAddress])); ?>">
-                                        <?php echo htmlspecialchars($ipAddress); ?>
+                                        <?php echo htmlspecialchars(truncateText($ipAddress, 18)); ?>
                                     </a>
                                     <?php if (filter_var($ipAddress, FILTER_VALIDATE_IP)): ?>
                                         <span class="ip-actions">
                                             <?php if ($canManageMaps): ?>
                                                 <button type="button" class="sender-action-btn ip-map-btn" data-ip="<?php echo htmlspecialchars($ipAddress, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('maps_add_ip')); ?>">
-                                                    <i class="fas fa-list-check"></i>
+                                                    <i class="fas fa-shield-alt"></i>
                                                 </button>
                                             <?php endif; ?>
                                             <button type="button" class="sender-action-btn ip-lookup-btn" data-ip="<?php echo htmlspecialchars($ipAddress, ENT_QUOTES); ?>" title="<?php echo htmlspecialchars(__('trace_ip_lookup_trigger')); ?>">
@@ -731,10 +731,9 @@ include 'menu.php';
             const group = escapeHtml(symbol.group ?? '');
             return `
                 <div class="metadata-symbol-row ${scoreClass}">
-                    <span class="metadata-symbol-field metadata-symbol-score">"score": ${score.toFixed(1)},</span>
-                    <span class="metadata-symbol-field metadata-symbol-name">"name": "${name}",</span>
-                    <span class="metadata-symbol-field metadata-symbol-options">"options": ${formattedOptions},</span>
-                    <span class="metadata-symbol-field metadata-symbol-group">"group": "${group}",</span>
+                    <span class="metadata-symbol-field metadata-symbol-score">${score.toFixed(1)},</span>
+                    <span class="metadata-symbol-field metadata-symbol-name">${name}",</span>
+                    <span class="metadata-symbol-field metadata-symbol-options">${formattedOptions},</span>
                 </div>
             `;
         }
