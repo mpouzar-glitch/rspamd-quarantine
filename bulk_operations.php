@@ -652,6 +652,8 @@ include 'menu.php';
     const subjectModalTitle = document.getElementById('subjectMapModalTitle');
     const subjectModalValue = document.getElementById('subjectMapValue');
     const subjectModalListType = document.getElementById('subjectMapListType');
+    const bulkSubmitBtn = document.getElementById('bulkSubmitBtn');
+    const selectedCount = document.getElementById('selectedCount');
     const subjectStrings = {
         whitelist: "<?php echo htmlspecialchars(__('maps_add_whitelist_subject')); ?>",
         blacklist: "<?php echo htmlspecialchars(__('maps_add_blacklist_subject')); ?>"
@@ -690,6 +692,25 @@ include 'menu.php';
         senderModal.setAttribute('aria-hidden', 'true');
     }
 
+    function getSelectedActionsCount() {
+        const selectedRadios = document.querySelectorAll('.action-radio:checked');
+        const selectedChecks = document.querySelectorAll('.action-checkbox:checked');
+        return selectedRadios.length + selectedChecks.length;
+    }
+
+    function updateBulkSelectionCount() {
+        if (!selectedCount || !bulkSubmitBtn) {
+            return;
+        }
+        const count = getSelectedActionsCount();
+        selectedCount.textContent = String(count);
+        bulkSubmitBtn.disabled = count === 0;
+    }
+
+    function updateRowState() {
+        updateBulkSelectionCount();
+    }
+
     document.querySelectorAll('.sender-map-btn').forEach((button) => {
         button.addEventListener('click', () => {
             openSenderModal(button.dataset.listType, button.dataset.sender || '');
@@ -720,6 +741,10 @@ include 'menu.php';
         if (event.target === subjectModal) {
             closeSubjectModal();
         }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBulkSelectionCount();
     });
 
     // Detail modal functionality

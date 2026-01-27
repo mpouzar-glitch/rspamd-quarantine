@@ -601,13 +601,13 @@ include 'menu.php';
             if (trimmedMetadata) {
                 try {
                     const parsed = JSON.parse(trimmedMetadata);
-                    content = JSON.stringify(parsed, null, 2);
+                    content = formatJsonValue(parsed, 0);
                 } catch (error) {
-                    content = trimmedMetadata;
+                    content = escapeHtml(trimmedMetadata);
                 }
             }
 
-            metadataModalContent.textContent = content;
+            metadataModalContent.innerHTML = content;
             metadataModalEmpty.hidden = Boolean(content);
             metadataModal.classList.add('active');
             metadataModal.setAttribute('aria-hidden', 'false');
@@ -616,6 +616,56 @@ include 'menu.php';
         function closeMetadataModal() {
             metadataModal.classList.remove('active');
             metadataModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        }
+
+        function formatJsonValue(value, indentLevel) {
+            const indent = '  '.repeat(indentLevel);
+            const nextIndent = '  '.repeat(indentLevel + 1);
+
+            if (value === null) {
+                return '<span class="json-null">null</span>';
+            }
+
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    return '[]';
+                }
+
+                const items = value.map((item) => `${nextIndent}${formatJsonValue(item, indentLevel + 1)}`);
+                return `[\n${items.join(',\n')}\n${indent}]`;
+            }
+
+            if (typeof value === 'object') {
+                const keys = Object.keys(value);
+                if (keys.length === 0) {
+                    return '{}';
+                }
+                const entries = keys.map((key) => {
+                    const safeKey = escapeHtml(key);
+                    return `${nextIndent}<span class="json-key">"${safeKey}"</span>: ${formatJsonValue(value[key], indentLevel + 1)}`;
+                });
+                return `{\n${entries.join(',\n')}\n${indent}}`;
+            }
+
+            if (typeof value === 'string') {
+                return `<span class="json-string">"${escapeHtml(value)}"</span>`;
+            }
+
+            if (typeof value === 'number') {
+                return `<span class="json-number">${value}</span>`;
+            }
+
+            if (typeof value === 'boolean') {
+                return `<span class="json-boolean">${value}</span>`;
+            }
+
+            return `<span class="json-unknown">${escapeHtml(String(value))}</span>`;
         }
 
         document.querySelectorAll('.sender-map-btn').forEach((button) => {
