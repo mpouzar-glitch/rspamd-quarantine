@@ -34,7 +34,7 @@ $entryType = $_POST['entry_type'] ?? 'email';
 
 $allowedActions = ['add', 'delete'];
 $allowedLists = ['whitelist', 'blacklist'];
-$allowedEntryTypes = ['email', 'email_regex', 'subject'];
+$allowedEntryTypes = ['email', 'email_regex', 'subject', 'ip'];
 
 if (!in_array($action, $allowedActions, true)) {
     $_SESSION['error_msg'] = __('maps_invalid_input');
@@ -67,6 +67,12 @@ if ($entryType === 'email_regex' && (empty($entryValue) || !isRegexMapEntry($ent
 }
 
 if ($entryType === 'subject' && (empty($entryValue) || !isRegexMapEntry($entryValue))) {
+    $_SESSION['error_msg'] = __('maps_invalid_value');
+    header('Location: ' . $returnUrl);
+    exit;
+}
+
+if ($entryType === 'ip' && (empty($entryValue) || filter_var($entryValue, FILTER_VALIDATE_IP) === false)) {
     $_SESSION['error_msg'] = __('maps_invalid_value');
     header('Location: ' . $returnUrl);
     exit;
