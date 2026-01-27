@@ -158,7 +158,7 @@ if (empty($message_ids)) {
 
 // Check domain access for all messages
 $placeholders = implode(',', array_fill(0, count($message_ids), '?'));
-$check_sql = "SELECT id, sender, recipients, subject, message_content FROM quarantine_messages WHERE id IN ($placeholders)";
+$check_sql = "SELECT id, sender, recipients, subject, message_content, symbols FROM quarantine_messages WHERE id IN ($placeholders)";
 $check_stmt = $db->prepare($check_sql);
 $check_stmt->execute($message_ids);
 $messages = $check_stmt->fetchAll();
@@ -227,10 +227,21 @@ try {
             break;
 
         case 'release':
+            $blocked_count = 0;
             foreach ($message_ids as $id) {
+                $msg = $message_lookup[$id] ?? null;
+                if (!$msg) {
+                    continue;
+                }
+                if (!checkPermission('admin')) {
+                    $symbolData = buildMessageSymbolData($msg['symbols'] ?? '');
+                    if (($symbolData['has_virus_symbol'] ?? false) || ($symbolData['has_bad_attachment_symbol'] ?? false)) {
+                        $blocked_count++;
+                        continue;
+                    }
+                }
                 if (safeSendmailRelease($db, (int)$id, $_SESSION['username'])) {
                     $success_count++;
-                    $msg = $message_lookup[$id] ?? null;
                     $details = $buildAuditDetails("Released message ID $id", $msg);
                     logAudit($user_id, $user, 'release', 'quarantine', $id, $details);
                 }
@@ -238,6 +249,9 @@ try {
 
             $db->commit();
             $_SESSION['success_msg'] = "$success_count z " . count($message_ids) . " zpráv uvolněno/odesláno sendmailem";
+            if ($blocked_count > 0) {
+                $_SESSION['warning_msg'] = "Nelze uvolnit $blocked_count zpráv s virem nebo nebezpečnou přílohou.";
+            }
             break;
 
         case 'delete':
@@ -265,9 +279,17 @@ try {
         case 'learn_ham':
             $log_stmt = $db->prepare("INSERT INTO trace_log (quarantine_id, action, user, details) VALUES (?, 'learned_ham', ?, 'Bulk learned as HAM')");
             $update_stmt = $db->prepare("UPDATE quarantine_messages SET state = 1, state_at=NOW(), state_by=? WHERE id=?");
+            $blocked_count = 0;
 
             foreach ($messages as $msg) {
                 try {
+                    if (!checkPermission('admin')) {
+                        $symbolData = buildMessageSymbolData($msg['symbols'] ?? '');
+                        if (($symbolData['has_virus_symbol'] ?? false) || ($symbolData['has_bad_attachment_symbol'] ?? false)) {
+                            $blocked_count++;
+                            continue;
+                        }
+                    }
                     $result = learnMessage($msg['message_content'], 'ham');
                     if ($result['success']) {
                         $log_stmt->execute([$msg['id'], $user]);
@@ -289,6 +311,14 @@ try {
             $_SESSION['success_msg'] = "Naučeno jako HAM: $success_count " . ($success_count === 1 ? 'zpráva' : ($success_count < 5 ? 'zprávy' : 'zpráv'));
             if ($error_count > 0) {
                 $_SESSION['warning_msg'] = "Chyba při učení $error_count " . ($error_count === 1 ? 'zprávy' : 'zpráv');
+            }
+            if ($blocked_count > 0) {
+                $blockedMessage = "Nelze učit HAM u $blocked_count zpráv s virem nebo nebezpečnou přílohou.";
+                if (!empty($_SESSION['warning_msg'])) {
+                    $_SESSION['warning_msg'] .= ' | ' . $blockedMessage;
+                } else {
+                    $_SESSION['warning_msg'] = $blockedMessage;
+                }
             }
             break;
 

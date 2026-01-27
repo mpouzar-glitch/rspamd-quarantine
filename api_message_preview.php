@@ -270,6 +270,7 @@ try {
     $to_header_decoded = decodeMimeHeader($to_header);
 
     $parsed_symbols = parseSymbolsForStats($message['symbols'] ?? '');
+    $symbolData = buildMessageSymbolData($message['symbols'] ?? '');
     $dkim_dmarc_symbols = array_values(array_filter($parsed_symbols, function ($sym) {
         $name = $sym['name'] ?? '';
         return stripos($name, 'dkim') !== false || stripos($name, 'dmarc') !== false;
@@ -304,7 +305,9 @@ try {
         'state_by' => $message['state_by'] ?? '',
         'subject_decoded' => $subject_decoded,
         'sender_decoded' => $sender_decoded,
-        'recipients_decoded' => $recipients_decoded
+        'recipients_decoded' => $recipients_decoded,
+        'has_virus_symbol' => $symbolData['has_virus_symbol'] ?? false,
+        'has_bad_attachment_symbol' => $symbolData['has_bad_attachment_symbol'] ?? false
     ]);
 
 } catch (Exception $e) {

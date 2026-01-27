@@ -25,6 +25,7 @@ $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 $returnUrl = $_SERVER['REQUEST_URI'] ?? 'index.php';
 $canManageMaps = checkPermission('domain_admin');
+$isAdmin = checkPermission('admin');
 
 // Get filters from request
 $pageSessionKey = 'index_page';
@@ -270,6 +271,8 @@ include 'menu.php';
                         $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
                         $scoreClass = getScoreBadgeClass($score, $action);
+                        $isReleaseRestricted = !$isAdmin && ($hasVirusSymbol || $hasBadAttachmentSymbol);
+                        $isHamRestricted = $isReleaseRestricted;
 
                         // State class for row coloring
                         $stateClass = getMessageStateClass((int)$msg['state']);
@@ -482,7 +485,7 @@ include 'menu.php';
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="learn_ham">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
+                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>" <?php echo $isHamRestricted ? 'disabled' : ''; ?>>
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -490,7 +493,7 @@ include 'menu.php';
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="release">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>">
+                                        <button type="submit" class="action-btn release-btn" title="<?php echo htmlspecialchars(__('msg_release')); ?>" <?php echo $isReleaseRestricted ? 'disabled' : ''; ?>>
                                             <i class="fas fa-paper-plane"></i>
                                         </button>
                                     </form>
@@ -565,19 +568,19 @@ include 'menu.php';
                 <i class="fas fa-ban"></i>
             </button>
         </form>
-        <form method="POST" action="operations.php" class="modal-action-form">
+        <form method="POST" action="operations.php" class="modal-action-form" data-action="learn_ham">
             <input type="hidden" name="message_ids" id="detailActionHamId" value="">
             <input type="hidden" name="operation" value="learn_ham">
             <input type="hidden" name="return_url" value="index.php">
-            <button type="submit" class="action-btn learn-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
+            <button type="submit" class="action-btn learn-ham-btn modal-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
                 <i class="fas fa-check"></i>
             </button>
         </form>
-        <form method="POST" action="operations.php" class="modal-action-form">
+        <form method="POST" action="operations.php" class="modal-action-form" data-action="release">
             <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
             <input type="hidden" name="operation" value="release">
             <input type="hidden" name="return_url" value="index.php">
-            <button type="submit" class="action-btn release-btn" title="' . safe_html(__('msg_release')) . '">
+            <button type="submit" class="action-btn release-btn modal-release-btn" title="' . safe_html(__('msg_release')) . '">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </form>
@@ -693,6 +696,9 @@ include 'menu.php';
     let activeRequest = null;
     const detailModal = document.getElementById('messageDetailModal');
     const detailModalContent = document.getElementById('detailModalContent');
+    const isAdmin = <?php echo json_encode($isAdmin); ?>;
+    const releaseActionButton = detailModal.querySelector('.modal-release-btn');
+    const hamActionButton = detailModal.querySelector('.modal-ham-btn');
     const actionIdFields = [
         document.getElementById('detailActionSpamId'),
         document.getElementById('detailActionHamId'),
@@ -842,6 +848,23 @@ include 'menu.php';
         if (data.is_html) {
             const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
+        }
+
+        if (!isAdmin) {
+            const releaseBlocked = Boolean(data.has_virus_symbol || data.has_bad_attachment_symbol);
+            if (releaseActionButton) {
+                releaseActionButton.disabled = releaseBlocked;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = releaseBlocked;
+            }
+        } else {
+            if (releaseActionButton) {
+                releaseActionButton.disabled = false;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = false;
+            }
         }
     }
 

@@ -29,6 +29,14 @@ if (!$message) {
     die(__('msg_not_found'));
 }
 
+$isAdmin = checkPermission('admin');
+$symbolData = buildMessageSymbolData($message['symbols'] ?? '');
+$hasVirusSymbol = $symbolData['has_virus_symbol'] ?? false;
+$hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'] ?? false;
+$isReleaseRestricted = !$isAdmin && ($hasVirusSymbol || $hasBadAttachmentSymbol);
+$isHamRestricted = $isReleaseRestricted;
+$canDownloadAttachments = $isAdmin || !$hasVirusSymbol;
+
 $splitHeadersBody = function (string $raw): array {
     $headers_end = strpos($raw, "\r\n\r\n");
     $separator_length = 4;
@@ -254,6 +262,9 @@ foreach ($attachments as $index => $attachment) {
 
 $attachment_index = isset($_GET['attachment']) ? intval($_GET['attachment']) : null;
 if ($attachment_index !== null && $attachment_index >= 0) {
+    if (!$canDownloadAttachments) {
+        die(__('error_permission'));
+    }
     if (!isset($attachments[$attachment_index])) {
         die(__('msg_not_found'));
     }
@@ -443,6 +454,7 @@ switch (strtolower($action)) {
         .attachment-name { font-weight: 600; color: #2c3e50; word-break: break-word; }
         .attachment-meta { font-size: 12px; color: #7f8c8d; }
         .btn-attachment { font-size: 12px; padding: 6px 12px; }
+        .btn-disabled { opacity: 0.6; cursor: not-allowed; }
 
     </style>
 </head>
@@ -591,9 +603,15 @@ switch (strtolower($action)) {
                                     <?php endif; ?>
                                 </span>
                             </div>
-                            <a class="btn btn-primary btn-attachment" href="view.php?id=<?= $message['id'] ?>&attachment=<?= $index ?>">
-                                <i class="fas fa-download"></i> <?= htmlspecialchars(__('download')) ?>
-                            </a>
+                            <?php if ($canDownloadAttachments): ?>
+                                <a class="btn btn-primary btn-attachment" href="view.php?id=<?= $message['id'] ?>&attachment=<?= $index ?>">
+                                    <i class="fas fa-download"></i> <?= htmlspecialchars(__('download')) ?>
+                                </a>
+                            <?php else: ?>
+                                <span class="btn btn-primary btn-attachment btn-disabled" title="<?= htmlspecialchars(__('error_permission')) ?>">
+                                    <i class="fas fa-download"></i> <?= htmlspecialchars(__('download')) ?>
+                                </span>
+                            <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -674,7 +692,7 @@ switch (strtolower($action)) {
         <div class="card">
             <h2><i class="fas fa-tools"></i> <?= htmlspecialchars(__('actions')) ?></h2>
             <div class="actions">
-                <?php if (!$released): ?>
+                <?php if (!$released && !$isReleaseRestricted): ?>
                     <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_release'), ENT_QUOTES) ?>')">
                         <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
                         <input type="hidden" name="operation" value="release">
@@ -685,14 +703,16 @@ switch (strtolower($action)) {
                     </form>
                 <?php endif; ?>
                 
-                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="operation" value="learn_ham">
-                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
-                    </button>
-                </form>
+                <?php if (!$isHamRestricted): ?>
+                    <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="operation" value="learn_ham">
+                        <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
                 
                 <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">

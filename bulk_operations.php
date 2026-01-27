@@ -30,6 +30,7 @@ $db = Database::getInstance()->getConnection();
 $user = $_SESSION['username'] ?? 'unknown';
 $returnUrl = $_SERVER['REQUEST_URI'] ?? 'bulk_operations.php';
 $canManageMaps = checkPermission('domain_admin');
+$isAdmin = checkPermission('admin');
 
 // Get filters from request
 $pageSessionKey = 'bulk_operations_page';
@@ -292,6 +293,8 @@ include 'menu.php';
                             $timestamp = date('d.m. H:i', strtotime($msg['timestamp']));
 
                             $scoreClass = getScoreBadgeClass($score, $action);
+                            $isReleaseRestricted = !$isAdmin && ($hasVirusSymbol || $hasBadAttachmentSymbol);
+                            $isHamRestricted = $isReleaseRestricted;
 
                             // Unique name for radio group
                             $radioName = 'action_' . $msgId;
@@ -510,7 +513,7 @@ include 'menu.php';
                                             <span>S</span><?php if ($isAutoLearnSpam) echo ' <i class="fas fa-robot" style="font-size:9px;" title="' . htmlspecialchars(__('bulk_auto_learned')) . '"></i>'; ?>
                                         </label>
                                         <label class="action-label action-ham" title="<?php echo htmlspecialchars(__('bulk_action_ham')); ?>">
-                                            <input type="radio" name="<?php echo $radioName; ?>" value="ham" class="action-radio" onchange="updateRowState('<?php echo $msgId; ?>')">
+                                            <input type="radio" name="<?php echo $radioName; ?>" value="ham" class="action-radio" onchange="updateRowState('<?php echo $msgId; ?>')" <?php echo $isHamRestricted ? 'disabled' : ''; ?>>
                                             <span>H</span>
                                         </label>
                                         <label class="action-label action-forget" title="<?php echo htmlspecialchars(__('bulk_action_forget')); ?>">
@@ -518,7 +521,7 @@ include 'menu.php';
                                             <span>F</span>
                                         </label>
                                         <label class="action-label action-release" title="<?php echo htmlspecialchars(__('bulk_action_release_short')); ?>">
-                                            <input type="checkbox" name="release_<?php echo $msgId; ?>" value="1" class="action-checkbox" onchange="updateRowState('<?php echo $msgId; ?>')">
+                                            <input type="checkbox" name="release_<?php echo $msgId; ?>" value="1" class="action-checkbox" onchange="updateRowState('<?php echo $msgId; ?>')" <?php echo $isReleaseRestricted ? 'disabled' : ''; ?>>
                                             <span>R</span>
                                         </label>
                                     </div>
@@ -596,19 +599,19 @@ include 'menu.php';
                 <i class="fas fa-ban"></i>
             </button>
         </form>
-        <form method="POST" action="operations.php" class="modal-action-form">
+        <form method="POST" action="operations.php" class="modal-action-form" data-action="learn_ham">
             <input type="hidden" name="message_ids" id="detailActionHamId" value="">
             <input type="hidden" name="operation" value="learn_ham">
             <input type="hidden" name="return_url" value="index.php">
-            <button type="submit" class="action-btn learn-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
+            <button type="submit" class="action-btn learn-ham-btn modal-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
                 <i class="fas fa-check"></i>
             </button>
         </form>
-        <form method="POST" action="operations.php" class="modal-action-form">
+        <form method="POST" action="operations.php" class="modal-action-form" data-action="release">
             <input type="hidden" name="message_ids" id="detailActionReleaseId" value="">
             <input type="hidden" name="operation" value="release">
             <input type="hidden" name="return_url" value="index.php">
-            <button type="submit" class="action-btn release-btn" title="' . safe_html(__('msg_release')) . '">
+            <button type="submit" class="action-btn release-btn modal-release-btn" title="' . safe_html(__('msg_release')) . '">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </form>
@@ -724,6 +727,9 @@ include 'menu.php';
     let activeRequest = null;
     const detailModal = document.getElementById('messageDetailModal');
     const detailModalContent = document.getElementById('detailModalContent');
+    const isAdmin = <?php echo json_encode($isAdmin); ?>;
+    const releaseActionButton = detailModal.querySelector('.modal-release-btn');
+    const hamActionButton = detailModal.querySelector('.modal-ham-btn');
     const actionIdFields = [
         document.getElementById('detailActionSpamId'),
         document.getElementById('detailActionHamId'),
@@ -873,6 +879,23 @@ include 'menu.php';
         if (data.is_html) {
             const iframe = detailModalContent.querySelector('.preview-iframe');
             iframe.srcdoc = data.preview;
+        }
+
+        if (!isAdmin) {
+            const releaseBlocked = Boolean(data.has_virus_symbol || data.has_bad_attachment_symbol);
+            if (releaseActionButton) {
+                releaseActionButton.disabled = releaseBlocked;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = releaseBlocked;
+            }
+        } else {
+            if (releaseActionButton) {
+                releaseActionButton.disabled = false;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = false;
+            }
         }
     }
 
