@@ -34,6 +34,7 @@ $symbolData = buildMessageSymbolData($message['symbols'] ?? '');
 $hasVirusSymbol = $symbolData['has_virus_symbol'] ?? false;
 $hasBadAttachmentSymbol = $symbolData['has_bad_attachment_symbol'] ?? false;
 $isReleaseRestricted = !$isAdmin && ($hasVirusSymbol || $hasBadAttachmentSymbol);
+$isHamRestricted = $isReleaseRestricted;
 $canDownloadAttachments = $isAdmin || !$hasVirusSymbol;
 
 $splitHeadersBody = function (string $raw): array {
@@ -702,14 +703,16 @@ switch (strtolower($action)) {
                     </form>
                 <?php endif; ?>
                 
-                <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
-                    <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
-                    <input type="hidden" name="operation" value="learn_ham">
-                    <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
-                    </button>
-                </form>
+                <?php if (!$isHamRestricted): ?>
+                    <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_ham'), ENT_QUOTES) ?>')">
+                        <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">
+                        <input type="hidden" name="operation" value="learn_ham">
+                        <input type="hidden" name="return_url" value="view.php?id=<?= $message['id'] ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-thumbs-up"></i> <?= htmlspecialchars(__('msg_learn_ham')) ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
                 
                 <form method="post" action="operations.php" onsubmit="return confirm('<?= htmlspecialchars(__('confirm_learn_spam'), ENT_QUOTES) ?>')">
                     <input type="hidden" name="message_ids" value="<?= $message['id'] ?>">

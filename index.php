@@ -272,6 +272,7 @@ include 'menu.php';
 
                         $scoreClass = getScoreBadgeClass($score, $action);
                         $isReleaseRestricted = !$isAdmin && ($hasVirusSymbol || $hasBadAttachmentSymbol);
+                        $isHamRestricted = $isReleaseRestricted;
 
                         // State class for row coloring
                         $stateClass = getMessageStateClass((int)$msg['state']);
@@ -484,7 +485,7 @@ include 'menu.php';
                                         <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
                                         <input type="hidden" name="operation" value="learn_ham">
                                         <input type="hidden" name="return_url" value="index.php">
-                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>">
+                                        <button type="submit" class="action-btn learn-ham-btn" title="<?php echo htmlspecialchars(__('msg_learn_ham')); ?>" <?php echo $isHamRestricted ? 'disabled' : ''; ?>>
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -567,11 +568,11 @@ include 'menu.php';
                 <i class="fas fa-ban"></i>
             </button>
         </form>
-        <form method="POST" action="operations.php" class="modal-action-form">
+        <form method="POST" action="operations.php" class="modal-action-form" data-action="learn_ham">
             <input type="hidden" name="message_ids" id="detailActionHamId" value="">
             <input type="hidden" name="operation" value="learn_ham">
             <input type="hidden" name="return_url" value="index.php">
-            <button type="submit" class="action-btn learn-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
+            <button type="submit" class="action-btn learn-ham-btn modal-ham-btn" title="' . safe_html(__('msg_learn_ham')) . '">
                 <i class="fas fa-check"></i>
             </button>
         </form>
@@ -697,6 +698,7 @@ include 'menu.php';
     const detailModalContent = document.getElementById('detailModalContent');
     const isAdmin = <?php echo json_encode($isAdmin); ?>;
     const releaseActionButton = detailModal.querySelector('.modal-release-btn');
+    const hamActionButton = detailModal.querySelector('.modal-ham-btn');
     const actionIdFields = [
         document.getElementById('detailActionSpamId'),
         document.getElementById('detailActionHamId'),
@@ -848,11 +850,21 @@ include 'menu.php';
             iframe.srcdoc = data.preview;
         }
 
-        if (!isAdmin && releaseActionButton) {
+        if (!isAdmin) {
             const releaseBlocked = Boolean(data.has_virus_symbol || data.has_bad_attachment_symbol);
-            releaseActionButton.disabled = releaseBlocked;
-        } else if (releaseActionButton) {
-            releaseActionButton.disabled = false;
+            if (releaseActionButton) {
+                releaseActionButton.disabled = releaseBlocked;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = releaseBlocked;
+            }
+        } else {
+            if (releaseActionButton) {
+                releaseActionButton.disabled = false;
+            }
+            if (hamActionButton) {
+                hamActionButton.disabled = false;
+            }
         }
     }
 

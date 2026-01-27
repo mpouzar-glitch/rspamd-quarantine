@@ -279,9 +279,17 @@ try {
         case 'learn_ham':
             $log_stmt = $db->prepare("INSERT INTO trace_log (quarantine_id, action, user, details) VALUES (?, 'learned_ham', ?, 'Bulk learned as HAM')");
             $update_stmt = $db->prepare("UPDATE quarantine_messages SET state = 1, state_at=NOW(), state_by=? WHERE id=?");
+            $blocked_count = 0;
 
             foreach ($messages as $msg) {
                 try {
+                    if (!checkPermission('admin')) {
+                        $symbolData = buildMessageSymbolData($msg['symbols'] ?? '');
+                        if (($symbolData['has_virus_symbol'] ?? false) || ($symbolData['has_bad_attachment_symbol'] ?? false)) {
+                            $blocked_count++;
+                            continue;
+                        }
+                    }
                     $result = learnMessage($msg['message_content'], 'ham');
                     if ($result['success']) {
                         $log_stmt->execute([$msg['id'], $user]);
@@ -303,6 +311,14 @@ try {
             $_SESSION['success_msg'] = "Naučeno jako HAM: $success_count " . ($success_count === 1 ? 'zpráva' : ($success_count < 5 ? 'zprávy' : 'zpráv'));
             if ($error_count > 0) {
                 $_SESSION['warning_msg'] = "Chyba při učení $error_count " . ($error_count === 1 ? 'zprávy' : 'zpráv');
+            }
+            if ($blocked_count > 0) {
+                $blockedMessage = "Nelze učit HAM u $blocked_count zpráv s virem nebo nebezpečnou přílohou.";
+                if (!empty($_SESSION['warning_msg'])) {
+                    $_SESSION['warning_msg'] .= ' | ' . $blockedMessage;
+                } else {
+                    $_SESSION['warning_msg'] = $blockedMessage;
+                }
             }
             break;
 
