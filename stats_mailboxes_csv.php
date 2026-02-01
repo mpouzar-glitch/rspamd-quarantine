@@ -42,15 +42,24 @@ header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 
 $output = fopen('php://output', 'w');
-fputcsv($output, ['Domain', 'Mailbox', 'Size']);
+$delimiter = ',';
+$enclosure = '"';
+$escape = '\\';
+fputcsv($output, ['Domain', 'Mailbox', 'Size'], $delimiter, $enclosure, $escape);
 
 foreach ($domainStats as $domain) {
     foreach ($domain['mailboxes'] as $mailbox) {
-        fputcsv($output, [
-            $domain['domain'],
-            $mailbox['name'],
-            $mailbox['size'],
-        ]);
+        fputcsv(
+            $output,
+            [
+                $domain['domain'],
+                $mailbox['name'],
+                $mailbox['size'],
+            ],
+            $delimiter,
+            $enclosure,
+            $escape
+        );
     }
 }
 
