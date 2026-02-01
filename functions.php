@@ -1190,6 +1190,75 @@ function getMailboxStorageStats(string $baseDir, array &$errors = []): array {
     return $stats;
 }
 
+function getPostfixMailboxStats(array &$errors = []): array {
+    $stats = [];
+    $connectionError = null;
+    $db = getPostfixConnection($connectionError);
+
+    if (!$db) {
+        $errors[] = [
+            'type' => 'db',
+            'message' => $connectionError ?? 'Postfix database connection failed.',
+        ];
+        return $stats;
+    }
+
+    try {
+        $stmt = $db->prepare(
+            'SELECT d.domain AS domain, m.username AS mailbox, m.size AS size
+             FROM domain d
+             INNER JOIN mailbox m ON m.domain = d.domain
+             WHERE d.backupmx = 0
+             ORDER BY d.domain, m.username'
+        );
+        $stmt->execute();
+
+        while ($row = $stmt->fetch()) {
+            $domain = $row['domain'] ?? '';
+            $mailbox = $row['mailbox'] ?? '';
+            if ($domain === '' || $mailbox === '') {
+                continue;
+            }
+
+            if (!isset($stats[$domain])) {
+                $stats[$domain] = [
+                    'domain' => $domain,
+                    'mailboxes' => [],
+                    'mailbox_count' => 0,
+                    'total_size' => 0,
+                ];
+            }
+
+            $mailboxSize = (int) ($row['size'] ?? 0);
+            $stats[$domain]['mailboxes'][] = [
+                'name' => $mailbox,
+                'size' => $mailboxSize,
+            ];
+            $stats[$domain]['mailbox_count']++;
+            $stats[$domain]['total_size'] += $mailboxSize;
+        }
+    } catch (PDOException $e) {
+        $errors[] = [
+            'type' => 'query',
+            'message' => $e->getMessage(),
+        ];
+        return [];
+    }
+
+    foreach ($stats as &$domainStats) {
+        usort($domainStats['mailboxes'], function ($a, $b) {
+            return strcasecmp($a['name'], $b['name']);
+        });
+    }
+    unset($domainStats);
+
+    uasort($stats, function ($a, $b) {
+        return strcasecmp($a['domain'], $b['domain']);
+    });
+
+    return array_values($stats);
+}
+
 /**
  * UTF-8 safe truncate
  */
