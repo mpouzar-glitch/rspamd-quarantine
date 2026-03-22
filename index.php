@@ -480,6 +480,16 @@ include 'menu.php';
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
+                                    <?php if ($isAdmin): ?>
+                                        <form method="POST" action="operations.php" style="display: inline;">
+                                            <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">
+                                            <input type="hidden" name="operation" value="block_ip">
+                                            <input type="hidden" name="return_url" value="index.php">
+                                            <button type="submit" class="action-btn block-ip-btn" title="<?php echo htmlspecialchars(__('msg_block_ip')); ?>">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                     <?php if (!$isReleaseRestricted): ?>
                                         <form method="POST" action="operations.php" style="display: inline;">
                                             <input type="hidden" name="message_ids" value="<?php echo $msgId; ?>">

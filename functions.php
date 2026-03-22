@@ -1434,6 +1434,8 @@ function displayAlerts() {
         echo '</div>';
         unset($_SESSION['info_msg']);
     }
+
+    // debug message display temporarily removed
 }
 
 // ============================================

@@ -136,6 +136,7 @@ return [
     'msg_view_details' => 'Ver detalles',
     'msg_learn_spam' => 'Aprender como spam',
     'msg_learn_ham' => 'Aprender como ham',
+    'msg_block_ip' => 'Bloquear dirección IP',
     'msg_view_source' => 'Ver fuente',
     'msg_view_headers' => 'Ver encabezados',
     'msg_download' => 'Descargar EML',

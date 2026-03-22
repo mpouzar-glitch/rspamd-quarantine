@@ -131,6 +131,14 @@ if (!defined('RSPAMD_API_SERVERS')) {
     ]);
 }
 
+// ============================================
+// CrowdSec API Configuration
+// ============================================
+if (!defined('CROWDSEC_API_URL')) {
+    define('CROWDSEC_API_URL', 'http://ip_crowds1ec_api/api/external_bans.php');
+    define('CROWDSEC_API_KEY', 'YOUR_API_KEY');
+}
+
 // Map names configured in Rspamd for whitelist/blacklist entries
 if (!defined('RSPAMD_MAPS')) {
     define('RSPAMD_MAPS', [

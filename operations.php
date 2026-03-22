@@ -113,6 +113,52 @@ if (!function_exists('safeSendmailRelease')) {
         return true;
     }
 }
+/**
+ * Block IP address via CrowdSec API
+ */
+if (!function_exists('blockIpAddress')) {
+    function blockIpAddress($ip, $duration = '24h', $reason = 'force-denied', $source = 'rspamd') {
+        if (!defined('CROWDSEC_API_URL') || !defined('CROWDSEC_API_KEY')) {
+            return ['success' => false, 'error' => 'CrowdSec API není nakonfigurováno'];
+        }
+
+        $url = CROWDSEC_API_URL;
+        $api_key = CROWDSEC_API_KEY;
+
+        $data = [
+            'ip' => $ip,
+            'duration' => $duration,
+            'reason' => $reason,
+            'type' => 'ban',
+            'source' => $source
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'X-Api-Key: ' . $api_key
+        ]);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+
+        if ($curl_error) {
+            return ['success' => false, 'error' => 'Curl error: ' . $curl_error];
+        }
+
+        if ($http_code < 200 || $http_code >= 300) {
+            return ['success' => false, 'error' => 'HTTP error: ' . $http_code . ' Response: ' . $response];
+        }
+
+        return ['success' => true];
+    }
+}
 
 // Main execution
 $db = Database::getInstance()->getConnection();
@@ -158,7 +204,7 @@ if (empty($message_ids)) {
 
 // Check domain access for all messages
 $placeholders = implode(',', array_fill(0, count($message_ids), '?'));
-$check_sql = "SELECT id, sender, recipients, subject, message_content, symbols FROM quarantine_messages WHERE id IN ($placeholders)";
+$check_sql = "SELECT id, sender, recipients, subject, message_content, symbols, ip_address FROM quarantine_messages WHERE id IN ($placeholders)";
 $check_stmt = $db->prepare($check_sql);
 $check_stmt->execute($message_ids);
 $messages = $check_stmt->fetchAll();
@@ -336,7 +382,44 @@ try {
             }
             break;
 
-        default:
+        case 'block_ip':
+            foreach ($messages as $msg) {
+                $id = $msg['id'] ?? 0;
+                $ip = trim($msg['ip_address'] ?? '');
+                if (empty($ip)) {
+                    $error_count++;
+                    $details = $buildAuditDetails("Missing IP for block_ip attempt for message ID $id", $msg);
+                    logAudit($user_id, $user, 'block_ip_failed', 'quarantine', $id, $details);
+                    continue;
+                }
+                try {
+                    $result = blockIpAddress($ip);
+                    if ($result['success']) {
+                        $success_count++;
+                        $details = $buildAuditDetails("Blocked IP $ip for message ID $id", $msg);
+                        logAudit($user_id, $user, 'block_ip', 'quarantine', $id, $details);
+                    } else {
+                        $error_count++;
+                        $details = $buildAuditDetails("Block IP failed for message ID $id IP $ip: " . ($result['error'] ?? 'Unknown'), $msg);
+                        logAudit($user_id, $user, 'block_ip_failed', 'quarantine', $id, $details);
+                        error_log("Block IP error for ID {$id} IP {$ip}: " . ($result['error'] ?? 'Unknown'));
+                    }
+                } catch (Exception $e) {
+                    $error_count++;
+                    $details = $buildAuditDetails("Block IP exception for message ID $id IP $ip: " . $e->getMessage(), $msg);
+                    logAudit($user_id, $user, 'block_ip_failed', 'quarantine', $id, $details);
+                    error_log("Block IP exception for ID {$id} IP {$ip}: " . $e->getMessage());
+                }
+            }
+
+            $db->commit();
+            $_SESSION['success_msg'] = "Zablokováno $success_count IP adres";
+            if ($error_count > 0) {
+                $_SESSION['warning_msg'] = "Chyba při blokování $error_count IP adres";
+            }
+            break;
+
+            default:
             $db->rollBack();
             $_SESSION['error_msg'] = 'Neznámá operace';
     }

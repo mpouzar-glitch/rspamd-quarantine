@@ -136,6 +136,7 @@ return [
     'msg_view_details' => 'Näytä tiedot',
     'msg_learn_spam' => 'Opeta roskapostiksi',
     'msg_learn_ham' => 'Opeta hamiksi',
+    'msg_block_ip' => 'Block IP address',
     'msg_view_source' => 'Näytä lähde',
     'msg_view_headers' => 'Näytä otsakkeet',
     'msg_download' => 'Lataa EML',
