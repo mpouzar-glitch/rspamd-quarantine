@@ -200,6 +200,18 @@ if (!defined('SESSION_TIMEOUT')) {
 }
 
 // ============================================
+// Auto-Block Spam IP Settings
+// ============================================
+if (!defined('AUTO_BLOCK_ENABLED')) {
+    define('AUTO_BLOCK_ENABLED', true);
+    define('AUTO_BLOCK_MIN_MESSAGES', 10);       // Min počet spam zpráv z jedné IP pro zablokování
+    define('AUTO_BLOCK_TIME_WINDOW_HOURS', 8;  // Časové okno v hodinách, ve kterém se zprávy počítají
+    define('AUTO_BLOCK_MIN_SCORE', 10.0);        // Minimální rspamd skóre, aby zpráva byla zahrnuta
+    define('AUTO_BLOCK_DURATION', '8h');         // Délka blokace v CrowdSec (formát: 24h, 7d, ...)
+    define('AUTO_BLOCK_EXCLUDE_IPS', []);         // IP adresy, které nikdy nebudou automaticky zablokovány
+}
+
+// ============================================
 // Data Retention Settings
 // ============================================
 if (!defined('QUARANTINE_RETENTION_DAYS')) {
