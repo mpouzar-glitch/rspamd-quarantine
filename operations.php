@@ -59,7 +59,6 @@ if (!function_exists('learnMessage')) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             $response = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
             if ($http_code < 200 || $http_code >= 300) {
                 $errors[] = $server . ' (HTTP ' . $http_code . ')';
@@ -146,7 +145,6 @@ if (!function_exists('blockIpAddress')) {
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curl_error = curl_error($ch);
-        curl_close($ch);
 
         if ($curl_error) {
             return ['success' => false, 'error' => 'Curl error: ' . $curl_error];

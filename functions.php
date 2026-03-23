@@ -25,11 +25,15 @@ if (!class_exists('Database')) {
                     DB_CHARSET
                 );
 
+                $mysqlInitCommandAttr = defined('Pdo\\Mysql::ATTR_INIT_COMMAND')
+                    ? constant('Pdo\\Mysql::ATTR_INIT_COMMAND')
+                    : PDO::MYSQL_ATTR_INIT_COMMAND;
+
                 $options = [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . DB_CHARSET
+                    $mysqlInitCommandAttr => 'SET NAMES ' . DB_CHARSET
                 ];
 
                 $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
@@ -83,11 +87,15 @@ function getPostfixConnection(?string &$error = null): ?PDO {
             $charset
         );
 
+        $mysqlInitCommandAttr = defined('Pdo\\Mysql::ATTR_INIT_COMMAND')
+            ? constant('Pdo\\Mysql::ATTR_INIT_COMMAND')
+            : PDO::MYSQL_ATTR_INIT_COMMAND;
+
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . $charset
+            $mysqlInitCommandAttr => 'SET NAMES ' . $charset
         ];
 
         $password = defined('POSTFIX_DB_PASS') ? POSTFIX_DB_PASS : '';
@@ -3605,7 +3613,6 @@ if (!function_exists('uploadRspamdMap')) {
 
             $mapsResponse = curl_exec($ch);
             $mapsHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
             if ($mapsHttpCode !== 200) {
                 $results[] = [
@@ -3724,7 +3731,6 @@ if (!function_exists('uploadRspamdMap')) {
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
-            curl_close($ch);
 
             $serverSuccess = ($httpCode >= 200 && $httpCode < 300 && !$curlError);
 
