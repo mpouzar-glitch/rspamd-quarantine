@@ -2848,6 +2848,7 @@ function buildMessageSymbolData($symbols) {
         'virus' => $virusSymbols,
         'bad-extension' => $badAttachmentSymbols,
         'policy-reject' => $policyRejectSymbols,
+        'ai' => [],
         'blacklist' => ['BLACKLIST_IP', 'BLACKLIST_EMAIL_SMTP', 'BLACKLIST_EMAIL_MIME','BAD_SUBJECT'],
         'whitelist' => ['WHITELIST_IP', 'WHITELIST_EMAIL_MIME', 'WHITELIST_EMAIL_SMTP'],
     ];
@@ -2856,6 +2857,7 @@ function buildMessageSymbolData($symbols) {
         'virus' => [],
         'bad-extension' => [],
         'policy-reject' => [],
+        'ai' => [],
         'blacklist' => [],
         'whitelist' => [],
     ];
@@ -2870,6 +2872,9 @@ function buildMessageSymbolData($symbols) {
         }
         if (in_array($name, $badAttachmentSymbols, true)) {
             $hasBadAttachmentSymbol = true;
+        }
+        if (stripos($name, 'GPT') !== false) {
+            $statusSymbolMatches['ai'][] = substr($name, 0, 10);
         }
         foreach ($statusSymbolGroups as $groupKey => $groupSymbols) {
             if (in_array($name, $groupSymbols, true)) {
@@ -2891,7 +2896,7 @@ function buildMessageSymbolData($symbols) {
 }
 
 function getStatusRowClass(array $statusSymbolMatches): string {
-    $priority = ['virus', 'policy-reject', 'bad-extension', 'blacklist', 'whitelist'];
+    $priority = ['virus', 'policy-reject', 'ai', 'bad-extension', 'blacklist', 'whitelist'];
     foreach ($priority as $statusKey) {
         if (!empty($statusSymbolMatches[$statusKey])) {
             return 'status-row-' . $statusKey;

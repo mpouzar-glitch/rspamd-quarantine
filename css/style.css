@@ -1330,6 +1330,10 @@ tr.selected {
     background-color: #666666;
 }
 
+.status-pill--ai {
+    background-color: #0f766e;
+}
+
 .data-table .col-operations {
     width: 200px;
     white-space: nowrap;
