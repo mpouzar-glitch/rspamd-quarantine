@@ -268,12 +268,12 @@ try {
             message_id, queue_id, sender, recipients, subject,
             ip_address, country, authenticated_user, action, score, symbols,
             headers_from, headers_to, headers_date, hostname,
-            message_content, metadata
+            metadata
         ) VALUES (
             :message_id, :queue_id, :sender, :recipients, :subject,
             :ip, :country, :user, :action, :score, :symbols,
             :headers_from, :headers_to, :headers_date, :hostname,
-            :message_content, :metadata
+            :metadata
         )
     ");
 
@@ -293,11 +293,19 @@ try {
         ':headers_to' => $headers['to'],
         ':headers_date' => $headers['date'],
         ':hostname' => $hostname,
-        ':message_content' => $message_content,
         ':metadata' => json_encode(array_merge($metadata, $headers))
     ]);
 
     $quarantine_id = $db->lastInsertId();
+
+    $blob_stmt = $db->prepare("
+        INSERT INTO quarantine_message_blob (quarantine_id, message_content)
+        VALUES (:quarantine_id, :message_content)
+    ");
+    $blob_stmt->execute([
+        ':quarantine_id' => $quarantine_id,
+        ':message_content' => $message_content,
+    ]);
 
     // Log to trace
     $stmt = $db->prepare("

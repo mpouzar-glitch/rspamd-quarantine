@@ -1602,7 +1602,7 @@ function buildQuarantineWhereClause($filters = [], &$params = []) {
  */
 function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
     $defaults = [
-        'select' => 'id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, country, state, state_at, state_by, IFNULL(LENGTH(message_content), 0) as size_bytes',
+        'select' => 'quarantine_messages.id, message_id, timestamp, sender, recipients, subject, action, score, hostname, ip_address, country, state, state_at, state_by, IFNULL(LENGTH(quarantine_message_blob.message_content), 0) as size_bytes',
         'order_by' => 'timestamp DESC',
         'limit' => null,
         'offset' => 0
@@ -1616,7 +1616,10 @@ function buildQuarantineQuery($filters = [], &$params = [], $options = []) {
         $where_clause = '1=1';
     }
 
-    $sql = "SELECT {$options['select']} FROM quarantine_messages WHERE $where_clause";
+    $sql = "SELECT {$options['select']}
+            FROM quarantine_messages
+            LEFT JOIN quarantine_message_blob ON quarantine_message_blob.quarantine_id = quarantine_messages.id
+            WHERE $where_clause";
 
     if ($options['order_by']) {
         $sql .= " ORDER BY {$options['order_by']}";
@@ -3227,13 +3230,14 @@ function getSymbolMessages($db, $symbol, $dateFrom, $dateTo, $domainFilter, $par
  */
 function getVolumeStats($db, $dateFrom, $dateTo, $domainFilter, $params) {
     // Quarantine stats
-    $sql = "SELECT 
+    $sql = "SELECT
                 COUNT(*) as total_messages,
-                SUM(LENGTH(message_content)) as total_bytes,
+                SUM(LENGTH(quarantine_message_blob.message_content)) as total_bytes,
                 AVG(score) as avg_score,
                 MIN(score) as min_score,
                 MAX(score) as max_score
             FROM quarantine_messages
+            LEFT JOIN quarantine_message_blob ON quarantine_message_blob.quarantine_id = quarantine_messages.id
             WHERE timestamp BETWEEN ? AND ?
             AND ($domainFilter)";
 

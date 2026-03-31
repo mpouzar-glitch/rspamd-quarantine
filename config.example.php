@@ -112,9 +112,6 @@ if (!defined('VMAIL_BASE_DIR')) {
     define('VMAIL_BASE_DIR', '/var/vmail/vmail1');
 }
 
-// Set timezone
-date_default_timezone_set(APP_TIMEZONE);
-
 // ============================================
 // Rspamd API Configuration
 // ============================================
@@ -205,7 +202,7 @@ if (!defined('SESSION_TIMEOUT')) {
 if (!defined('AUTO_BLOCK_ENABLED')) {
     define('AUTO_BLOCK_ENABLED', true);
     define('AUTO_BLOCK_MIN_MESSAGES', 10);       // Min počet spam zpráv z jedné IP pro zablokování
-    define('AUTO_BLOCK_TIME_WINDOW_HOURS', 8;  // Časové okno v hodinách, ve kterém se zprávy počítají
+    define('AUTO_BLOCK_TIME_WINDOW_HOURS', 8);  // Časové okno v hodinách, ve kterém se zprávy počítají
     define('AUTO_BLOCK_MIN_SCORE', 10.0);        // Minimální rspamd skóre, aby zpráva byla zahrnuta
     define('AUTO_BLOCK_DURATION', '8h');         // Délka blokace v CrowdSec (formát: 24h, 7d, ...)
     define('AUTO_BLOCK_EXCLUDE_IPS', []);         // IP adresy, které nikdy nebudou automaticky zablokovány
@@ -216,7 +213,7 @@ if (!defined('AUTO_BLOCK_ENABLED')) {
 // ============================================
 if (!defined('QUARANTINE_RETENTION_DAYS')) {
     define('QUARANTINE_RETENTION_DAYS', 30);
-    define('TRACE_RETENTION_DAYS', 90);
+    define('TRACE_RETENTION_DAYS', 60);
     define('AUDIT_RETENTION_DAYS', 365);
 }
 
@@ -241,7 +238,7 @@ if (!class_exists('Database')) {
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES ' . DB_CHARSET
+                    (defined('Pdo\Mysql::ATTR_INIT_COMMAND') ? Pdo\Mysql::ATTR_INIT_COMMAND : PDO::MYSQL_ATTR_INIT_COMMAND) => 'SET NAMES ' . DB_CHARSET
                 ];
 
                 $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);

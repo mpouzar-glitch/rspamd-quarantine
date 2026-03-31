@@ -77,7 +77,7 @@ if (!function_exists('learnMessage')) {
  */
 if (!function_exists('safeSendmailRelease')) {
     function safeSendmailRelease($db, $id, $user) {
-        $stmt = $db->prepare("SELECT message_content, sender, recipients FROM quarantine_messages WHERE id = ?");
+        $stmt = $db->prepare("SELECT qm.sender, qm.recipients, qmb.message_content FROM quarantine_messages qm JOIN quarantine_message_blob qmb ON qmb.quarantine_id = qm.id WHERE qm.id = ?");
         $stmt->execute([$id]);
         $msg = $stmt->fetch();
 
@@ -202,7 +202,7 @@ if (empty($message_ids)) {
 
 // Check domain access for all messages
 $placeholders = implode(',', array_fill(0, count($message_ids), '?'));
-$check_sql = "SELECT id, sender, recipients, subject, message_content, symbols, ip_address FROM quarantine_messages WHERE id IN ($placeholders)";
+$check_sql = "SELECT qm.id, qm.sender, qm.recipients, qm.subject, qm.symbols, qm.ip_address, qmb.message_content FROM quarantine_messages qm LEFT JOIN quarantine_message_blob qmb ON qmb.quarantine_id = qm.id WHERE qm.id IN ($placeholders)";
 $check_stmt = $db->prepare($check_sql);
 $check_stmt->execute($message_ids);
 $messages = $check_stmt->fetchAll();

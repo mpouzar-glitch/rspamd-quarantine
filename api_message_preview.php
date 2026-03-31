@@ -31,7 +31,7 @@ try {
     $params = [$msg_id];
     $domainFilter = getDomainFilterSQL($params);
 
-    $sql = "SELECT * FROM quarantine_messages WHERE id = ? AND $domainFilter LIMIT 1";
+    $sql = "SELECT qm.*, qmb.message_content FROM quarantine_messages qm LEFT JOIN quarantine_message_blob qmb ON qmb.quarantine_id = qm.id WHERE qm.id = ? AND $domainFilter LIMIT 1";
 
     $stmt = $db->prepare($sql);
     $stmt->execute($params);

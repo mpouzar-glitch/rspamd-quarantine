@@ -18,9 +18,12 @@ if ($id <= 0) {
 
 $db = Database::getInstance()->getConnection();
 
-// Get message details
+// Get message details including raw content from blob table
 $stmt = $db->prepare("
-    SELECT * FROM quarantine_messages WHERE id = ?
+    SELECT qm.*, qmb.message_content
+    FROM quarantine_messages qm
+    LEFT JOIN quarantine_message_blob qmb ON qmb.quarantine_id = qm.id
+    WHERE qm.id = ?
 ");
 $stmt->execute([$id]);
 $message = $stmt->fetch();

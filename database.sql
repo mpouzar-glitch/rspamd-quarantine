@@ -1,21 +1,10 @@
--- phpMyAdmin SQL Dump
--- version 5.2.2
--- https://www.phpmyadmin.net/
---
 -- Počítač: localhost
--- Vytvořeno: Ned 04. led 2026, 05:54
--- Verze serveru: 11.8.3-MariaDB-0+deb13u1 from Debian-log
--- Verze PHP: 8.4.16
+-- Verze serveru: 11.8.6-MariaDB-0+deb13u1 from Debian-log
+-- Verze PHP: 8.5.3
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
 
 --
 -- Databáze: `rspamd_quarantine`
@@ -48,13 +37,27 @@ CREATE TABLE `audit_log` (
 DELIMITER $$
 CREATE TRIGGER `tr_update_last_login` AFTER INSERT ON `audit_log` FOR EACH ROW BEGIN
     IF NEW.action = 'login_success' THEN
-        UPDATE users 
-        SET last_login = NEW.timestamp 
+        UPDATE users
+        SET last_login = NEW.timestamp
         WHERE id = NEW.user_id;
     END IF;
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabulky `login_attempts`
+--
+
+CREATE TABLE `login_attempts` (
+  `id` int(11) NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `attempt_count` int(11) NOT NULL DEFAULT 1,
+  `last_attempt_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -66,7 +69,7 @@ CREATE TABLE `message_trace` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `message_id` varchar(255) DEFAULT NULL,
   `queue_id` varchar(100) DEFAULT NULL,
-  `timestamp` datetime DEFAULT current_timestamp(),
+  `timestamp` datetime NOT NULL DEFAULT current_timestamp(),
   `sender` varchar(255) DEFAULT NULL,
   `recipients` text DEFAULT NULL,
   `subject` varchar(500) DEFAULT NULL,
@@ -80,8 +83,26 @@ CREATE TABLE `message_trace` (
   `headers_from` varchar(255) DEFAULT NULL,
   `headers_to` text DEFAULT NULL,
   `hostname` varchar(255) DEFAULT NULL,
-  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),
+  `sender_domain` varchar(255) GENERATED ALWAYS AS (substring_index(`sender`,'@',-1)) STORED,
+  `sender_lc` varchar(255) GENERATED ALWAYS AS (lcase(`sender`)) STORED
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+PARTITION BY RANGE COLUMNS(`timestamp`)
+(
+PARTITION p2026_01 VALUES LESS THAN ('2026-02-01') ENGINE=InnoDB,
+PARTITION p2026_02 VALUES LESS THAN ('2026-03-01') ENGINE=InnoDB,
+PARTITION p2026_03 VALUES LESS THAN ('2026-04-01') ENGINE=InnoDB,
+PARTITION p2026_04 VALUES LESS THAN ('2026-05-01') ENGINE=InnoDB,
+PARTITION p2026_05 VALUES LESS THAN ('2026-06-01') ENGINE=InnoDB,
+PARTITION p2026_06 VALUES LESS THAN ('2026-07-01') ENGINE=InnoDB,
+PARTITION p2026_07 VALUES LESS THAN ('2026-08-01') ENGINE=InnoDB,
+PARTITION p2026_08 VALUES LESS THAN ('2026-09-01') ENGINE=InnoDB,
+PARTITION p2026_09 VALUES LESS THAN ('2026-10-01') ENGINE=InnoDB,
+PARTITION p2026_10 VALUES LESS THAN ('2026-11-01') ENGINE=InnoDB,
+PARTITION p2026_11 VALUES LESS THAN ('2026-12-01') ENGINE=InnoDB,
+PARTITION p2026_12 VALUES LESS THAN ('2027-01-01') ENGINE=InnoDB,
+PARTITION pmax VALUES LESS THAN (MAXVALUE) ENGINE=InnoDB
+);
 
 -- --------------------------------------------------------
 
@@ -96,7 +117,7 @@ CREATE TABLE `quarantine_messages` (
   `timestamp` datetime DEFAULT current_timestamp(),
   `sender` varchar(255) DEFAULT NULL,
   `recipients` text DEFAULT NULL,
-  `subject` text DEFAULT NULL,
+  `subject` varchar(500) DEFAULT NULL,
   `ip_address` varchar(45) DEFAULT NULL,
   `country` varchar(2) DEFAULT NULL,
   `authenticated_user` varchar(255) DEFAULT NULL,
@@ -106,11 +127,40 @@ CREATE TABLE `quarantine_messages` (
   `headers_from` varchar(255) DEFAULT NULL,
   `headers_to` text DEFAULT NULL,
   `headers_date` varchar(255) DEFAULT NULL,
-  `message_content` longblob DEFAULT NULL,
+  `hostname` varchar(255) DEFAULT NULL,
   `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
   `state` tinyint(1) DEFAULT 0,
   `state_at` datetime DEFAULT NULL,
   `state_by` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabulky `quarantine_message_blob`
+-- Odděleno od quarantine_messages: LONGBLOB se načítá jen při stažení zprávy.
+--
+
+CREATE TABLE `quarantine_message_blob` (
+  `quarantine_id` bigint(20) UNSIGNED NOT NULL,
+  `message_content` longblob NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabulky `rspamd_map_entries`
+--
+
+CREATE TABLE `rspamd_map_entries` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `list_type` enum('whitelist','blacklist') NOT NULL,
+  `entry_type` enum('ip','email','subject') NOT NULL,
+  `entry_value` varchar(255) NOT NULL,
+  `score` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `created_by` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -179,20 +229,6 @@ CREATE TABLE `users` (
 -- --------------------------------------------------------
 
 --
--- Struktura tabulky `login_attempts`
---
-
-CREATE TABLE `login_attempts` (
-  `id` int(11) NOT NULL,
-  `username` varchar(100) NOT NULL,
-  `ip_address` varchar(45) NOT NULL,
-  `attempt_count` int(11) NOT NULL DEFAULT 1,
-  `last_attempt_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Struktura tabulky `user_domains`
 --
 
@@ -201,22 +237,6 @@ CREATE TABLE `user_domains` (
   `user_id` int(11) NOT NULL,
   `domain` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Struktura tabulky `rspamd_map_entries`
---
-
-CREATE TABLE `rspamd_map_entries` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `list_type` enum('whitelist','blacklist') NOT NULL,
-  `entry_type` enum('ip','email','subject') NOT NULL,
-  `entry_value` varchar(255) NOT NULL,
-  `created_by` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -242,6 +262,12 @@ CREATE TABLE `v_daily_stats` (
 -- (Vlastní pohled viz níže)
 --
 CREATE TABLE `v_quarantine_stats_by_domain` (
+`domain` mediumtext
+,`total_messages` bigint(21)
+,`in_quarantine` decimal(22,0)
+,`released` decimal(22,0)
+,`avg_score` decimal(14,6)
+,`last_message` datetime
 );
 
 -- --------------------------------------------------------
@@ -284,7 +310,7 @@ CREATE TABLE `v_users_with_domains` (
 `id` int(11)
 ,`username` varchar(100)
 ,`email` varchar(255)
-,`role` enum('admin','domain_admin','viewer')
+,`role` enum('admin','domain_admin','quarantine_user','viewer')
 ,`active` tinyint(1)
 ,`created_at` timestamp
 ,`last_login` timestamp
@@ -310,7 +336,7 @@ CREATE TABLE `v_user_activity` (
 --
 
 --
--- Indexy pro tabulku `audit_log`
+-- Indexy pro tabulku `audit_log`
 --
 ALTER TABLE `audit_log`
   ADD PRIMARY KEY (`id`),
@@ -320,84 +346,43 @@ ALTER TABLE `audit_log`
   ADD KEY `user_id` (`user_id`);
 
 --
--- Indexy pro tabulku `message_trace`
---
-ALTER TABLE `message_trace`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_timestamp` (`timestamp`),
-  ADD KEY `idx_sender` (`sender`),
-  ADD KEY `idx_recipients` (`recipients`(255)),
-  ADD KEY `idx_message_id` (`message_id`),
-  ADD KEY `idx_queue_id` (`queue_id`),
-  ADD KEY `idx_action` (`action`),
-  ADD KEY `idx_ip` (`ip_address`),
-  ADD KEY `idx_user` (`authenticated_user`),
-  ADD KEY `idx_score` (`score`),
-  ADD KEY `idx_composite` (`timestamp`,`action`,`score`);
-
---
--- Indexy pro tabulku `quarantine_messages`
---
-ALTER TABLE `quarantine_messages`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_timestamp` (`timestamp`),
-  ADD KEY `idx_sender` (`sender`),
-  ADD KEY `idx_message_id` (`message_id`),
-  ADD KEY `idx_queue_id` (`queue_id`),
-  ADD KEY `idx_action` (`action`),
-  ADD KEY `idx_released` (`state`);
-
---
--- Indexy pro tabulku `sessions`
---
-ALTER TABLE `sessions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_user_id` (`user_id`),
-  ADD KEY `idx_expires_at` (`expires_at`);
-
---
--- Indexy pro tabulku `trace_log`
---
-ALTER TABLE `trace_log`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `quarantine_id` (`quarantine_id`),
-  ADD KEY `idx_timestamp` (`timestamp`),
-  ADD KEY `idx_action` (`action`);
-
---
--- Indexy pro tabulku `trace_statistics`
---
-ALTER TABLE `trace_statistics`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_stat` (`date_hour`,`sender_domain`,`action`),
-  ADD KEY `idx_date` (`date_hour`),
-  ADD KEY `idx_domain` (`sender_domain`);
-
---
--- Indexy pro tabulku `users`
---
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD KEY `idx_username` (`username`),
-  ADD KEY `idx_role` (`role`),
-  ADD KEY `idx_active` (`active`);
-
---
--- Indexy pro tabulku `login_attempts`
+-- Indexy pro tabulku `login_attempts`
 --
 ALTER TABLE `login_attempts`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `login_attempts_user_ip` (`username`,`ip_address`);
 
 --
--- Indexy pro tabulku `user_domains`
+-- Indexy pro tabulku `message_trace`
+-- PK obsahuje timestamp — povinnost pro RANGE COLUMNS partitioning.
 --
-ALTER TABLE `user_domains`
+ALTER TABLE `message_trace`
+  ADD PRIMARY KEY (`id`,`timestamp`),
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_queue_id` (`queue_id`),
+  ADD KEY `idx_user` (`authenticated_user`),
+  ADD KEY `idx_ts_action` (`timestamp`,`action`),
+  ADD KEY `idx_ts_ip_action` (`timestamp`,`ip_address`,`action`),
+  ADD KEY `idx_ts_sender_score` (`timestamp`,`sender`,`score`),
+  ADD KEY `idx_sender_domain_ts` (`sender_domain`,`timestamp`);
+
+--
+-- Indexy pro tabulku `quarantine_messages`
+--
+ALTER TABLE `quarantine_messages`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_user_domain` (`user_id`,`domain`),
-  ADD KEY `idx_user_id` (`user_id`),
-  ADD KEY `idx_domain` (`domain`);
+  ADD KEY `idx_message_id` (`message_id`),
+  ADD KEY `idx_queue_id` (`queue_id`),
+  ADD KEY `idx_state_ts` (`state`,`timestamp`),
+  ADD KEY `idx_state_state_at` (`state`,`state_at`),
+  ADD KEY `idx_sender_ts` (`sender`,`timestamp`),
+  ADD KEY `idx_user_ts` (`authenticated_user`,`timestamp`);
+
+--
+-- Indexy pro tabulku `quarantine_message_blob`
+--
+ALTER TABLE `quarantine_message_blob`
+  ADD PRIMARY KEY (`quarantine_id`);
 
 --
 -- Indexy pro tabulku `rspamd_map_entries`
@@ -410,6 +395,51 @@ ALTER TABLE `rspamd_map_entries`
   ADD KEY `idx_entry_value` (`entry_value`);
 
 --
+-- Indexy pro tabulku `sessions`
+--
+ALTER TABLE `sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_expires_at` (`expires_at`);
+
+--
+-- Indexy pro tabulku `trace_log`
+--
+ALTER TABLE `trace_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `quarantine_id` (`quarantine_id`),
+  ADD KEY `idx_timestamp` (`timestamp`),
+  ADD KEY `idx_action` (`action`);
+
+--
+-- Indexy pro tabulku `trace_statistics`
+--
+ALTER TABLE `trace_statistics`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_stat` (`date_hour`,`sender_domain`,`action`),
+  ADD KEY `idx_date` (`date_hour`),
+  ADD KEY `idx_domain` (`sender_domain`);
+
+--
+-- Indexy pro tabulku `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD KEY `idx_username` (`username`),
+  ADD KEY `idx_role` (`role`),
+  ADD KEY `idx_active` (`active`);
+
+--
+-- Indexy pro tabulku `user_domains`
+--
+ALTER TABLE `user_domains`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_domain` (`user_id`,`domain`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_domain` (`domain`);
+
+--
 -- AUTO_INCREMENT pro tabulky
 --
 
@@ -417,6 +447,12 @@ ALTER TABLE `rspamd_map_entries`
 -- AUTO_INCREMENT pro tabulku `audit_log`
 --
 ALTER TABLE `audit_log`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pro tabulku `login_attempts`
+--
+ALTER TABLE `login_attempts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -429,6 +465,12 @@ ALTER TABLE `message_trace`
 -- AUTO_INCREMENT pro tabulku `quarantine_messages`
 --
 ALTER TABLE `quarantine_messages`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pro tabulku `rspamd_map_entries`
+--
+ALTER TABLE `rspamd_map_entries`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -450,22 +492,10 @@ ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pro tabulku `login_attempts`
---
-ALTER TABLE `login_attempts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT pro tabulku `user_domains`
 --
 ALTER TABLE `user_domains`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT pro tabulku `rspamd_map_entries`
---
-ALTER TABLE `rspamd_map_entries`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
 
@@ -483,7 +513,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `v_quarantine_stats_by_domain`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_quarantine_stats_by_domain`  AS SELECT substring_index(`quarantine_messages`.`recipients`,'@',-1) AS `domain`, count(0) AS `total_messages`, sum(case when `quarantine_messages`.`released` = 0 then 1 else 0 end) AS `in_quarantine`, sum(case when `quarantine_messages`.`released` = 1 then 1 else 0 end) AS `released`, avg(`quarantine_messages`.`score`) AS `avg_score`, max(`quarantine_messages`.`timestamp`) AS `last_message` FROM `quarantine_messages` GROUP BY substring_index(`quarantine_messages`.`recipients`,'@',-1) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_quarantine_stats_by_domain`  AS SELECT substring_index(`quarantine_messages`.`recipients`,'@',-1) AS `domain`, count(0) AS `total_messages`, sum(case when `quarantine_messages`.`state` = 0 then 1 else 0 end) AS `in_quarantine`, sum(case when `quarantine_messages`.`state` = 1 then 1 else 0 end) AS `released`, avg(`quarantine_messages`.`score`) AS `avg_score`, max(`quarantine_messages`.`timestamp`) AS `last_message` FROM `quarantine_messages` GROUP BY substring_index(`quarantine_messages`.`recipients`,'@',-1) ;
 
 -- --------------------------------------------------------
 
@@ -532,6 +562,12 @@ ALTER TABLE `audit_log`
   ADD CONSTRAINT `audit_log_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
+-- Omezení pro tabulku `quarantine_message_blob`
+--
+ALTER TABLE `quarantine_message_blob`
+  ADD CONSTRAINT `fk_qmb_quarantine_messages` FOREIGN KEY (`quarantine_id`) REFERENCES `quarantine_messages` (`id`) ON DELETE CASCADE;
+
+--
 -- Omezení pro tabulku `sessions`
 --
 ALTER TABLE `sessions`
@@ -549,7 +585,3 @@ ALTER TABLE `trace_log`
 ALTER TABLE `user_domains`
   ADD CONSTRAINT `user_domains_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
