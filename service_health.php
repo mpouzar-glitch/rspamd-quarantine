@@ -220,9 +220,14 @@ include 'menu.php';
                                 elseif ($row['state'] === 'failed') $badgeClass = 'badge-danger';
                                 elseif ($row['state'] === 'starting') $badgeClass = 'badge-warning';
                                 ?>
-                                <span class="badge <?php echo $badgeClass; ?>">
-                                    <?php echo __('state_' . $row['state']); ?>
-                                </span>
+                                <div class="tooltip">
+                                    <span class="badge <?php echo $badgeClass; ?>">
+                                        <?php echo __($row['state']); ?>
+                                    </span>
+                                    <?php if ($badgeClass !== 'badge-success'): ?>
+                                        <span class="tooltiptext"><?php echo htmlspecialchars(!empty($row['logs']) ? implode("\n", $row['logs']) : $row['detail']); ?></span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td class="text-center">
                                 <?php echo $row['process_count'] > 0 ? '<strong>' . $row['process_count'] . '</strong>' : '<span style="color: #bdc3c7;">-</span>'; ?>
@@ -372,4 +377,43 @@ code {
     font-size: 12px;
     color: #2c3e50;
 }
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltiptext {
+  visibility: hidden;
+  min-width: max-content;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  text-align: center;
+  padding: 8px;
+  border-radius: 6px;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+.tooltiptext::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent rgba(0, 0, 0, 0.85) transparent transparent;
+}
+
 </style>

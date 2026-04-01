@@ -465,6 +465,18 @@ function getServiceHealthServices(): array {
     ];
 }
 
+function getFailedServiceLogs(string $unit): array {
+    $command = sprintf(
+        'journalctl -u %s | grep -iE "fatal|error" | tail -n 1 | awk -F\': \' \'{print $NF}\'',
+        escapeshellarg($unit)
+    );
+    $output = shell_exec($command);
+    if ($output === null) {
+        return [];
+    }
+    return array_filter(explode("\n", trim($output)));
+}
+
 function getServiceHealthData(): array {
     $services = getServiceHealthServices();
     $systemctlAvailable = isSystemctlAvailable();
